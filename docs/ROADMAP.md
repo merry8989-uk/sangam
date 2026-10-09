@@ -79,7 +79,7 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Avatars shown across feed, profile and channel pages.
 - [x] Direct messaging: 1:1 conversations, messages list, thread view with polling,
       unread counts, and a Message button on profiles/channels.
-- [ ] Real-time delivery (WebSocket/SSE) instead of 4s polling.
+- [x] Real-time delivery over SSE (Redis pub/sub), with a slow fallback poll.
 - [x] Groups / communities: create, join/leave, public + private, group-scoped posts.
 - [x] Block, mute and report: feeds filter blocked/muted users; blocks stop follow + DM;
       reports land in the moderation queue.

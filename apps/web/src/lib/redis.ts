@@ -15,3 +15,6 @@ if (process.env.NODE_ENV !== "production") globalForRedis.redis = redis;
 // feed:{userId} sorted sets (score = timestamp), mirroring the classic
 // hybrid push/pull timeline model.
 export const feedKey = (userId: string) => `feed:${userId}`;
+
+// Pub/sub channel for a conversation's live message stream.
+export const dmChannel = (conversationId: string) => `dm:conv:${conversationId}`;

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { dmChannel, redis } from "@/lib/redis";
 
 async function membership(conversationId: string, userId: string) {
   return prisma.conversationParticipant.findUnique({
@@ -58,6 +59,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     data: { conversationId: params.id, senderId: userId, body: parsed.data.body }
   });
   await prisma.conversation.update({ where: { id: params.id }, data: { updatedAt: new Date() } });
+
+  // Push it to anyone streaming this conversation.
+  try {
+    await redis.publish(dmChannel(params.id), JSON.stringify(message));
+  } catch {
+    /* live delivery is best effort; the thread also re-fetches */
+  }
 
   const participants = await prisma.conversationParticipant.findMany({
     where: { conversationId: params.id, userId: { not: userId } },

@@ -50,7 +50,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Hover preview clips + processing status polling | ✅ |
 | Notifications (like/comment/follow) + nav bell | ✅ |
 | Profile settings (name, bio, avatar, cover) + delete own post | ✅ |
-| Direct messaging (1:1 conversations) | ✅ |
+| Direct messaging (1:1) with live SSE delivery | ✅ |
 | Bookmarks / saved posts | ✅ |
 | Block, mute and report | ✅ |
 | Groups / communities (public + private) | ✅ |
