@@ -47,6 +47,16 @@ curl -fsS -X POST http://localhost:3000/api/internal/reindex \
   -H "x-internal-secret: $INTERNAL_SECRET"
 ```
 
+## 6. Evaluate error budgets (every 5 minutes)
+
+Computes each SLO's error budget and raises an alert when it is burning.
+Alerts are stored (see /ops) and posted to `ALERT_WEBHOOK_URL` if set.
+
+```bash
+*/5 * * * * curl -fsS -X POST http://localhost:3000/api/internal/evaluate-slo \
+  -H "x-internal-secret: $INTERNAL_SECRET"
+```
+
 ## Notes
 
 - Both endpoints are idempotent per run window: the counter flush takes a Redis

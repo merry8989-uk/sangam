@@ -48,7 +48,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Observability: structured JSON request logs + /metrics (AI service), /api/health (web).
 - [x] Distributed tracing: W3C traceparent generated per call, propagated to the AI
       service and the worker, and logged with each request.
-- [ ] Error budgets and alerting on top of the metrics.
+- [x] Error budgets: Redis-backed metrics, SLOs (AI / jobs / API), burn-rate
+      evaluation, deduped alerts stored + posted to ALERT_WEBHOOK_URL, /ops page.
 
 ## Phase 4 - Creators & agents
 - [x] Creator studio: post/follower/like/comment/view analytics.

@@ -4,6 +4,7 @@ import { redis } from "@/lib/redis";
 import { sarvamChat } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/agent";
 import { matchesCron } from "@/lib/schedule";
+import { recordJob, recordRoute } from "@/lib/metrics";
 
 // Runs each agent's due scheduled tasks and stores the result as a chat
 // session, so the owner sees it under recent chats.
@@ -11,6 +12,7 @@ import { matchesCron } from "@/lib/schedule";
 export async function POST(req: Request) {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
+    await recordRoute("run-scheduled", 403);
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -57,5 +59,7 @@ export async function POST(req: Request) {
     }
   }
 
+  await recordJob("run-scheduled", true);
+  await recordRoute("run-scheduled", 200);
   return NextResponse.json({ ran, checked: agents.length });
 }

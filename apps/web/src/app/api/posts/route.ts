@@ -9,6 +9,7 @@ import { POST_INCLUDE, enrichMedia, fanOut } from "@/lib/media-pipeline";
 import { enqueueMedia, queueEnabled } from "@/lib/queue";
 import { newTraceparent } from "@/lib/trace";
 import { indexPosts } from "@/lib/search";
+import { recordRoute } from "@/lib/metrics";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -56,6 +57,12 @@ export async function GET(req: Request) {
 // queue (MEDIA_QUEUE_ENABLED=true) or, if the queue is off, to an in-process
 // background task; either way the client polls /api/posts/[id]/status.
 export async function POST(req: Request) {
+  const res = await handleCreatePost(req);
+  await recordRoute("posts:create", res.status);
+  return res;
+}
+
+async function handleCreatePost(req: Request): Promise<Response> {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

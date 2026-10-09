@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
+import { recordRoute } from "@/lib/metrics";
 
 // Liveness / readiness probe: reports database and cache connectivity.
 export async function GET() {
+  const res = await handleHealth();
+  await recordRoute("health", res.status);
+  return res;
+}
+
+async function handleHealth(): Promise<Response> {
   let db = false;
   let cache = false;
   try {

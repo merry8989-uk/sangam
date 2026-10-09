@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteObject } from "@/lib/s3";
+import { recordJob, recordRoute } from "@/lib/metrics";
 
 const THUMB_WIDTHS = [320, 640, 1080];
 
@@ -10,6 +11,7 @@ const THUMB_WIDTHS = [320, 640, 1080];
 export async function POST(req: Request) {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
+    await recordRoute("sweep-stories", 403);
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -46,5 +48,7 @@ export async function POST(req: Request) {
     removed += 1;
   }
 
+  await recordJob("sweep-stories", true);
+  await recordRoute("sweep-stories", 200);
   return NextResponse.json({ removed, objects });
 }

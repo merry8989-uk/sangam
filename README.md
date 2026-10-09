@@ -60,6 +60,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Distributed tracing (W3C traceparent) | ✅ |
 | Stories expiry sweeper (rows + storage objects) | ✅ |
 | Meilisearch search (optional, Postgres fallback) | ✅ |
+| Error budgets (SLOs) + alerting, with an /ops page | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

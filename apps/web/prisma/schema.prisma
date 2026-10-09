@@ -461,3 +461,16 @@ model PostStat {
   @@unique([postId, day])
   @@index([day])
 }
+
+// ---------- Alerting ----------
+model Alert {
+  id           String   @id @default(cuid())
+  slo          String
+  severity     String
+  message      String
+  value        Float    @default(0)
+  acknowledged Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}

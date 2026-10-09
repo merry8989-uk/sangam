@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hiddenUserIds } from "@/lib/filters";
 import { searchEnabled, searchPosts as meiliPosts, searchUsers as meiliUsers } from "@/lib/search";
+import { recordRoute } from "@/lib/metrics";
 
 const EMPTY = { users: [], tags: [], posts: [] };
 
@@ -11,6 +12,12 @@ const EMPTY = { users: [], tags: [], posts: [] };
 // is configured; otherwise both fall back to Postgres `contains`. Hashtags
 // always come from Postgres (they are just counts).
 export async function GET(req: Request) {
+  const res = await handleSearch(req);
+  await recordRoute("search", res.status);
+  return res;
+}
+
+async function handleSearch(req: Request): Promise<Response> {
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json(EMPTY);
 

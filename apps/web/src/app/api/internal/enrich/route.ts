@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enrichMedia, fanOut } from "@/lib/media-pipeline";
+import { recordJob, recordRoute } from "@/lib/metrics";
 
 const Body = z.object({
   postId: z.string().min(1),
@@ -14,6 +15,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
+    await recordRoute("enrich", 403);
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -25,9 +27,13 @@ export async function POST(req: Request) {
     await enrichMedia(postId);
     await prisma.post.update({ where: { id: postId }, data: { status: "READY" } });
     await fanOut(userId, postId, visibility);
+    await recordJob("enrich", true);
+    await recordRoute("enrich", 200);
     return NextResponse.json({ ok: true });
   } catch {
     await prisma.post.update({ where: { id: postId }, data: { status: "FAILED" } }).catch(() => {});
+    await recordJob("enrich", false);
+    await recordRoute("enrich", 502);
     return NextResponse.json({ error: "Enrichment failed" }, { status: 502 });
   }
 }

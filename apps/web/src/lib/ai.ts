@@ -1,14 +1,24 @@
 // Thin client for the Python AI/media service.
 import { newTraceparent } from "./trace";
+import { recordAiCall } from "./metrics";
+class AiError extends Error {}
+
 export async function callAi<T>(path: string, body: unknown): Promise<T> {
   const base = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", traceparent: newTraceparent() },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(`AI service error ${res.status} on ${path}`);
-  return (await res.json()) as T;
+  try {
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", traceparent: newTraceparent() },
+      body: JSON.stringify(body)
+    });
+    await recordAiCall(res.ok);
+    if (!res.ok) throw new AiError(`AI service error ${res.status} on ${path}`);
+    return (await res.json()) as T;
+  } catch (err) {
+    // Network-level failure: the status-based recording above never ran.
+    if (!(err instanceof AiError)) await recordAiCall(false);
+    throw err;
+  }
 }
 
 export type ProcessedImage = { width: number; height: number; thumbnailKey: string };
