@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { indexUsers } from "@/lib/search";
 
 const Body = z.object({
   displayName: z.string().min(1).max(60).optional(),
@@ -20,6 +21,7 @@ export async function GET() {
     where: { id: userId },
     select: { username: true, displayName: true, bio: true, avatarUrl: true, coverUrl: true }
   });
+  await indexUsers([{ id: userId, username: user.username, displayName: user.displayName }]);
   return NextResponse.json({ user });
 }
 
@@ -36,5 +38,6 @@ export async function PUT(req: Request) {
     data: parsed.data,
     select: { username: true, displayName: true, bio: true, avatarUrl: true, coverUrl: true }
   });
+  await indexUsers([{ id: userId, username: user.username, displayName: user.displayName }]);
   return NextResponse.json({ user });
 }

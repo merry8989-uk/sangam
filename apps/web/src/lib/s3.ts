@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Object storage. In production point S3_ENDPOINT at an India-region bucket
@@ -31,6 +31,10 @@ export async function presignUpload(key: string, contentType: string) {
     ContentType: contentType
   });
   return getSignedUrl(s3, cmd, { expiresIn: 60 * 10 });
+}
+
+export async function deleteObject(key: string): Promise<void> {
+  await s3.send(new DeleteObjectCommand({ Bucket: MEDIA_BUCKET, Key: key }));
 }
 
 export async function presignDownload(key: string) {

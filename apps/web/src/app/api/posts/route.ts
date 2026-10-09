@@ -8,6 +8,7 @@ import { extractTags } from "@/lib/hashtags";
 import { POST_INCLUDE, enrichMedia, fanOut } from "@/lib/media-pipeline";
 import { enqueueMedia, queueEnabled } from "@/lib/queue";
 import { newTraceparent } from "@/lib/trace";
+import { indexPosts } from "@/lib/search";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -120,6 +121,22 @@ export async function POST(req: Request) {
     } catch {
       /* best effort */
     }
+  }
+
+  // 2b. Index for search (best effort; no-op when Meilisearch is unset).
+  try {
+    await indexPosts([
+      {
+        id: post.id,
+        caption: caption ?? "",
+        authorUsername: post.author.username,
+        hashtags: extractTags(caption),
+        type,
+        createdAt: post.createdAt.getTime()
+      }
+    ]);
+  } catch {
+    /* search index is optional */
   }
 
   // 3. Flagged posts are withheld from public distribution.

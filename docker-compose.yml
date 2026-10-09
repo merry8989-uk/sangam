@@ -30,6 +30,16 @@ services:
       timeout: 5s
       retries: 10
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-change-me-in-prod}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -92,6 +102,8 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8000}
       INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-in-prod}
       MEDIA_QUEUE_ENABLED: ${MEDIA_QUEUE_ENABLED:-false}
+      MEILISEARCH_URL: ${MEILISEARCH_URL:-}
+      MEILISEARCH_KEY: ${MEILISEARCH_KEY:-change-me-in-prod}
     ports:
       - "3000:3000"
     depends_on:
@@ -135,6 +147,7 @@ services:
       - "8100:8000"
 
 volumes:
+  meilidata:
   pgdata:
   redisdata:
   miniodata:

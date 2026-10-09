@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { indexUsers } from "@/lib/search";
 
 const Body = z.object({
   email: z.string().email(),
@@ -37,5 +38,6 @@ export async function POST(req: Request) {
     },
     select: { id: true, username: true }
   });
+  await indexUsers([{ id: user.id, username: user.username, displayName }]);
   return NextResponse.json(user, { status: 201 });
 }

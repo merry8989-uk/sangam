@@ -58,6 +58,8 @@ channel follows) into **one** product, built on our **own stack**.
 | GPU/ML inference split (ML_INFERENCE_URL) | ✅ |
 | Analytics store: daily view rollups + studio trend | ✅ |
 | Distributed tracing (W3C traceparent) | ✅ |
+| Stories expiry sweeper (rows + storage objects) | ✅ |
+| Meilisearch search (optional, Postgres fallback) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

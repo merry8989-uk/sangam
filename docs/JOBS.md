@@ -30,6 +30,23 @@ standalone worker in `apps/worker`. Enable it with `MEDIA_QUEUE_ENABLED=true`
 and run the worker service (it is already in docker-compose). The worker calls
 the internal enrich endpoint and re-queues on failure, up to three attempts.
 
+## 4. Sweep expired stories (every 15 minutes)
+
+Stories expire 24 hours after posting. Expiry is enforced on read, but this job
+deletes the rows and their stored objects so they do not accumulate.
+
+```bash
+*/15 * * * * curl -fsS -X POST http://localhost:3000/api/internal/sweep-stories \
+  -H "x-internal-secret: $INTERNAL_SECRET"
+```
+
+## 5. Reindex search (one-off, after enabling Meilisearch)
+
+```bash
+curl -fsS -X POST http://localhost:3000/api/internal/reindex \
+  -H "x-internal-secret: $INTERNAL_SECRET"
+```
+
 ## Notes
 
 - Both endpoints are idempotent per run window: the counter flush takes a Redis
