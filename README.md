@@ -34,6 +34,9 @@ channel follows) into **one** product, built on our **own stack**.
 | Likes, comments, follow (API + UI) | ✅ |
 | Stories (24h), Search, Explore, hashtag pages | ✅ |
 | Channel pages, watch page, Following feed | ✅ |
+| Batched view counters (Redis) + flush job | ✅ |
+| Streaming chat (SSE) + scheduler job for agent tasks | ✅ |
+| Structured logs + /metrics; /api/health | ✅ |
 | Creator studio: analytics + agent assist | ✅ |
 | AI chat (Sarvam Indus / sarvam-105b), no login required | ✅ |
 | One agent per user + public Agent API (Bearer key) | ✅ |

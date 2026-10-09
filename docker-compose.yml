@@ -84,6 +84,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-generate-a-long-random-string}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8000}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-in-prod}
     ports:
       - "3000:3000"
     depends_on:

@@ -1,13 +1,20 @@
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from .agents import alt_text, draft_title_description, suggest_captions, suggest_hashtags, translate
 from .media import InvalidImage, process_image
 from .moderation import moderate_text
+from .observability import ObservabilityMiddleware, metrics_snapshot
 from .recommend import Candidate, recommend, similar
-from .sarvam import SarvamError, chat as sarvam_chat, is_configured as sarvam_configured
+from .sarvam import (
+    SarvamError,
+    chat as sarvam_chat,
+    chat_stream as sarvam_chat_stream,
+    is_configured as sarvam_configured,
+)
 from .settings import settings
 from .video import TranscodeError, transcode_video
 from .vision import classify_image
@@ -15,8 +22,10 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.6.0",
+    version="0.7.0",
 )
+
+app.add_middleware(ObservabilityMiddleware)
 
 
 class ModerateIn(BaseModel):
@@ -74,6 +83,11 @@ class ProcessVideoOut(BaseModel):
     thumbnailKey: str
     hlsKey: str
     renditions: list[int]
+
+
+@app.get("/metrics")
+def metrics() -> dict:
+    return metrics_snapshot()
 
 
 @app.get("/health")
@@ -205,3 +219,33 @@ def chat_endpoint(payload: ChatIn) -> ChatOut:
         ))
     except SarvamError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/chat/stream")
+def chat_stream_endpoint(payload: ChatIn) -> StreamingResponse:
+    """Streaming variant of /chat - forwards Sarvam's SSE to the client."""
+    messages: list[dict] = []
+    if payload.system:
+        messages.append({"role": "system", "content": payload.system})
+    messages.extend(m.model_dump() for m in payload.messages)
+
+    def event_source():
+        try:
+            for line in sarvam_chat_stream(
+                messages,
+                model=payload.model,
+                temperature=payload.temperature,
+                max_tokens=payload.max_tokens,
+                reasoning_effort=payload.reasoning_effort,
+            ):
+                yield (line + "\n\n") if line else "\n"
+        except SarvamError as exc:
+            detail = str(exc).replace('"', "'")
+            yield 'data: {"error": "' + detail + '"}\n\n'
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

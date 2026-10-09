@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { formatCount, formatDuration, timeAgo } from "@/lib/format";
+import { bumpView, pendingViews } from "@/lib/counters";
 import VideoPlayer from "@/components/VideoPlayer";
 import Comments from "@/components/Comments";
 import FollowButton from "@/components/FollowButton";
@@ -24,8 +25,9 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
 
   const video = post.media.find((m) => m.kind === "VIDEO" && m.hlsKey);
 
-  // View counting is a simple increment here; production batches it in Redis.
-  await prisma.post.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } });
+  // View counting is buffered in Redis and flushed to the database in batches.
+  await bumpView(post.id);
+  const viewTotal = post.viewCount + (await pendingViews(post.id));
 
   const liked = viewerId
     ? Boolean(await prisma.like.findUnique({ where: { postId_userId: { postId: post.id, userId: viewerId } } }))
@@ -91,7 +93,7 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
           </div>
 
           <div className="mt-2 text-sm text-ink-500">
-            {formatCount(post.viewCount)} views · {timeAgo(post.createdAt)}
+            {formatCount(viewTotal)} views · {timeAgo(post.createdAt)}
             {video?.durationMs ? ` · ${formatDuration(video.durationMs)}` : ""}
           </div>
 

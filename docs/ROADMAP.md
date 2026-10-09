@@ -36,8 +36,10 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Moderation wired into post creation: flagged posts withheld + queued.
 - [x] Ranked "For you" feed and a moderation review page.
 - [ ] Replace heuristics with trained models (Indic text classifier, vision/NSFW).
-- [ ] Counters moved to batched aggregation (Redis -> analytics store).
-- [ ] Observability: metrics, tracing, error budgets.
+- [x] View counters batched in Redis, flushed to Postgres by a job (docs/JOBS.md).
+- [ ] Move counters to an analytics store for long-term reporting.
+- [x] Observability: structured JSON request logs + /metrics (AI service), /api/health (web).
+- [ ] Distributed tracing and error budgets.
 
 ## Phase 4 - Creators & agents
 - [x] Creator studio: post/follower/like/comment/view analytics.
@@ -55,8 +57,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] AI side bar - docked (not floating); tap to reveal options (new chat, recent
       chat, skills, knowledge base, scheduled task, connector); collapses on navigation;
       dot shown while collapsed.
-- [ ] Streaming responses (SSE) instead of waiting for the full reply.
-- [ ] A scheduler worker to actually run the agent's scheduled tasks.
+- [x] Streaming responses (SSE), end to end: Sarvam -> AI service -> web -> chat UI.
+- [x] Scheduler job that runs due agent tasks (docs/JOBS.md).
 - [ ] Embeddings-based knowledge base retrieval (today the KB is injected as text).
 
 ## Cross-cutting, ongoing

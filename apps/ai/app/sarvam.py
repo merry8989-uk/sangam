@@ -69,3 +69,43 @@ def chat(
         "model": data.get("model"),
         "usage": data.get("usage"),
     }
+
+
+def chat_stream(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    max_tokens: int = 2048,
+    reasoning_effort: str | None = None,
+):
+    """Yield raw SSE lines from Sarvam for pass-through streaming.
+
+    Each yielded item is a line such as ``data: {"choices":[...]}`` with no
+    trailing newline; the caller re-emits it as an SSE event.
+    """
+    if not settings.sarvam_api_key:
+        raise SarvamError("SARVAM_API_KEY is not configured")
+
+    payload: dict = {
+        "model": model or settings.sarvam_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    if reasoning_effort:
+        payload["reasoning_effort"] = reasoning_effort
+
+    url = f"{settings.sarvam_base_url.rstrip('/')}/v1/chat/completions"
+    headers = {
+        "api-subscription-key": settings.sarvam_api_key,
+        "Content-Type": "application/json",
+    }
+
+    with httpx.Client(timeout=120) as client:
+        with client.stream("POST", url, json=payload, headers=headers) as resp:
+            if resp.status_code != 200:
+                body = resp.read().decode(errors="replace")
+                raise SarvamError(f"{resp.status_code}: {body[:300]}")
+            for line in resp.iter_lines():
+                yield line

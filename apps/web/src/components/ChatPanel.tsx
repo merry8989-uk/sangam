@@ -41,22 +41,62 @@ export default function ChatPanel({
     const text = input.trim();
     if (!text || busy) return;
     setError(null);
-    const next = [...messages, { role: "user" as const, content: text }];
-    setMessages(next);
+    const history = [...messages, { role: "user" as const, content: text }];
+    setMessages([...history, { role: "assistant", content: "" }]);
     setInput("");
     setBusy(true);
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch("/api/ai/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next, sessionId, useAgent })
+        body: JSON.stringify({ messages: history, sessionId, useAgent })
       });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error ?? "Chat failed");
-      if (d.sessionId) setSessionId(d.sessionId);
-      setMessages((m) => [...m, { role: "assistant", content: d.content }]);
+      if (!res.ok || !res.body) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "Chat failed");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith("data:")) continue;
+          const data = t.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          try {
+            const j = JSON.parse(data);
+            const delta = j?.choices?.[0]?.delta?.content;
+            if (delta) {
+              acc += delta;
+              setMessages((m) => {
+                const copy = [...m];
+                copy[copy.length - 1] = { role: "assistant", content: acc };
+                return copy;
+              });
+            }
+          } catch {
+            /* partial chunk */
+          }
+        }
+      }
+      if (!acc) {
+        setMessages((m) => {
+          const copy = [...m];
+          copy[copy.length - 1] = { role: "assistant", content: "(no response)" };
+          return copy;
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chat failed");
+      setMessages((m) => m.slice(0, -1));
     } finally {
       setBusy(false);
     }
