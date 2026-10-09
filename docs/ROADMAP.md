@@ -55,7 +55,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Creator studio: post/follower/like/comment/view analytics.
 - [x] Creator-assist agents: captions, hashtags, title & description, alt-text, translation seam.
 - [x] App shell (navigation) and post detail page.
-- [ ] Groups/communities, direct messaging, live streaming.
+- [x] Groups/communities and direct messaging (built in Phase 6).
+- [ ] Live streaming (RTMP ingest + HLS playback).
 
 
 ## Phase 5 - AI chat & agents
