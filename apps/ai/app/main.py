@@ -5,9 +5,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from .agents import alt_text, draft_title_description, suggest_captions, suggest_hashtags, translate
-from .embeddings import embed
+from .embeddings import embed, local_embed
 from .media import InvalidImage, process_image
-from .moderation import moderate_text
+from .moderation import local_text, moderate_text
 from .observability import ObservabilityMiddleware, metrics_snapshot
 from .recommend import Candidate, recommend, similar
 from .sarvam import (
@@ -23,7 +23,7 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.9.0",
+    version="1.0.0",
 )
 
 app.add_middleware(ObservabilityMiddleware)
@@ -277,3 +277,30 @@ def embed_endpoint(payload: EmbedIn) -> EmbedOut:
     if not payload.texts or len(payload.texts) > 256:
         raise HTTPException(status_code=400, detail="texts must contain 1..256 items")
     return EmbedOut(**embed(payload.texts))
+
+
+class InferTextIn(BaseModel):
+    text: str
+
+
+class InferEmbedIn(BaseModel):
+    texts: list[str]
+
+
+@app.post("/infer/text")
+def infer_text(payload: InferTextIn) -> dict:
+    """Model-only text moderation. This is the surface a GPU worker exposes."""
+    r = local_text(payload.text)
+    if r is None:
+        raise HTTPException(status_code=503, detail="text model not enabled on this instance")
+    return {"flagged": r.flagged, "score": r.score, "categories": r.categories,
+            "labels": r.labels, "engine": r.engine}
+
+
+@app.post("/infer/embed")
+def infer_embed(payload: InferEmbedIn) -> dict:
+    """Model-only embeddings. This is the surface a GPU worker exposes."""
+    v = local_embed(payload.texts)
+    if v is None:
+        raise HTTPException(status_code=503, detail="embeddings model not enabled on this instance")
+    return v

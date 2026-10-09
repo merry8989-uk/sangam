@@ -22,6 +22,14 @@ if not logger.handlers:
 _metrics: Counter = Counter()
 
 
+def trace_id_of(traceparent: str | None) -> str | None:
+    """Extract the trace id from a W3C traceparent header."""
+    if not traceparent:
+        return None
+    parts = traceparent.split("-")
+    return parts[1] if len(parts) >= 3 and len(parts[1]) == 32 else None
+
+
 class ObservabilityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         start = time.perf_counter()
@@ -32,6 +40,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
             raise
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         _metrics[(request.method, request.url.path, response.status_code)] += 1
+        trace_id = trace_id_of(request.headers.get("traceparent"))
         logger.info(
             json.dumps(
                 {
@@ -39,9 +48,12 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "status": response.status_code,
                     "duration_ms": duration_ms,
+                    "trace_id": trace_id,
                 }
             )
         )
+        if trace_id:
+            response.headers["x-trace-id"] = trace_id
         return response
 
 

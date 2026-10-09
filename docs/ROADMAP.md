@@ -28,7 +28,7 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Long-form channel pages (videos, shorts, about) + a Following feed of channel videos.
 - [x] Watch page: player, channel row, description, hashtags, comments, related videos.
 - [x] Preview clip generation (short muted MP4 for hover previews) + processing status polling.
-- [ ] Move media enrichment onto a queue worker (today it runs in a background task).
+- [x] Media enrichment on a Redis queue + standalone worker (apps/worker), with retries.
 
 ## Phase 3 - Ranking & trust
 - [x] Multi-stage recommender: retrieval -> filter -> rank -> diversity.
@@ -38,11 +38,15 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Ranked "For you" feed and a moderation review page.
 - [x] Real moderation models wired in: multilingual text (XLM-R) + NSFW vision, opt-in
       via MODERATION_ENABLED; lazy-loaded with heuristic fallback and engine reporting.
-- [ ] Serve the moderation models from a dedicated (GPU) worker for throughput.
+- [x] GPU/ML split: API forwards to a separate inference service (ML_INFERENCE_URL);
+      /infer/text and /infer/embed are the worker surface; `--profile ml` runs it.
 - [x] View counters batched in Redis, flushed to Postgres by a job (docs/JOBS.md).
-- [ ] Move counters to an analytics store for long-term reporting.
+- [x] Analytics store: PostStat daily view rollups written by the flush job, shown
+      as a 7-day trend in the creator studio.
 - [x] Observability: structured JSON request logs + /metrics (AI service), /api/health (web).
-- [ ] Distributed tracing and error budgets.
+- [x] Distributed tracing: W3C traceparent generated per call, propagated to the AI
+      service and the worker, and logged with each request.
+- [ ] Error budgets and alerting on top of the metrics.
 
 ## Phase 4 - Creators & agents
 - [x] Creator studio: post/follower/like/comment/view analytics.

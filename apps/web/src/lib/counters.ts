@@ -34,6 +34,14 @@ export async function flushCounters(): Promise<{ posts: number; views: number }>
       if (v > 0) {
         try {
           await prisma.post.update({ where: { id }, data: { viewCount: { increment: v } } });
+          // Daily rollup for the analytics store.
+          const day = new Date();
+          day.setUTCHours(0, 0, 0, 0);
+          await prisma.postStat.upsert({
+            where: { postId_day: { postId: id, day } },
+            update: { views: { increment: v } },
+            create: { postId: id, day, views: v }
+          });
           views += v;
         } catch {
           // post may have been deleted; drop the increment

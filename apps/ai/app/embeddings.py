@@ -17,6 +17,8 @@ import math
 import re
 import threading
 
+import httpx
+
 from .settings import settings
 
 HASH_DIM = 256
@@ -51,25 +53,42 @@ def _load_model():
     return _model
 
 
-def _model_embed(texts: list[str]) -> list[list[float]] | None:
+def _remote_embed(texts: list[str]) -> dict | None:
+    """Ask the ML inference service to embed, if one is configured."""
+    if not settings.ml_inference_url:
+        return None
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.post(
+                f"{settings.ml_inference_url.rstrip('/')}/infer/embed", json={"texts": texts}
+            )
+        data = resp.json() if resp.status_code == 200 else None
+        return data if data and "embeddings" in data else None
+    except Exception:
+        return None
+
+
+def local_embed(texts: list[str]) -> dict | None:
+    """Embed on THIS instance (used by /infer/embed on a GPU worker)."""
     if not settings.embeddings_enabled:
         return None
     try:
         model = _load_model()
         vectors = model.encode(texts, normalize_embeddings=True)
-        return [list(map(float, v)) for v in vectors]
+        vecs = [list(map(float, v)) for v in vectors]
+        return {"embeddings": vecs, "dim": len(vecs[0]) if vecs else 0,
+                "engine": settings.embeddings_model}
     except Exception:
         return None
 
 
 def embed(texts: list[str]) -> dict:
-    vectors = _model_embed(texts)
-    if vectors is not None:
-        return {
-            "embeddings": vectors,
-            "dim": len(vectors[0]) if vectors else 0,
-            "engine": settings.embeddings_model,
-        }
+    remote = _remote_embed(texts)
+    if remote is not None:
+        return remote
+    local = local_embed(texts)
+    if local is not None:
+        return local
     return {
         "embeddings": [hashing_embed(t) for t in texts],
         "dim": HASH_DIM,

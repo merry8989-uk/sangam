@@ -70,6 +70,7 @@ services:
       MODERATION_IMAGE_MODEL: ${MODERATION_IMAGE_MODEL:-Falconsai/nsfw_image_detection}
       EMBEDDINGS_ENABLED: ${EMBEDDINGS_ENABLED:-false}
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      ML_INFERENCE_URL: ${ML_INFERENCE_URL:-}
     ports:
       - "8000:8000"
     depends_on:
@@ -90,6 +91,7 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-generate-a-long-random-string}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8000}
       INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-in-prod}
+      MEDIA_QUEUE_ENABLED: ${MEDIA_QUEUE_ENABLED:-false}
     ports:
       - "3000:3000"
     depends_on:
@@ -99,6 +101,38 @@ services:
         condition: service_healthy
       ai:
         condition: service_started
+
+  # Media enrichment worker. Enable it by setting MEDIA_QUEUE_ENABLED=true.
+  worker:
+    build: ./apps/worker
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change-me-in-prod}@redis:6379
+      WEB_URL: http://web:3000
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-in-prod}
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  # GPU/ML inference worker (models + optional GPU). Opt in with:
+  #   docker compose --profile ml up
+  # then point the API at it: ML_INFERENCE_URL=http://ml:8000
+  ml:
+    build:
+      context: ./apps/ai
+      args:
+        INSTALL_ML: "true"
+    profiles: ["ml"]
+    environment:
+      MODERATION_ENABLED: "true"
+      EMBEDDINGS_ENABLED: "true"
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-sangam-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-in-prod}
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:-sangam-media}
+    ports:
+      - "8100:8000"
 
 volumes:
   pgdata:

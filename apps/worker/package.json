@@ -1,0 +1,9 @@
+{
+  "name": "@sangam/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Media enrichment queue worker for Sangam.",
+  "scripts": { "start": "node index.mjs" },
+  "dependencies": { "ioredis": "^5.4.1" }
+}

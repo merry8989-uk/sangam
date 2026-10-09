@@ -134,6 +134,7 @@ model Post {
   hashtags   PostHashtag[]
   group      Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
   bookmarks  Bookmark[]
+  stats      PostStat[]
 
   @@index([authorId, createdAt])
   @@index([createdAt])
@@ -444,4 +445,19 @@ enum GroupRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+// ---------- Analytics ----------
+// Daily rollup of post views, written by the counter flush job. This is the
+// analytics store: Post.viewCount is the running total, PostStat is the trend.
+model PostStat {
+  id     String   @id @default(cuid())
+  postId String
+  day    DateTime @db.Date
+  views  Int      @default(0)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, day])
+  @@index([day])
 }

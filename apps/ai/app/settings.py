@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # Moderation. The ML backend is opt-in: it needs the extra dependencies in
     # requirements-ml.txt. With it off (or unavailable), the heuristic lexicon
     # runs alone. Models are loaded lazily on first use.
+    # When set, the API instance forwards model calls to a separate (GPU)
+    # inference service instead of running the models itself.
+    ml_inference_url: str = ""
+
     moderation_enabled: bool = False
     moderation_text_model: str = "unitary/multilingual-toxic-xlm-roberta"
     moderation_image_model: str = "Falconsai/nsfw_image_detection"

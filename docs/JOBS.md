@@ -23,6 +23,13 @@ session. Cron expressions support minute and hour fields, e.g. `0 9 * * *`.
   -H "x-internal-secret: $INTERNAL_SECRET"
 ```
 
+## 3. Media enrichment worker
+
+Video posts are handed to a Redis queue (`queue:media`) and processed by the
+standalone worker in `apps/worker`. Enable it with `MEDIA_QUEUE_ENABLED=true`
+and run the worker service (it is already in docker-compose). The worker calls
+the internal enrich endpoint and re-queues on failure, up to three attempts.
+
 ## Notes
 
 - Both endpoints are idempotent per run window: the counter flush takes a Redis

@@ -19,6 +19,8 @@ Default models:
 import io
 import re
 import threading
+
+import httpx
 from dataclasses import dataclass, field
 
 from .settings import settings
@@ -150,8 +152,20 @@ def _rows(raw) -> list[dict]:
     return [{"label": str(r.get("label", "")), "score": round(float(r.get("score", 0.0)), 3)} for r in raw]
 
 
-def model_text(text: str) -> ModerationResult | None:
-    """Run the ML text classifier, or return None if it is unavailable."""
+def _remote(path: str, payload: dict) -> dict | None:
+    """POST to the ML inference service, if one is configured."""
+    if not settings.ml_inference_url:
+        return None
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.post(f"{settings.ml_inference_url.rstrip('/')}{path}", json=payload)
+        return resp.json() if resp.status_code == 200 else None
+    except Exception:
+        return None
+
+
+def local_text(text: str) -> ModerationResult | None:
+    """Run the model on THIS instance (used by /infer/text on a GPU worker)."""
     if not settings.moderation_enabled:
         return None
     try:
@@ -167,6 +181,21 @@ def model_text(text: str) -> ModerationResult | None:
         flagged=bool(cats), score=round(score, 3), categories=cats,
         matches=[], engine=settings.moderation_text_model, labels=rows,
     )
+
+
+def model_text(text: str) -> ModerationResult | None:
+    """Remote inference if configured, else the local model, else None."""
+    remote = _remote("/infer/text", {"text": text[:4000]})
+    if remote is not None:
+        return ModerationResult(
+            flagged=bool(remote.get("flagged")),
+            score=float(remote.get("score", 0.0)),
+            categories=list(remote.get("categories", [])),
+            matches=[],
+            engine=str(remote.get("engine", "remote")),
+            labels=list(remote.get("labels", [])),
+        )
+    return local_text(text)
 
 
 def model_image(data: bytes) -> ModerationResult | None:

@@ -1,9 +1,10 @@
 // Thin client for the Python AI/media service.
+import { newTraceparent } from "./trace";
 export async function callAi<T>(path: string, body: unknown): Promise<T> {
   const base = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
   const res = await fetch(`${base}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", traceparent: newTraceparent() },
     body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(`AI service error ${res.status} on ${path}`);

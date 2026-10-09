@@ -54,6 +54,10 @@ channel follows) into **one** product, built on our **own stack**.
 | Bookmarks / saved posts | ✅ |
 | Block, mute and report | ✅ |
 | Groups / communities (public + private) | ✅ |
+| Media enrichment queue worker (apps/worker) | ✅ |
+| GPU/ML inference split (ML_INFERENCE_URL) | ✅ |
+| Analytics store: daily view rollups + studio trend | ✅ |
+| Distributed tracing (W3C traceparent) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

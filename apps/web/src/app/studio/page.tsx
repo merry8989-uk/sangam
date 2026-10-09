@@ -29,6 +29,29 @@ export default async function StudioPage() {
     { likes: 0, comments: 0, views: 0 }
   );
 
+  // Last 7 days of views from the analytics store.
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - 6);
+  since.setUTCHours(0, 0, 0, 0);
+  const daily = await prisma.postStat.findMany({
+    where: { post: { authorId: userId }, day: { gte: since } },
+    select: { day: true, views: true }
+  });
+  const byDay = new Map<string, number>();
+  for (const d of daily) {
+    const key = new Date(d.day).toISOString().slice(0, 10);
+    byDay.set(key, (byDay.get(key) ?? 0) + d.views);
+  }
+  const trend: { day: string; views: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    d.setUTCHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
+    trend.push({ day: key, views: byDay.get(key) ?? 0 });
+  }
+  const peak = Math.max(1, ...trend.map((t) => t.views));
+
   const stats = [
     { label: "Posts", value: user._count.posts },
     { label: "Followers", value: user._count.followers },
@@ -62,6 +85,25 @@ export default async function StudioPage() {
           </li>
         ))}
       </ul>
+
+      <section className="mb-8">
+        <h2 className="mb-3 font-semibold">Views · last 7 days</h2>
+        <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white p-4">
+          {trend.map((t) => (
+            <div key={t.day} className="flex flex-1 flex-col items-center gap-1">
+              <div
+                className="w-full rounded-t bg-brand-500"
+                style={{ height: `${Math.max(4, Math.round((t.views / peak) * 96))}px` }}
+                title={`${t.views} views`}
+              />
+              <span className="text-[10px] text-ink-500">{t.day.slice(5)}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-ink-500">
+          Peak {peak} views. Written by the counter flush job (docs/JOBS.md).
+        </p>
+      </section>
 
       <AgentAssist />
     </main>
