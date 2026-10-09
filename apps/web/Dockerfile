@@ -19,5 +19,8 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
+# keep the full dependency tree so the prisma CLI is available at startup
+COPY --from=build /app/node_modules ./node_modules
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "docker-entrypoint.sh"]

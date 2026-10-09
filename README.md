@@ -84,15 +84,20 @@ cp .env.example .env          # then edit secrets
 docker compose up --build     # postgres, redis, minio, ai, web
 ```
 
-Then open http://localhost:3000.
+The web container applies the database schema on startup (`prisma db push`),
+so there is no separate migration step. Then open http://localhost:3000.
 
-Running the web app directly (without Docker):
+Running the web app outside Docker instead? Apply the schema yourself:
 
 ```bash
 npm install
-npm --workspace apps/web run db:push
+npm --workspace apps/web run db:push   # creates/updates all tables
 npm run dev
 ```
+
+Without this step Prisma will query tables that do not exist yet and the app
+will error. For production, use committed migrations rather than `db push`:
+`npx prisma migrate dev` to create one, `npx prisma migrate deploy` to apply.
 
 ## Repository layout
 
