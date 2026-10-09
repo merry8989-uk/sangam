@@ -1,0 +1,97 @@
+# Sangam - local development stack.
+# In production these run on India-hosted infrastructure (see docs/ARCHITECTURE.md).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sangam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-prod}
+      POSTGRES_DB: ${POSTGRES_DB:-sangam}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sangam}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-change-me-in-prod}"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-sangam-minio}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-change-me-in-prod}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  # Creates the media bucket on first boot.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $S3_ACCESS_KEY $S3_SECRET_KEY; do sleep 2; done;
+      mc mb -p local/${S3_BUCKET_MEDIA:-sangam-media} || true;
+      mc anonymous set download local/${S3_BUCKET_MEDIA:-sangam-media} || true;
+      echo 'minio bucket ready';
+      "
+
+  ai:
+    build: ./apps/ai
+    environment:
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-sangam-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-in-prod}
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:-sangam-media}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  web:
+    build: ./apps/web
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sangam}:${POSTGRES_PASSWORD:-change-me-in-prod}@postgres:5432/${POSTGRES_DB:-sangam}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change-me-in-prod}@redis:6379
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      S3_REGION: ${S3_REGION:-ap-south-1}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-sangam-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-in-prod}
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:-sangam-media}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-generate-a-long-random-string}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
