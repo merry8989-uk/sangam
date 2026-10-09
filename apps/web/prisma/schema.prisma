@@ -50,6 +50,9 @@ model User {
   settings      UserSettings?
   viewHistory   ViewHistory[]
 
+  skipSegments  SkipSegment[]
+  skipVotes     SkipVote[]
+
   @@index([username])
 }
 
@@ -185,6 +188,8 @@ model Media {
 
   post       Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
   story      Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  skipSegments SkipSegment[]
 
   @@index([postId])
 }
@@ -503,7 +508,7 @@ model UserSettings {
   captionsDefault Boolean @default(false)
   pipEnabled      Boolean @default(true)       // picture-in-picture
   backgroundPlay  Boolean @default(false)      // audio only, video hidden
-  sponsorSkip     Boolean @default(false)      // skip points
+  sponsorSkip     Boolean @default(false)      // auto-skip community skip points
 
   // Posts & media
   defaultVisibility String  @default("PUBLIC") // PUBLIC | FOLLOWERS | PRIVATE
@@ -533,6 +538,8 @@ model UserSettings {
   historyEnabled Boolean @default(true)
   autoDeleteDays Int     @default(0)           // 0 = never
 
+  skipCategories Json    @default("[]") // empty = all categories
+
   // Moderation
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")
@@ -550,4 +557,44 @@ model ViewHistory {
 
   @@unique([userId, postId])
   @@index([userId, viewedAt])
+}
+
+// Community and personal skip points for a video (SponsorBlock-style).
+// visibility SELF  -> only the author's own player skips it
+// visibility EVERYONE -> anyone with "skip nonsense parts" on skips it
+model SkipSegment {
+  id         String   @id @default(cuid())
+  mediaId    String
+  authorId   String
+  startSec   Float
+  endSec     Float
+  // NONSENSE | INTRO | OUTRO | SPONSOR | SELF_PROMO | MUSIC | FILLER
+  category   String   @default("NONSENSE")
+  // SELF | EVERYONE
+  visibility String   @default("SELF")
+  upvotes    Int      @default(0)
+  downvotes  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  media      Media      @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes      SkipVote[]
+
+  @@index([mediaId, visibility])
+  @@index([authorId])
+}
+
+// One vote per user per segment, so scores cannot be inflated by repeats.
+model SkipVote {
+  id        String   @id @default(cuid())
+  segmentId String
+  userId    String
+  value     Int      // 1 or -1
+  createdAt DateTime @default(now())
+
+  segment   SkipSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, userId])
+  @@index([userId])
 }

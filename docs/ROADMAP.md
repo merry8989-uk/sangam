@@ -121,6 +121,17 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Live DM updates on mobile (SSE/WebSocket client).
 - [ ] Push notifications.
 
+## Phase 9 - Custom skip points
+- [x] Mark any part of a video as skippable; it is skipped on every replay.
+- [x] Author chooses SELF (only their own player) or EVERYONE (anyone with
+      skipping on).
+- [x] Community voting with one vote per user, and segments the crowd has
+      buried are hidden automatically.
+- [x] Works on the web watch page and in the Android player.
+- [ ] SponsorBlock-style category presets and an import/export of a user's
+      own skip list.
+
+
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.

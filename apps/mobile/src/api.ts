@@ -58,3 +58,57 @@ export type Post = {
 };
 
 export const mediaUrl = (key: string) => BASE_URL + "/api/media/" + encodeURIComponent(key);
+
+export type SkipSegment = {
+  id: string;
+  mediaId: string;
+  startSec: number;
+  endSec: number;
+  category: string;
+  visibility: "SELF" | "EVERYONE";
+  upvotes: number;
+  downvotes: number;
+  authorId: string;
+  authorName?: string;
+  mine?: boolean;
+};
+
+export const SKIP_CATEGORIES = [
+  "NONSENSE",
+  "INTRO",
+  "OUTRO",
+  "SPONSOR",
+  "SELF_PROMO",
+  "MUSIC",
+  "FILLER"
+] as const;
+
+export type SkipCategory = (typeof SKIP_CATEGORIES)[number];
+
+export function getSkipSegments(mediaId: string) {
+  return api<{ items: SkipSegment[] }>("/api/skip-points?mediaId=" + encodeURIComponent(mediaId));
+}
+
+export function createSkipSegment(input: {
+  mediaId: string;
+  startSec: number;
+  endSec: number;
+  category: SkipCategory;
+  visibility: "SELF" | "EVERYONE";
+}) {
+  return api<{ segment: SkipSegment }>("/api/skip-points", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function deleteSkipSegment(id: string) {
+  return api<{ ok: boolean }>("/api/skip-points/" + id, { method: "DELETE" });
+}
+
+export function voteSkipSegment(id: string, value: 1 | -1) {
+  return api<{ ok: boolean; vote: number }>("/api/skip-points/" + id + "/vote", {
+    method: "POST",
+    body: JSON.stringify({ value })
+  });
+}

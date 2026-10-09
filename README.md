@@ -66,6 +66,7 @@ channel follows) into **one** product, built on our **own stack**.
 | DM custom wallpaper + watch history with reset | ✅ |
 | Theme engine: 480 themes, day/week/month/year rotation, mood-driven | ✅ |
 | Android app (Expo / React Native) with Bearer-token auth | ✅ |
+| Custom skip points (per-user or shared, with community voting) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

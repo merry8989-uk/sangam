@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useColors } from "./ui";
+import type { SkipSegment } from "./api";
 
 // A video player with the controls from the design notes: play/pause, skip,
-// speed, mute, audio-only, background play and picture-in-picture.
+// speed, mute, audio-only, background play, picture-in-picture - and automatic
+// skipping of skip points (the author's own, plus community ones when enabled).
 export type VideoPlayerProps = {
   hlsUrl?: string | null;
   mp4Url?: string | null;
@@ -13,6 +15,9 @@ export type VideoPlayerProps = {
   mutedByDefault?: boolean;
   loop?: boolean;
   height?: number;
+  segments?: SkipSegment[];
+  skipEnabled?: boolean;
+  onTimeUpdate?: (t: number) => void;
 };
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -31,6 +36,7 @@ export default function VideoPlayer(props: VideoPlayerProps) {
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
   const [barW, setBarW] = useState(0);
+  const [skipped, setSkipped] = useState<string | null>(null);
   const viewRef = useRef<VideoView>(null);
 
   const player = useVideoPlayer(uri, (p) => {
@@ -39,16 +45,28 @@ export default function VideoPlayer(props: VideoPlayerProps) {
     if (props.autoPlay) p.play();
   });
 
-  // expo-video's values are not reactive, so poll for the scrubber.
+  // expo-video's values are not reactive, so poll. This also drives auto-skip.
   useEffect(() => {
     const t = setInterval(() => {
-      setTime(player.currentTime ?? 0);
+      const now = player.currentTime ?? 0;
+      setTime(now);
       setDur(player.duration ?? 0);
-      // Keep the button honest if playback ends or the native view takes over.
       setPlaying(player.playing);
-    }, 500);
+      props.onTimeUpdate?.(now);
+
+      if (props.skipEnabled && props.segments && props.segments.length && player.playing) {
+        // -0.15 keeps us from re-triggering on the segment's own end frame.
+        const hit = props.segments.find((s) => now >= s.startSec && now < s.endSec - 0.15);
+        if (hit) {
+          player.currentTime = hit.endSec;
+          setTime(hit.endSec);
+          setSkipped(hit.category);
+          setTimeout(() => setSkipped(null), 1500);
+        }
+      }
+    }, 400);
     return () => clearInterval(t);
-  }, [player]);
+  }, [player, props.segments, props.skipEnabled, props.onTimeUpdate]);
 
   if (!uri) return null;
 
@@ -129,6 +147,13 @@ export default function VideoPlayer(props: VideoPlayerProps) {
         {audioOnly && (
           <View style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center", backgroundColor: "#000" }]}>
             <Text style={{ color: "#fff", fontSize: 13 }}>Audio only</Text>
+          </View>
+        )}
+        {skipped && (
+          <View style={[StyleSheet.absoluteFillObject, { alignItems: "flex-end", justifyContent: "flex-start", padding: 10 }]}>
+            <View style={{ backgroundColor: "#000000cc", borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8 }}>
+              <Text style={{ color: "#fff", fontSize: 12 }}>Skipped {skipped}</Text>
+            </View>
           </View>
         )}
       </View>

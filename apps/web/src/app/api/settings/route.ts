@@ -24,6 +24,7 @@ const Body = z.object({
   pipEnabled: z.boolean().optional(),
   backgroundPlay: z.boolean().optional(),
   sponsorSkip: z.boolean().optional(),
+  skipCategories: z.array(z.enum(["NONSENSE", "INTRO", "OUTRO", "SPONSOR", "SELF_PROMO", "MUSIC", "FILLER"])).max(10).optional(),
 
   defaultVisibility: z.enum(["PUBLIC", "FOLLOWERS", "PRIVATE"]).optional(),
   allowDownloads: z.boolean().optional(),

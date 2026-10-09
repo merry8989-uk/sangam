@@ -29,6 +29,21 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
 
   const video = post.media.find((m) => m.kind === "VIDEO" && m.hlsKey);
 
+  // Skip points: everyone's public ones plus the viewer's own private ones.
+  const skipRows = video
+    ? await prisma.skipSegment.findMany({
+        where: {
+          mediaId: video.id,
+          OR: [{ visibility: "EVERYONE" }, ...(viewerId ? [{ authorId: viewerId }] : [])]
+        },
+        orderBy: { startSec: "asc" },
+        select: { startSec: true, endSec: true, upvotes: true, downvotes: true, visibility: true, authorId: true }
+      })
+    : [];
+  const skipSegments = skipRows
+    .filter((r) => r.authorId === viewerId || (r.visibility === "EVERYONE" && r.upvotes - r.downvotes >= -2))
+    .map((r) => ({ startSec: r.startSec, endSec: r.endSec }));
+
   const settings = await getSettingsOptional(viewerId);
 
   // Record this view in the viewer's history (unless they turned history off).
@@ -81,6 +96,8 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
               src={mediaUrl(video.hlsKey as string)}
               poster={video.thumbnailKey ? mediaUrl(video.thumbnailKey) : undefined}
               className="w-full rounded-xl bg-black"
+              segments={skipSegments}
+              skipEnabled={settings?.sponsorSkip ?? false}
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element

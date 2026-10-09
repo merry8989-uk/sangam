@@ -60,6 +60,29 @@ export default function Settings() {
         </Card>
 
         <Card>
+          <Heading>Playback</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            Skip parts other people have marked as nonsense or filler.
+          </Text>
+          <View style={{ marginTop: 10, flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <Pill label={settings?.sponsorSkip ? "Skip nonsense: on" : "Skip nonsense: off"} active={Boolean(settings?.sponsorSkip)} />
+            <Button
+              label={settings?.sponsorSkip ? "Turn off" : "Turn on"}
+              variant="ghost"
+              onPress={async () => {
+                const next = !settings?.sponsorSkip;
+                setSettings({ ...(settings ?? {}), sponsorSkip: next });
+                try {
+                  await api("/api/settings", { method: "PUT", body: JSON.stringify({ sponsorSkip: next }) });
+                } catch {
+                  setSettings({ ...(settings ?? {}), sponsorSkip: !next });
+                }
+              }}
+            />
+          </View>
+        </Card>
+
+        <Card>
           <Heading>Account</Heading>
           {hasToken() ? (
             <View style={{ marginTop: 8, gap: 8 }}>
