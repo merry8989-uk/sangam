@@ -138,6 +138,14 @@ def transcode_video(key: str) -> dict:
             "-frames:v", "1", "-vf", "scale=640:-2", str(outdir / "poster.jpg"),
         ])
 
+        # Short muted preview clip (used for hover previews), ~4s.
+        _run([
+            _ffmpeg(), "-y", "-ss", f"{seek:.2f}", "-i", str(src), "-t", "4",
+            "-vf", "scale=-2:360", "-an",
+            "-c:v", "libx264", "-preset", "veryfast", "-movflags", "+faststart",
+            str(outdir / "preview.mp4"),
+        ])
+
         prefix = f"{key.rsplit('.', 1)[0]}_hls"
         for f in sorted(outdir.rglob("*")):
             if f.is_file():
@@ -151,5 +159,6 @@ def transcode_video(key: str) -> dict:
             "durationMs": int(meta["duration"] * 1000),
             "thumbnailKey": f"{prefix}/poster.jpg",
             "hlsKey": f"{prefix}/master.m3u8",
+            "previewKey": f"{prefix}/preview.mp4",
             "renditions": [h for h, _, _ in rends],
         }

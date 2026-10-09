@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
+import PreviewThumb from "@/components/PreviewThumb";
 
 export const dynamic = "force-dynamic";
 
@@ -71,15 +72,12 @@ export default async function ExplorePage() {
           {posts.map((p) => {
             const m = p.media[0];
             return (
-              <Link key={p.id} href={`/post/${p.id}`} className="aspect-square overflow-hidden rounded-lg bg-slate-200">
-                {m && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={p.caption ?? ""}
-                    className="h-full w-full object-cover"
-                    src={mediaUrl(m.thumbnailKey ?? m.storageKey)}
-                  />
-                )}
+              <Link key={p.id} href={`/post/${p.id}`} className="block">
+                <PreviewThumb
+                  poster={m ? mediaUrl(m.thumbnailKey ?? m.storageKey) : undefined}
+                  preview={m?.kind === "VIDEO" && m.previewKey ? mediaUrl(m.previewKey) : undefined}
+                  className="aspect-square rounded-lg bg-slate-200"
+                />
               </Link>
             );
           })}

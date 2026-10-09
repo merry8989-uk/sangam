@@ -27,7 +27,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Shorts surface: full-height vertical video feed.
 - [x] Long-form channel pages (videos, shorts, about) + a Following feed of channel videos.
 - [x] Watch page: player, channel row, description, hashtags, comments, related videos.
-- [ ] Preview clip generation; processing status polling.
+- [x] Preview clip generation (short muted MP4 for hover previews) + processing status polling.
+- [ ] Move media enrichment onto a queue worker (today it runs in a background task).
 
 ## Phase 3 - Ranking & trust
 - [x] Multi-stage recommender: retrieval -> filter -> rank -> diversity.

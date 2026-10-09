@@ -23,7 +23,7 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.8.0",
+    version="0.9.0",
 )
 
 app.add_middleware(ObservabilityMiddleware)
@@ -85,6 +85,7 @@ class ProcessVideoOut(BaseModel):
     durationMs: int
     thumbnailKey: str
     hlsKey: str
+    previewKey: str
     renditions: list[int]
 
 

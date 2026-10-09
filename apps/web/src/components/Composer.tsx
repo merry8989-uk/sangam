@@ -8,6 +8,7 @@ export default function Composer() {
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function kindOf(f: File): "IMAGE" | "VIDEO" | "AUDIO" {
@@ -16,17 +17,41 @@ export default function Composer() {
     return "IMAGE";
   }
 
+  // Poll until the background transcoding finishes.
+  async function pollStatus(postId: string) {
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const res = await fetch(`/api/posts/${postId}/status`);
+        if (!res.ok) break;
+        const d = await res.json();
+        if (d.status === "READY") {
+          setStatus("Video ready.");
+          break;
+        }
+        if (d.status === "FAILED") {
+          setStatus("Video processing failed.");
+          break;
+        }
+        setStatus("Processing video...");
+      } catch {
+        break;
+      }
+    }
+    router.refresh();
+  }
+
   async function submit() {
     if (!caption.trim() && !file) return;
     setBusy(true);
     setError(null);
+    setStatus(null);
     try {
       const media: unknown[] = [];
       if (file) {
         const contentType = file.type || "application/octet-stream";
         const kind = kindOf(file);
 
-        // 1. ask the server for a pre-signed PUT URL
         const pres = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -35,7 +60,6 @@ export default function Composer() {
         if (!pres.ok) throw new Error("Could not start upload");
         const { key, url } = (await pres.json()) as { key: string; url: string };
 
-        // 2. upload bytes straight to object storage
         const put = await fetch(url, {
           method: "PUT",
           headers: { "Content-Type": contentType },
@@ -46,7 +70,6 @@ export default function Composer() {
         media.push({ key, kind, mimeType: contentType, sizeBytes: file.size });
       }
 
-      // 3. create the post
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,15 +80,22 @@ export default function Composer() {
           media
         })
       });
-      if (!res.ok) throw new Error("Could not create post");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not create post");
 
       setCaption("");
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-      router.refresh();
+      setBusy(false);
+
+      if (data.processing && data.post?.id) {
+        setStatus("Processing video...");
+        await pollStatus(data.post.id);
+      } else {
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
       setBusy(false);
     }
   }
@@ -88,6 +118,7 @@ export default function Composer() {
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="text-xs text-ink-500"
           />
+          {status && <span className="text-xs text-brand-700">{status}</span>}
           {error && <span className="text-xs text-red-600">{error}</span>}
         </div>
         <button

@@ -17,6 +17,7 @@ export type ProcessedVideo = {
   durationMs: number;
   thumbnailKey: string;
   hlsKey: string;
+  previewKey: string;
   renditions: number[];
 };
 export type ModerationResult = {

@@ -47,6 +47,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |
 | Video pipeline: FFmpeg -> ABR HLS ladder -> player -> Shorts | ✅ |
+| Hover preview clips + processing status polling | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

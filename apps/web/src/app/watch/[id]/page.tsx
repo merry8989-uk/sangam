@@ -10,6 +10,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import Comments from "@/components/Comments";
 import FollowButton from "@/components/FollowButton";
 import LikeButton from "@/components/LikeButton";
+import PreviewThumb from "@/components/PreviewThumb";
 
 export const dynamic = "force-dynamic";
 
@@ -119,12 +120,11 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
               return (
                 <li key={r.id}>
                   <Link href={`/watch/${r.id}`} className="flex gap-2">
-                    <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded bg-slate-200">
-                      {m?.thumbnailKey && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img alt="" className="h-full w-full object-cover" src={mediaUrl(m.thumbnailKey)} />
-                      )}
-                    </div>
+                    <PreviewThumb
+                      poster={m?.thumbnailKey ? mediaUrl(m.thumbnailKey) : undefined}
+                      preview={m?.previewKey ? mediaUrl(m.previewKey) : undefined}
+                      className="h-16 w-28 shrink-0 rounded bg-slate-200"
+                    />
                     <div className="min-w-0">
                       <div className="line-clamp-2 text-sm font-medium">{r.caption || "(no title)"}</div>
                       <div className="text-xs text-ink-500">@{r.author.username}</div>

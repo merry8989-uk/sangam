@@ -21,6 +21,53 @@ const CreateBody = z.object({
   media: z.array(MediaIn).max(10).default([])
 });
 
+const POST_INCLUDE = { author: true, media: true } as const;
+
+// Fan-out-on-write into each follower's Redis timeline (capped at 1000).
+async function fanOut(userId: string, postId: string, visibility: string) {
+  if (visibility === "PRIVATE") return;
+  const followers = await prisma.follow.findMany({
+    where: { followeeId: userId, status: "ACCEPTED" },
+    select: { followerId: true }
+  });
+  const score = Date.now();
+  const pipeline = redis.pipeline();
+  for (const f of followers) {
+    pipeline.zadd(feedKey(f.followerId), score, postId);
+    pipeline.zremrangebyrank(feedKey(f.followerId), 0, -1001);
+  }
+  await pipeline.exec();
+}
+
+// Enrich every media item on a post (thumbnails, HLS, poster, preview clip).
+async function enrichMedia(postId: string) {
+  const media = await prisma.media.findMany({ where: { postId } });
+  await Promise.all(
+    media.map(async (m) => {
+      if (m.kind === "IMAGE") {
+        const r = await processImage(m.storageKey);
+        await prisma.media.update({
+          where: { id: m.id },
+          data: { width: r.width, height: r.height, thumbnailKey: r.thumbnailKey }
+        });
+      } else if (m.kind === "VIDEO") {
+        const r = await processVideo(m.storageKey);
+        await prisma.media.update({
+          where: { id: m.id },
+          data: {
+            width: r.width,
+            height: r.height,
+            durationMs: r.durationMs,
+            thumbnailKey: r.thumbnailKey,
+            hlsKey: r.hlsKey,
+            previewKey: r.previewKey
+          }
+        });
+      }
+    })
+  );
+}
+
 // GET /api/posts?cursor=<id>&limit=20&type=<TYPE> - cursor-paginated feed.
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -37,7 +84,7 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
     take: limit,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    include: { author: true, media: true }
+    include: POST_INCLUDE
   });
 
   return NextResponse.json({
@@ -46,7 +93,12 @@ export async function GET(req: Request) {
   });
 }
 
-// POST /api/posts - create, moderate, enrich media, then fan out to followers.
+// POST /api/posts - create, moderate, then enrich.
+//
+// Images are enriched inline (fast). Posts containing video are enriched in the
+// background and return 202 PROCESSING; the client polls
+// /api/posts/[id]/status until the post is READY or FAILED. In production this
+// background step belongs on a queue worker.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
@@ -73,12 +125,10 @@ export async function POST(req: Request) {
         }))
       }
     },
-    include: { author: true, media: true }
+    include: POST_INCLUDE
   });
 
-  // 1. Moderation. A flagged caption is held for review: the post is hidden
-  //    (PRIVATE) and a flag is recorded rather than published. Fail-open on
-  //    service error, which is logged by the caller in production.
+  // 1. Moderation. A flagged caption is held for review.
   let flagged = false;
   if (caption) {
     try {
@@ -96,57 +146,15 @@ export async function POST(req: Request) {
         });
       }
     } catch {
-      // moderation unavailable: proceed, but this should alert in production
+      // moderation unavailable: proceed (should alert in production)
     }
   }
 
-  // 2. Media enrichment (queue in production; inline here for a working slice).
-  const images = post.media.filter((m) => m.kind === "IMAGE");
-  const videos = post.media.filter((m) => m.kind === "VIDEO");
-  if (images.length || videos.length) {
-    try {
-      await Promise.all([
-        ...images.map(async (m) => {
-          const r = await processImage(m.storageKey);
-          await prisma.media.update({
-            where: { id: m.id },
-            data: { width: r.width, height: r.height, thumbnailKey: r.thumbnailKey }
-          });
-        }),
-        ...videos.map(async (m) => {
-          const r = await processVideo(m.storageKey);
-          await prisma.media.update({
-            where: { id: m.id },
-            data: {
-              width: r.width,
-              height: r.height,
-              durationMs: r.durationMs,
-              thumbnailKey: r.thumbnailKey,
-              hlsKey: r.hlsKey
-            }
-          });
-        })
-      ]);
-      post = await prisma.post.update({
-        where: { id: post.id },
-        data: { status: "READY" },
-        include: { author: true, media: true }
-      });
-    } catch {
-      await prisma.post.update({ where: { id: post.id }, data: { status: "FAILED" } });
-      return NextResponse.json({ error: "Media processing failed" }, { status: 502 });
-    }
-  }
-
-  // 3. Index hashtags from the caption.
+  // 2. Index hashtags from the caption.
   if (caption) {
     try {
       for (const tag of extractTags(caption)) {
-        const hashtag = await prisma.hashtag.upsert({
-          where: { tag },
-          update: {},
-          create: { tag }
-        });
+        const hashtag = await prisma.hashtag.upsert({ where: { tag }, update: {}, create: { tag } });
         await prisma.postHashtag.upsert({
           where: { postId_hashtagId: { postId: post.id, hashtagId: hashtag.id } },
           update: {},
@@ -154,34 +162,49 @@ export async function POST(req: Request) {
         });
       }
     } catch {
-      /* hashtag indexing is best effort */
+      /* best effort */
     }
   }
 
-  // 4. Flagged posts are withheld from public distribution.
+  // 3. Flagged posts are withheld from public distribution.
   if (flagged) {
     post = await prisma.post.update({
       where: { id: post.id },
       data: { visibility: "PRIVATE" },
-      include: { author: true, media: true }
+      include: POST_INCLUDE
     });
     return NextResponse.json({ post, flagged: true }, { status: 201 });
   }
 
-  // 5. Fan-out-on-write into each follower's Redis timeline (capped at 1000).
-  if (visibility !== "PRIVATE") {
-    const followers = await prisma.follow.findMany({
-      where: { followeeId: userId, status: "ACCEPTED" },
-      select: { followerId: true }
-    });
-    const score = Date.now();
-    const pipeline = redis.pipeline();
-    for (const f of followers) {
-      pipeline.zadd(feedKey(f.followerId), score, post.id);
-      pipeline.zremrangebyrank(feedKey(f.followerId), 0, -1001);
-    }
-    await pipeline.exec();
+  // 4. Video posts are enriched in the background; the client polls status.
+  if (media.some((m) => m.kind === "VIDEO")) {
+    void (async () => {
+      try {
+        await enrichMedia(post.id);
+        await prisma.post.update({ where: { id: post.id }, data: { status: "READY" } });
+        await fanOut(userId, post.id, visibility);
+      } catch {
+        await prisma.post.update({ where: { id: post.id }, data: { status: "FAILED" } });
+      }
+    })();
+    return NextResponse.json({ post, flagged: false, processing: true }, { status: 202 });
   }
 
+  // 5. Images / text: enrich inline, then fan out.
+  if (media.length) {
+    try {
+      await enrichMedia(post.id);
+      post = await prisma.post.update({
+        where: { id: post.id },
+        data: { status: "READY" },
+        include: POST_INCLUDE
+      });
+    } catch {
+      await prisma.post.update({ where: { id: post.id }, data: { status: "FAILED" } });
+      return NextResponse.json({ error: "Media processing failed" }, { status: 502 });
+    }
+  }
+
+  await fanOut(userId, post.id, visibility);
   return NextResponse.json({ post, flagged: false }, { status: 201 });
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { formatCount, formatDuration, timeAgo } from "@/lib/format";
 import FollowButton from "@/components/FollowButton";
+import PreviewThumb from "@/components/PreviewThumb";
 
 export const dynamic = "force-dynamic";
 
@@ -65,11 +66,12 @@ export default async function ChannelPage({ params }: { params: { username: stri
             const m = p.media.find((x) => x.kind === "VIDEO");
             return (
               <Link key={p.id} href={`/watch/${p.id}`} className="group">
-                <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-200">
-                  {m?.thumbnailKey && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt="" className="h-full w-full object-cover" src={mediaUrl(m.thumbnailKey)} />
-                  )}
+                <div className="relative">
+                  <PreviewThumb
+                    poster={m?.thumbnailKey ? mediaUrl(m.thumbnailKey) : undefined}
+                    preview={m?.previewKey ? mediaUrl(m.previewKey) : undefined}
+                    className="aspect-video rounded-lg bg-slate-200"
+                  />
                   {m?.durationMs ? (
                     <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[11px] text-white">
                       {formatDuration(m.durationMs)}

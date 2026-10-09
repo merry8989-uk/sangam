@@ -162,6 +162,8 @@ model Media {
   thumbnailKey String?
   // HLS master playlist key for videos
   hlsKey     String?
+  // Short muted preview clip for hover previews
+  previewKey String?
   createdAt  DateTime  @default(now())
 
   post       Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
