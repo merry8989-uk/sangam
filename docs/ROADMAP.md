@@ -25,7 +25,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] /process/video endpoint; VIDEO media enriched on post creation.
 - [x] HLS player component (native HLS + hls.js fallback).
 - [x] Shorts surface: full-height vertical video feed.
-- [ ] Long-form "channel" pages + channel follows.
+- [x] Long-form channel pages (videos, shorts, about) + a Following feed of channel videos.
+- [x] Watch page: player, channel row, description, hashtags, comments, related videos.
 - [ ] Preview clip generation; processing status polling.
 
 ## Phase 3 - Ranking & trust

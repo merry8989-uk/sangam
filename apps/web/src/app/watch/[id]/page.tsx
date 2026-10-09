@@ -1,0 +1,139 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { mediaUrl } from "@/lib/s3";
+import { formatCount, formatDuration, timeAgo } from "@/lib/format";
+import VideoPlayer from "@/components/VideoPlayer";
+import Comments from "@/components/Comments";
+import FollowButton from "@/components/FollowButton";
+import LikeButton from "@/components/LikeButton";
+
+export const dynamic = "force-dynamic";
+
+export default async function WatchPage({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  const viewerId = (session?.user as { id?: string } | undefined)?.id;
+
+  const post = await prisma.post.findUnique({
+    where: { id: params.id },
+    include: { author: true, media: true, hashtags: { include: { hashtag: true } } }
+  });
+  if (!post || post.status !== "READY") notFound();
+
+  const video = post.media.find((m) => m.kind === "VIDEO" && m.hlsKey);
+
+  // View counting is a simple increment here; production batches it in Redis.
+  await prisma.post.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } });
+
+  const liked = viewerId
+    ? Boolean(await prisma.like.findUnique({ where: { postId_userId: { postId: post.id, userId: viewerId } } }))
+    : false;
+
+  const isFollowing =
+    viewerId && viewerId !== post.authorId
+      ? Boolean(
+          await prisma.follow.findUnique({
+            where: { followerId_followeeId: { followerId: viewerId, followeeId: post.authorId } }
+          })
+        )
+      : false;
+
+  const tagIds = post.hashtags.map((h) => h.hashtagId);
+  const related = await prisma.post.findMany({
+    where: {
+      id: { not: post.id },
+      status: "READY",
+      visibility: "PUBLIC",
+      OR: [{ authorId: post.authorId }, ...(tagIds.length ? [{ hashtags: { some: { hashtagId: { in: tagIds } } } }] : [])]
+    },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    include: { author: true, media: true }
+  });
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-6">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
+          {video ? (
+            <VideoPlayer
+              src={mediaUrl(video.hlsKey as string)}
+              poster={video.thumbnailKey ? mediaUrl(video.thumbnailKey) : undefined}
+              className="w-full rounded-xl bg-black"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="w-full rounded-xl"
+              src={mediaUrl(post.media[0]?.thumbnailKey ?? post.media[0]?.storageKey ?? "")}
+            />
+          )}
+
+          <h1 className="mt-3 text-xl font-semibold">{post.caption || "(no title)"}</h1>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Link href={`/channel/${post.author.username}`} className="flex items-center gap-2">
+              <span className="h-9 w-9 rounded-full bg-brand-100" />
+              <span>
+                <span className="block text-sm font-medium">{post.author.displayName}</span>
+                <span className="block text-xs text-ink-500">@{post.author.username}</span>
+              </span>
+            </Link>
+            {viewerId && viewerId !== post.authorId && (
+              <FollowButton targetId={post.authorId} initialFollowing={isFollowing} />
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <LikeButton postId={post.id} initialCount={post.likeCount} initialLiked={liked} />
+            </div>
+          </div>
+
+          <div className="mt-2 text-sm text-ink-500">
+            {formatCount(post.viewCount)} views · {timeAgo(post.createdAt)}
+            {video?.durationMs ? ` · ${formatDuration(video.durationMs)}` : ""}
+          </div>
+
+          {post.hashtags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {post.hashtags.map((h) => (
+                <Link key={h.hashtagId} href={`/tag/${encodeURIComponent(h.hashtag.tag)}`}
+                      className="text-sm font-medium text-brand-700">
+                  #{h.hashtag.tag}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <Comments postId={post.id} />
+        </div>
+
+        <aside>
+          <h2 className="mb-2 text-sm font-semibold text-ink-500">Related</h2>
+          <ul className="space-y-3">
+            {related.map((r) => {
+              const m = r.media[0];
+              return (
+                <li key={r.id}>
+                  <Link href={`/watch/${r.id}`} className="flex gap-2">
+                    <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded bg-slate-200">
+                      {m?.thumbnailKey && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img alt="" className="h-full w-full object-cover" src={mediaUrl(m.thumbnailKey)} />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="line-clamp-2 text-sm font-medium">{r.caption || "(no title)"}</div>
+                      <div className="text-xs text-ink-500">@{r.author.username}</div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
+      </div>
+    </main>
+  );
+}
