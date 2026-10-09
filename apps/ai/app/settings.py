@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     sarvam_base_url: str = "https://api.sarvam.ai"
     sarvam_model: str = "sarvam-105b"
 
+    # Moderation. The ML backend is opt-in: it needs the extra dependencies in
+    # requirements-ml.txt. With it off (or unavailable), the heuristic lexicon
+    # runs alone. Models are loaded lazily on first use.
+    moderation_enabled: bool = False
+    moderation_text_model: str = "unitary/multilingual-toxic-xlm-roberta"
+    moderation_image_model: str = "Falconsai/nsfw_image_detection"
+    moderation_text_threshold: float = 0.7
+    moderation_image_threshold: float = 0.7
+
     class Config:
         env_file = ".env"
 

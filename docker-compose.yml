@@ -65,6 +65,9 @@ services:
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}
       SARVAM_BASE_URL: ${SARVAM_BASE_URL:-https://api.sarvam.ai}
       SARVAM_MODEL: ${SARVAM_MODEL:-sarvam-105b}
+      MODERATION_ENABLED: ${MODERATION_ENABLED:-false}
+      MODERATION_TEXT_MODEL: ${MODERATION_TEXT_MODEL:-unitary/multilingual-toxic-xlm-roberta}
+      MODERATION_IMAGE_MODEL: ${MODERATION_IMAGE_MODEL:-Falconsai/nsfw_image_detection}
     ports:
       - "8000:8000"
     depends_on:

@@ -35,7 +35,9 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Multilingual text moderation (English + Hindi, Devanagari and romanised) with categories.
 - [x] Moderation wired into post creation: flagged posts withheld + queued.
 - [x] Ranked "For you" feed and a moderation review page.
-- [ ] Replace heuristics with trained models (Indic text classifier, vision/NSFW).
+- [x] Real moderation models wired in: multilingual text (XLM-R) + NSFW vision, opt-in
+      via MODERATION_ENABLED; lazy-loaded with heuristic fallback and engine reporting.
+- [ ] Serve the moderation models from a dedicated (GPU) worker for throughput.
 - [x] View counters batched in Redis, flushed to Postgres by a job (docs/JOBS.md).
 - [ ] Move counters to an analytics store for long-term reporting.
 - [x] Observability: structured JSON request logs + /metrics (AI service), /api/health (web).

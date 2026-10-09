@@ -1,0 +1,7 @@
+# Optional ML dependencies for real moderation models.
+# Install only where you want the models to run (see Dockerfile INSTALL_ML).
+# For CPU-only torch, install torch from the CPU index first:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch==2.4.1
+transformers==4.44.2
+sentencepiece==0.2.0

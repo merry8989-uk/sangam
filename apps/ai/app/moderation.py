@@ -1,19 +1,46 @@
-"""Multilingual content moderation.
+"""Content moderation.
 
-Heuristic, dependency-free starter: normalise the text (case, leetspeak,
-repeated characters, zero-width characters), then match against a small
-multilingual lexicon (English plus Hindi - Devanagari and romanised)
-organised by category. Returns a score, the matched categories and the
-specific terms.
+Two layers, combined:
 
-This is a safety floor, not a classifier. The ``classifier`` hook lets a
-trained model (an Indic-capable text model) replace ``moderate_text``
-without changing callers. Slur lists are maintained privately and are
-represented here by placeholders only.
+1. A real ML backend (Hugging Face `transformers`) for text and images. It is
+   opt-in (`MODERATION_ENABLED=true` plus the extra deps in requirements-ml.txt)
+   and loaded lazily on first use.
+2. A dependency-free heuristic lexicon that always runs as a floor.
+
+If the model is unavailable for any reason - deps missing, download failed,
+inference error - moderation falls back to the heuristic and reports which
+engine actually produced the verdict in `engine`.
+
+Default models:
+  text:  unitary/multilingual-toxic-xlm-roberta  (XLM-R; multilingual, incl. Indic)
+  image: Falconsai/nsfw_image_detection          (ViT image classifier)
 """
 
+import io
 import re
+import threading
 from dataclasses import dataclass, field
+
+from .settings import settings
+
+# --------------------------------------------------------------------------
+# Shared result type
+# --------------------------------------------------------------------------
+
+
+@dataclass
+class ModerationResult:
+    flagged: bool
+    score: float
+    categories: list[str] = field(default_factory=list)
+    matches: list[str] = field(default_factory=list)
+    engine: str = "heuristic"
+    labels: list[dict] = field(default_factory=list)
+
+
+# --------------------------------------------------------------------------
+# Layer 2: heuristic lexicon (always available)
+# --------------------------------------------------------------------------
 
 CATEGORY_WEIGHTS = {"hate": 1.0, "violence": 0.9, "scam": 0.8, "abuse": 0.7, "spam": 0.5}
 
@@ -44,15 +71,7 @@ def normalize(text: str) -> str:
     return t
 
 
-@dataclass
-class ModerationResult:
-    flagged: bool
-    score: float
-    categories: list[str] = field(default_factory=list)
-    matches: list[str] = field(default_factory=list)
-
-
-def moderate_text(text: str) -> ModerationResult:
+def heuristic_text(text: str) -> ModerationResult:
     n = normalize(text)
     cats: list[str] = []
     matches: list[str] = []
@@ -66,5 +85,138 @@ def moderate_text(text: str) -> ModerationResult:
                 score = max(score, CATEGORY_WEIGHTS[category])
     score = min(1.0, score + 0.1 * max(0, len(matches) - 1))
     return ModerationResult(
-        flagged=score >= 0.5, score=round(score, 3), categories=cats, matches=matches
+        flagged=score >= 0.5, score=round(score, 3), categories=cats,
+        matches=matches, engine="heuristic",
     )
+
+
+# --------------------------------------------------------------------------
+# Layer 1: ML backend (lazy, optional)
+# --------------------------------------------------------------------------
+
+# A label is treated as a "bad" class unless it reads as an explicitly safe one.
+SAFE_LABEL_HINTS = ("non-toxic", "nontoxic", "non_toxic", "neutral", "safe", "normal", "clean", "not_")
+BAD_LABEL_HINTS = (
+    "toxic", "hate", "abuse", "threat", "obscene", "insult", "identity",
+    "harass", "violent", "nsfw", "severe", "profan",
+)
+
+_text_pipe = None
+_image_pipe = None
+_pipe_lock = threading.Lock()
+
+
+def _is_bad_label(label: str) -> bool:
+    low = label.lower()
+    if any(s in low for s in SAFE_LABEL_HINTS):
+        return False
+    return any(b in low for b in BAD_LABEL_HINTS)
+
+
+def _load_text_pipe():
+    global _text_pipe
+    if _text_pipe is None:
+        with _pipe_lock:
+            if _text_pipe is None:
+                from transformers import pipeline  # imported only when enabled
+
+                _text_pipe = pipeline(
+                    "text-classification",
+                    model=settings.moderation_text_model,
+                    top_k=None,
+                    truncation=True,
+                )
+    return _text_pipe
+
+
+def _load_image_pipe():
+    global _image_pipe
+    if _image_pipe is None:
+        with _pipe_lock:
+            if _image_pipe is None:
+                from transformers import pipeline
+
+                _image_pipe = pipeline(
+                    "image-classification",
+                    model=settings.moderation_image_model,
+                )
+    return _image_pipe
+
+
+def _rows(raw) -> list[dict]:
+    """Normalise pipeline output to a flat list of {label, score}."""
+    if raw and isinstance(raw[0], list):
+        raw = raw[0]
+    return [{"label": str(r.get("label", "")), "score": round(float(r.get("score", 0.0)), 3)} for r in raw]
+
+
+def model_text(text: str) -> ModerationResult | None:
+    """Run the ML text classifier, or return None if it is unavailable."""
+    if not settings.moderation_enabled:
+        return None
+    try:
+        pipe = _load_text_pipe()
+        rows = _rows(pipe(text[:4000]))
+    except Exception:
+        return None
+
+    cats = [r["label"].lower() for r in rows
+            if _is_bad_label(r["label"]) and r["score"] >= settings.moderation_text_threshold]
+    score = max([r["score"] for r in rows if _is_bad_label(r["label"])] or [0.0])
+    return ModerationResult(
+        flagged=bool(cats), score=round(score, 3), categories=cats,
+        matches=[], engine=settings.moderation_text_model, labels=rows,
+    )
+
+
+def model_image(data: bytes) -> ModerationResult | None:
+    """Run the ML image classifier, or return None if it is unavailable."""
+    if not settings.moderation_enabled:
+        return None
+    try:
+        from PIL import Image
+
+        pipe = _load_image_pipe()
+        image = Image.open(io.BytesIO(data)).convert("RGB")
+        rows = _rows(pipe(image))
+    except Exception:
+        return None
+
+    cats = [r["label"].lower() for r in rows
+            if _is_bad_label(r["label"]) and r["score"] >= settings.moderation_image_threshold]
+    score = max([r["score"] for r in rows if _is_bad_label(r["label"])] or [0.0])
+    return ModerationResult(
+        flagged=bool(cats), score=round(score, 3), categories=cats,
+        matches=[], engine=settings.moderation_image_model, labels=rows,
+    )
+
+
+# --------------------------------------------------------------------------
+# Public API - combine model + heuristic
+# --------------------------------------------------------------------------
+
+
+def _combine(a: ModerationResult, b: ModerationResult) -> ModerationResult:
+    cats = list(dict.fromkeys(a.categories + b.categories))
+    return ModerationResult(
+        flagged=a.flagged or b.flagged,
+        score=max(a.score, b.score),
+        categories=cats,
+        matches=a.matches + b.matches,
+        engine=f"{b.engine}+{a.engine}" if b.engine != a.engine else a.engine,
+        labels=b.labels or a.labels,
+    )
+
+
+def moderate_text(text: str) -> ModerationResult:
+    heuristic = heuristic_text(text)
+    model = model_text(text)
+    return heuristic if model is None else _combine(heuristic, model)
+
+
+def moderate_image_bytes(data: bytes) -> ModerationResult:
+    model = model_image(data)
+    if model is not None:
+        return model
+    # No image model available: a conservative default (do not block).
+    return ModerationResult(flagged=False, score=0.0, engine="none")

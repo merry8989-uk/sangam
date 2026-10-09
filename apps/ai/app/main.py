@@ -37,6 +37,8 @@ class ModerateOut(BaseModel):
     score: float
     categories: list[str]
     matches: list[str] = []
+    engine: str = "heuristic"
+    labels: list[dict] = []
 
 
 class ModerateImageIn(BaseModel):
@@ -98,13 +100,19 @@ def health() -> dict:
 @app.post("/moderate", response_model=ModerateOut)
 def moderate(payload: ModerateIn) -> ModerateOut:
     r = moderate_text(payload.text)
-    return ModerateOut(flagged=r.flagged, score=r.score, categories=r.categories, matches=r.matches)
+    return ModerateOut(
+        flagged=r.flagged, score=r.score, categories=r.categories,
+        matches=r.matches, engine=r.engine, labels=r.labels,
+    )
 
 
 @app.post("/moderate/image", response_model=ModerateOut)
 def moderate_image(payload: ModerateImageIn) -> ModerateOut:
     r = classify_image(payload.key)
-    return ModerateOut(flagged=r.flagged, score=r.score, categories=r.categories, matches=r.matches)
+    return ModerateOut(
+        flagged=r.flagged, score=r.score, categories=r.categories,
+        matches=r.matches, engine=r.engine, labels=r.labels,
+    )
 
 
 @app.post("/feed/rank", response_model=RankOut)
