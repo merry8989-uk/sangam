@@ -230,3 +230,22 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Web and Android.
 - [ ] Notifications when something is shared with you.
 - [ ] Per-link passwords and download limits.
+
+## Phase 17 - Backup
+- [x] A Backup section in Settings: switch it on, choose what to include
+      (chat backup, search history backup, watch history backup), how often
+      (daily, weekly, monthly, half-yearly, yearly) and where it goes.
+- [x] Targets: Zoho WorkDrive (preferred) and Google Drive, each through its
+      own OAuth. Terabox is offered but marked as unable to receive files,
+      because it has no supported way to write one.
+- [x] Search history is now recorded (`SearchHistory`), so there is something
+      to back up.
+- [x] Each run is a plain JSON document - versioned, with the period in the
+      name - so it can be read without us.
+- [x] A `BackupRun` row per attempt, shown in the settings screen with its
+      status, size and a link to the file.
+- [x] A scheduler entry point (`/api/internal/run-backups`) that runs every
+      backup that is due.
+- [x] Web and Android.
+- [ ] Encrypting the backup document before it leaves us.
+- [ ] Restore: reading a backup back into the account.

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { api, hasToken, setToken } from "../src/api";
+import * as Linking from "expo-linking";
+import { api, backupStatus, googleConnectUrl, hasToken, runBackupNow, setToken, zohoConnectUrl, type BackupStatus } from "../src/api";
 import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
 import { pickTheme, THEME_COUNT } from "../src/theme";
 
@@ -10,6 +11,9 @@ export default function Settings() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Record<string, unknown> | null>(null);
+  const [backup, setBackup] = useState<BackupStatus | null>(null);
+  const [backupBusy, setBackupBusy] = useState<string | null>(null);
+  const [backupNote, setBackupNote] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -19,9 +23,37 @@ export default function Settings() {
       } catch {
         // not signed in
       }
+      try {
+        setBackup(await backupStatus());
+      } catch {
+        // signed out
+      }
       setLoading(false);
     })();
   }, []);
+
+  async function saveBackup(patch: Record<string, unknown>) {
+    setBackup((b) => (b ? { ...b, ...patch } as BackupStatus : b));
+    try {
+      await api("/api/settings", { method: "PUT", body: JSON.stringify(patch) });
+      setBackup(await backupStatus());
+    } catch {
+      setBackupNote("Could not save that.");
+    }
+  }
+
+  async function backUpNow() {
+    setBackupBusy("run");
+    setBackupNote(null);
+    try {
+      await runBackupNow();
+      setBackupNote("Backup finished.");
+      setBackup(await backupStatus());
+    } catch {
+      setBackupNote("The backup failed.");
+    }
+    setBackupBusy(null);
+  }
 
   if (loading) return <Screen><Loading /></Screen>;
 
@@ -170,6 +202,68 @@ export default function Settings() {
           <Toggle label="Q and A panel" field="liveQaEnabled" />
           <Toggle label="Record my streams by default" field="liveAutoRecord" />
         </Card>
+
+        {backup ? (
+          <Card>
+            <Heading>Backup</Heading>
+            <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+              Keep your chats, searches and watch history in your own cloud account.
+            </Text>
+
+            <Pressable onPress={() => saveBackup({ backupEnabled: !backup.enabled })} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Pill label={backup.enabled ? "on" : "off"} active={backup.enabled} />
+              <Text style={{ color: c.ink700, fontSize: 13, flex: 1 }}>Back up my data</Text>
+            </Pressable>
+
+            <Toggle label="Chat backup" field="backupChats" />
+            <Toggle label="Search history backup" field="backupSearchHistory" />
+            <Toggle label="Watch history backup" field="backupWatchHistory" />
+
+            <Picker label="How often" field="backupFrequency" options={["daily", "weekly", "monthly", "halfyearly", "yearly"]} />
+            <Picker label="Where to keep it" field="backupProvider" options={["ZOHO", "GOOGLE", "TERABOX"]} />
+
+            {backup.provider === "TERABOX" ? (
+              <Text style={{ color: "#b45309", fontSize: 11, marginTop: 8 }}>
+                Terabox cannot receive files - there is no supported way to write one. Pick Zoho or Google.
+              </Text>
+            ) : null}
+
+            {backup.provider !== "TERABOX" &&
+            ((backup.provider === "ZOHO" && !backup.connected.zoho) || (backup.provider === "GOOGLE" && !backup.connected.google)) ? (
+              <View style={{ marginTop: 10 }}>
+                <Button
+                  label={backup.provider === "ZOHO" ? "Connect Zoho WorkDrive" : "Connect Google Drive"}
+                  onPress={() => Linking.openURL(backup.provider === "ZOHO" ? zohoConnectUrl() : googleConnectUrl())}
+                />
+              </View>
+            ) : null}
+
+            <View style={{ marginTop: 10 }}>
+              <Button
+                label={backupBusy === "run" ? "Backing up..." : "Back up now"}
+                onPress={backUpNow}
+                disabled={backupBusy !== null || backup.provider === "TERABOX"}
+              />
+            </View>
+
+            <Text style={{ color: c.ink500, fontSize: 11, marginTop: 8 }}>
+              {backup.lastBackupAt
+                ? `Last backup ${new Date(backup.lastBackupAt).toLocaleString("en-IN")}`
+                : "No backup has run yet."}
+            </Text>
+            {backupNote ? <Text style={{ color: c.brand700, fontSize: 12, marginTop: 6 }}>{backupNote}</Text> : null}
+
+            {backup.runs.length > 0 ? (
+              <View style={{ marginTop: 10, gap: 4 }}>
+                {backup.runs.slice(0, 5).map((r) => (
+                  <Text key={r.id} style={{ color: r.status === "FAILED" ? "#dc2626" : c.ink700, fontSize: 11 }}>
+                    {r.status} - {r.provider} {r.period} - {new Date(r.startedAt).toLocaleDateString("en-IN")}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </Card>
+        ) : null}
 
         <Card>
           <Heading>Notes &amp; Drive</Heading>

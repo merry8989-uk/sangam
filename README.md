@@ -78,6 +78,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Zoho WorkDrive: create sheets/documents/slides and upload from the drive | ✅ |
 | Drive sharing: with people or by link, folders inherit | ✅ |
 | Zoho WorkDrive large-file upload (streamed, not buffered) | ✅ |
+| Backup to Zoho or Google Drive: chats, searches, watch history | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

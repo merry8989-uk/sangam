@@ -57,6 +57,8 @@ model User {
   driveItems    DriveItem[]
   linkedAccounts LinkedAccount[]
   driveSharesReceived DriveShare[] @relation("DriveSharedWith")
+  searchHistory SearchHistory[]
+  backupRuns    BackupRun[]
 
   @@index([username])
 }
@@ -582,6 +584,16 @@ model UserSettings {
   liveFilterChat     Boolean @default(true)
   liveWhoCanChat     String  @default("EVERYONE")  // EVERYONE | FOLLOWERS | NOBODY
 
+  // Backup
+  backupEnabled       Boolean   @default(false)
+  backupChats         Boolean   @default(true)
+  backupSearchHistory Boolean   @default(true)
+  backupWatchHistory  Boolean   @default(true)
+  backupFrequency     String    @default("weekly") // daily | weekly | monthly | halfyearly | yearly
+  backupProvider      String    @default("ZOHO")   // ZOHO | GOOGLE | TERABOX
+  backupFolder        String    @default("")
+  lastBackupAt        DateTime?
+
   // Moderation
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")
@@ -761,4 +773,36 @@ model DriveShare {
   @@index([sharedWithId])
   @@index([ownerId])
   @@index([token])
+}
+
+// What people searched for. Kept so it can be shown, cleared, or backed up.
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// One run of a user's backup, so the settings screen can show what happened.
+model BackupRun {
+  id          String    @id @default(cuid())
+  userId      String
+  provider    String
+  status      String    @default("RUNNING") // RUNNING | OK | FAILED
+  frequency   String    @default("weekly")
+  periodLabel String    @default("")
+  itemCount   Int       @default(0)
+  sizeBytes   Int       @default(0)
+  fileUrl     String?
+  error       String?
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
 }

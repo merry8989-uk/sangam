@@ -400,3 +400,28 @@ export async function uploadLargeToWorkDrive(
   if (res.status < 200 || res.status >= 300) throw new Error("HTTP " + res.status);
   return JSON.parse(res.body) as { item: DriveItem };
 }
+
+// ---- backup ----
+export type BackupStatus = {
+  enabled: boolean;
+  frequency: string;
+  provider: string;
+  sections: { chats: boolean; search: boolean; watch: boolean };
+  lastBackupAt: string | null;
+  due: boolean;
+  nextRunAt: string | null;
+  connected: { zoho: boolean; google: boolean };
+  runs: { id: string; provider: string; status: string; period: string; itemCount: number; sizeBytes: number; error: string | null; startedAt: string }[];
+};
+
+export function backupStatus() {
+  return api<BackupStatus>("/api/backup/status");
+}
+
+export function runBackupNow() {
+  return api<{ ok: boolean; runId: string }>("/api/backup/run", { method: "POST" });
+}
+
+export function googleConnectUrl() {
+  return BASE_URL + "/api/google/connect";
+}

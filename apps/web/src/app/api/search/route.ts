@@ -13,6 +13,15 @@ const EMPTY = { users: [], tags: [], posts: [] };
 export async function GET(req: Request) {
   const res = await handleSearch(req);
   await recordRoute("search", res.status);
+
+  // Remember the query, so it can be shown, cleared, or included in a backup.
+  const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
+  if (q.length >= 2) {
+    const viewerId = await getViewerId(req);
+    if (viewerId) {
+      await prisma.searchHistory.create({ data: { userId: viewerId, query: q.slice(0, 200) } }).catch(() => {});
+    }
+  }
   return res;
 }
 

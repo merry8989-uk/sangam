@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FAMILIES, THEMES } from "@/lib/themes";
+import BackupPanel from "./BackupPanel";
 
 type S = {
   theme: string; accent: string; dailyBackground: boolean; backgroundMode: string;
@@ -301,6 +302,10 @@ export default function SettingsPanel({
         <a href="/drive" className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
           Open My Drive
         </a>
+      </Section>
+
+      <Section title="Backup" hint="Keep your chats, searches and watch history in your own cloud account.">
+        <BackupPanel />
       </Section>
 
       <Section title="Moderation" hint="Filter what you see, and block words.">

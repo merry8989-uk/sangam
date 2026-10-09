@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import {

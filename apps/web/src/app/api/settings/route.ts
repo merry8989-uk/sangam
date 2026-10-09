@@ -82,6 +82,15 @@ const Body = z.object({
   liveFilterChat: z.boolean().optional(),
   liveWhoCanChat: z.enum(["EVERYONE", "FOLLOWERS", "NOBODY"]).optional(),
 
+  // Backup
+  backupEnabled: z.boolean().optional(),
+  backupChats: z.boolean().optional(),
+  backupSearchHistory: z.boolean().optional(),
+  backupWatchHistory: z.boolean().optional(),
+  backupFrequency: z.enum(["daily", "weekly", "monthly", "halfyearly", "yearly"]).optional(),
+  backupProvider: z.enum(["ZOHO", "GOOGLE", "TERABOX"]).optional(),
+  backupFolder: z.string().max(200).optional(),
+
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });
