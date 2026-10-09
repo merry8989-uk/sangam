@@ -21,7 +21,7 @@ const links = [
 export default function Nav() {
   return (
     <header className="border-b border-slate-200 bg-white">
-      <nav className="mx-auto flex max-w-5xl items-center gap-1 px-4 py-3">
+      <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-1 gap-y-1 px-4 py-3">
         <Link href="/" className="mr-4 font-bold tracking-tight text-brand-700">
           Sangam
         </Link>
