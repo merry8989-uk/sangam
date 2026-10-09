@@ -268,3 +268,35 @@ export async function uploadToDrive(file: { uri: string; name: string; mimeType:
     })
   });
 }
+
+// ---- linked accounts (Terabox) ----
+export type LinkedAccount = {
+  id: string;
+  provider: string;
+  label: string;
+  status: string;
+  method: string;
+  tokenHint: string | null;
+};
+
+export function listLinkedAccounts() {
+  return api<{ accounts: LinkedAccount[]; terabox: { oauthAvailable: boolean } }>("/api/linked-accounts");
+}
+
+export function linkTerabox(input: { label?: string; token?: string }) {
+  return api<{ account: LinkedAccount }>("/api/linked-accounts", {
+    method: "POST",
+    body: JSON.stringify({ provider: "TERABOX", label: input.label, token: input.token })
+  });
+}
+
+export function unlinkAccount(id: string) {
+  return api<{ ok: boolean }>("/api/linked-accounts/" + id, { method: "DELETE" });
+}
+
+export function importTeraboxLink(url: string, parentId?: string | null) {
+  return api<{ item: DriveItem }>("/api/drive/import-link", {
+    method: "POST",
+    body: JSON.stringify({ url, parentId: parentId ?? null })
+  });
+}

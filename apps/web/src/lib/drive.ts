@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 
-export const DRIVE_KINDS = ["FOLDER", "FILE", "NOTE", "SHEET", "DOC", "SLIDES"] as const;
+export const DRIVE_KINDS = ["FOLDER", "FILE", "NOTE", "SHEET", "DOC", "SLIDES", "LINK"] as const;
 export type DriveKind = (typeof DRIVE_KINDS)[number];
 
 // Documents you write inside the app (as opposed to uploaded bytes).

@@ -181,3 +181,18 @@ Narrow, sequential phases. Each phase ships something usable.
 ## Phase 13 - Navigation tidy-up
 - [x] The nav bar shows eight primary destinations; the rest moved into a
       More menu.
+
+## Phase 14 - Terabox in the drive
+- [x] The drive opens with a Terabox card: create an account, connect it,
+      then add share links.
+- [x] A generic `LinkedAccount` model (Terabox today, reusable for others),
+      with the credential encrypted at rest (AES-256-GCM) and never returned
+      to a client. No password is ever asked for or stored.
+- [x] Two connection paths, labelled honestly in the UI:
+      - official OAuth device-code (needs credentials from the Terabox
+        integration programme), and
+      - the unofficial `ndus` session token, marked as advanced and unstable.
+- [x] Import a share link into the drive as a `LINK` item (a pointer, not a
+      copy - the bytes stay on Terabox).
+- [ ] A background sync that mirrors Terabox files locally. This needs the
+      official API; without it we would be scraping, which we do not do.

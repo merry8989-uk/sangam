@@ -12,6 +12,7 @@ type Item = {
   updatedAt: string;
   starred: boolean;
   trashedAt: string | null;
+  sourceUrl: string | null;
 };
 
 const ICON: Record<string, string> = {
@@ -20,7 +21,8 @@ const ICON: Record<string, string> = {
   NOTE: "note",
   SHEET: "sheet",
   DOC: "doc",
-  SLIDES: "slides"
+  SLIDES: "slides",
+  LINK: "link"
 };
 
 function humanSize(bytes: number): string {
@@ -187,25 +189,44 @@ export default function DriveBrowser({
         </p>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item) => (
-            <Link
-              key={item.id}
-              href={`/drive/${item.id}`}
-              className="rounded-xl border border-slate-200 bg-white p-3 hover:border-brand-600"
-            >
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-500">
-                  {ICON[item.kind] ?? item.kind.toLowerCase()}
-                </span>
-                {item.starred ? <span className="text-xs text-brand-600">starred</span> : null}
-              </div>
-              <p className="mt-2 truncate font-medium">{item.name}</p>
-              <p className="text-xs text-ink-500">
-                {item.mimeType || item.kind.toLowerCase()}
-                {item.sizeBytes ? ` - ${humanSize(item.sizeBytes)}` : ""}
-              </p>
-            </Link>
-          ))}
+          {filtered.map((item) => {
+            const card = (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-500">
+                    {ICON[item.kind] ?? item.kind.toLowerCase()}
+                  </span>
+                  {item.starred ? <span className="text-xs text-brand-600">starred</span> : null}
+                </div>
+                <p className="mt-2 truncate font-medium">{item.name}</p>
+                <p className="text-xs text-ink-500">
+                  {item.mimeType || item.kind.toLowerCase()}
+                  {item.sizeBytes ? ` - ${humanSize(item.sizeBytes)}` : ""}
+                </p>
+              </>
+            );
+            // A link item opens the external page; everything else opens here.
+            return item.kind === "LINK" && item.sourceUrl ? (
+              <a
+                key={item.id}
+                href={item.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl border border-slate-200 bg-white p-3 hover:border-brand-600"
+              >
+                {card}
+              </a>
+            ) : (
+              <Link
+                key={item.id}
+                href={`/drive/${item.id}`}
+                className="rounded-xl border border-slate-200 bg-white p-3 hover:border-brand-600"
+              >
+                {card}
+              </Link>
+            );
+          })}
+
         </div>
       )}
     </div>

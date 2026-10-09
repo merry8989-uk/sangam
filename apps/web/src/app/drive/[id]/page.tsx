@@ -41,7 +41,7 @@ export default async function DriveItemPage({ params }: { params: { id: string }
     return (
       <main className="mx-auto max-w-5xl px-4 py-6">
         <DriveBrowser
-          items={children.map((i) => ({ ...i, updatedAt: i.updatedAt.toISOString(), trashedAt: i.trashedAt ? i.trashedAt.toISOString() : null }))}
+          items={children.map((i) => ({ ...i, updatedAt: i.updatedAt.toISOString(), trashedAt: i.trashedAt ? i.trashedAt.toISOString() : null, sourceUrl: i.sourceUrl }))}
           parentId={item.id}
           crumbs={crumbs}
         />
@@ -59,7 +59,8 @@ export default async function DriveItemPage({ params }: { params: { id: string }
           mimeType: item.mimeType,
           sizeBytes: item.sizeBytes,
           storageKey: item.storageKey,
-          content: item.content
+          content: item.content,
+          sourceUrl: item.sourceUrl
         }}
       />
     </main>

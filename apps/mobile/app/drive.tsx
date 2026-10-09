@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, ScrollView, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import {
   createDriveItem,
+  importTeraboxLink,
+  linkTerabox,
   listDrive,
+  listLinkedAccounts,
+  unlinkAccount,
   uploadToDrive,
   type DriveItem,
-  type DriveKind
+  type DriveKind,
+  type LinkedAccount
 } from "../src/api";
 import { Button, Card, Empty, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
 
@@ -37,6 +42,13 @@ export default function DriveScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tb, setTb] = useState<LinkedAccount | null>(null);
+  const [oauthAvailable, setOauthAvailable] = useState(false);
+  const [tbLoaded, setTbLoaded] = useState(false);
+  const [tbLabel, setTbLabel] = useState("");
+  const [tbToken, setTbToken] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -47,12 +59,65 @@ export default function DriveScreen() {
     }
   }, [parentId]);
 
+  const loadTerabox = useCallback(async () => {
+    try {
+      const d = await listLinkedAccounts();
+      setTb((d.accounts ?? []).find((a) => a.provider === "TERABOX") ?? null);
+      setOauthAvailable(Boolean(d.terabox?.oauthAvailable));
+    } catch {
+      // signed out
+    }
+    setTbLoaded(true);
+  }, []);
+
   useEffect(() => {
     (async () => {
       await load();
+      await loadTerabox();
       setLoading(false);
     })();
-  }, [load]);
+  }, [load, loadTerabox]);
+
+  async function linkTb() {
+    setBusy("TB");
+    setError(null);
+    try {
+      await linkTerabox({ label: tbLabel, token: tbToken.trim() });
+      setTbToken("");
+      setNotice("Terabox linked.");
+      await loadTerabox();
+    } catch {
+      setError("Could not link Terabox. Check the session token.");
+    }
+    setBusy(null);
+  }
+
+  async function unlinkTb() {
+    if (!tb) return;
+    setBusy("TB");
+    try {
+      await unlinkAccount(tb.id);
+      setTb(null);
+      setNotice("Terabox disconnected.");
+    } catch {
+      setError("Could not disconnect.");
+    }
+    setBusy(null);
+  }
+
+  async function importShare() {
+    setBusy("IMPORT");
+    setError(null);
+    try {
+      await importTeraboxLink(shareUrl, parentId);
+      setShareUrl("");
+      setNotice("Added to your drive.");
+      await load();
+    } catch {
+      setError("That is not a Terabox link.");
+    }
+    setBusy(null);
+  }
 
   async function create(kind: DriveKind) {
     setBusy(kind);
@@ -113,7 +178,79 @@ export default function DriveScreen() {
             <Button label={busy === "UPLOAD" ? "Uploading..." : "Upload a file"} disabled={busy !== null} onPress={upload} />
           </View>
           {error ? <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{error}</Text> : null}
+          {notice ? <Text style={{ color: c.brand700, fontSize: 12, marginTop: 8 }}>{notice}</Text> : null}
         </Card>
+
+        {tbLoaded ? (
+          <Card>
+            <Heading>Terabox</Heading>
+            {tb ? (
+              <>
+                <Text style={{ color: c.ink500, fontSize: 12, marginTop: 4 }}>
+                  Linked{tb.label ? ` as ${tb.label}` : ""} via {tb.method === "OAUTH" ? "Terabox sign-in" : "session token"}
+                  {tb.tokenHint ? ` (${tb.tokenHint})` : ""}.
+                </Text>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={{ color: c.ink500, fontSize: 12 }}>Paste a Terabox share link</Text>
+                  <TextInput
+                    style={{ borderColor: c.line, borderWidth: 1, borderRadius: 8, padding: 10, color: c.ink900, marginTop: 6 }}
+                    placeholder="https://www.terabox.com/s/..."
+                    placeholderTextColor={c.ink500}
+                    value={shareUrl}
+                    onChangeText={setShareUrl}
+                  />
+                </View>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                  <Button label={busy === "IMPORT" ? "Adding..." : "Add to my drive"} onPress={importShare} disabled={busy !== null || shareUrl.trim().length < 6} />
+                  <Button label="Disconnect" variant="ghost" onPress={unlinkTb} disabled={busy !== null} />
+                </View>
+                <Text style={{ color: c.ink500, fontSize: 11, marginTop: 8 }}>
+                  This saves a pointer, not a copy - the file stays on Terabox.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={{ color: c.ink500, fontSize: 12, marginTop: 4 }}>
+                  Link your Terabox account to keep its share links in your drive.
+                </Text>
+                <Text style={{ color: c.ink700, fontSize: 13, marginTop: 8 }}>
+                  1. Create a free Terabox account at terabox.com
+                </Text>
+                <Text style={{ color: c.ink700, fontSize: 13, marginTop: 4 }}>
+                  2. Connect it below.
+                </Text>
+                {oauthAvailable ? (
+                  <Text style={{ color: c.ink500, fontSize: 11, marginTop: 4 }}>
+                    Official sign-in is available on this server.
+                  </Text>
+                ) : (
+                  <Text style={{ color: "#b45309", fontSize: 11, marginTop: 6 }}>
+                    Unofficial path: Terabox has no open sign-in for ordinary users, so paste the ndus session token
+                    from a signed-in browser. It may stop working and may not be allowed by their terms. Stored encrypted;
+                    we never ask for your password.
+                  </Text>
+                )}
+                <TextInput
+                  style={{ borderColor: c.line, borderWidth: 1, borderRadius: 8, padding: 10, color: c.ink900, marginTop: 8 }}
+                  placeholder="Account name (optional)"
+                  placeholderTextColor={c.ink500}
+                  value={tbLabel}
+                  onChangeText={setTbLabel}
+                />
+                <TextInput
+                  style={{ borderColor: c.line, borderWidth: 1, borderRadius: 8, padding: 10, color: c.ink900, marginTop: 8 }}
+                  placeholder="ndus session token"
+                  placeholderTextColor={c.ink500}
+                  value={tbToken}
+                  onChangeText={setTbToken}
+                />
+                <View style={{ marginTop: 10 }}>
+                  <Button label={busy === "TB" ? "Linking..." : "Link Terabox"} onPress={linkTb} disabled={busy !== null || tbToken.trim().length < 16} />
+                </View>
+              </>
+            )}
+          </Card>
+        ) : null}
 
         {items.length === 0 ? (
           <Empty text="Nothing here yet." />

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import DriveBrowser from "@/components/DriveBrowser";
+import TeraboxCard from "@/components/TeraboxCard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,9 @@ export default async function DrivePage() {
       <p className="mb-4 text-sm text-ink-500">
         Notes, sheets, documents, slides and any file you upload - all in one place.
       </p>
+      <TeraboxCard />
       <DriveBrowser
-        items={items.map((i) => ({ ...i, updatedAt: i.updatedAt.toISOString(), trashedAt: i.trashedAt ? i.trashedAt.toISOString() : null }))}
+        items={items.map((i) => ({ ...i, updatedAt: i.updatedAt.toISOString(), trashedAt: i.trashedAt ? i.trashedAt.toISOString() : null, sourceUrl: i.sourceUrl }))}
         parentId={null}
         crumbs={[]}
       />

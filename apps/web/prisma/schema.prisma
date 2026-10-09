@@ -55,6 +55,7 @@ model User {
   roomsOwned    Room[]
   roomParticipations RoomParticipant[]
   driveItems    DriveItem[]
+  linkedAccounts LinkedAccount[]
 
   @@index([username])
 }
@@ -689,7 +690,7 @@ model DriveItem {
   id         String    @id @default(cuid())
   ownerId    String
   parentId   String?
-  // FOLDER | FILE | NOTE | SHEET | DOC | SLIDES
+  // FOLDER | FILE | NOTE | SHEET | DOC | SLIDES | LINK
   kind       String
   name       String
   mimeType   String    @default("")
@@ -697,6 +698,8 @@ model DriveItem {
   storageKey String?
   // NOTE / DOC / SLIDES hold markdown; SHEET holds a JSON grid.
   content    String    @default("")
+  // For kind = LINK: where the item points (an imported Terabox share link).
+  sourceUrl  String?
   starred    Boolean   @default(false)
   trashedAt  DateTime?
   createdAt  DateTime  @default(now())
@@ -709,4 +712,27 @@ model DriveItem {
   @@index([ownerId, parentId])
   @@index([ownerId, kind])
   @@index([ownerId, trashedAt])
+}
+
+// A third-party account a user has connected (Terabox today; the shape is
+// generic so Zoho or others can reuse it). The credential is stored
+// encrypted and is never sent back to any client.
+model LinkedAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     String    // TERABOX | ...
+  label        String    @default("")
+  status       String    @default("LINKED")  // LINKED | ERROR | REVOKED
+  // AES-256-GCM ciphertext. Empty when the link is OAuth-only.
+  secretCipher String    @default("")
+  // How the link was made: OAUTH | SESSION_TOKEN
+  method       String    @default("SESSION_TOKEN")
+  meta         Json      @default("{}")
+  linkedAt     DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }

@@ -12,6 +12,7 @@ type Item = {
   sizeBytes: number;
   storageKey: string | null;
   content: string;
+  sourceUrl?: string | null;
 };
 
 type SheetData = { cols: number; rows: number; cells: Record<string, string> };
@@ -220,6 +221,26 @@ export default function DriveEditor({ item }: { item: Item }) {
             >
               Add slide
             </button>
+          </div>
+        ) : null}
+
+        {item.kind === "LINK" ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-sm font-medium">External link</p>
+            <p className="mt-1 break-all font-mono text-xs text-ink-500">{item.sourceUrl}</p>
+            <p className="mt-2 text-xs text-ink-500">
+              This is a pointer, not a copy - the file itself stays on the other service.
+            </p>
+            {item.sourceUrl ? (
+              <a
+                href={item.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Open the link
+              </a>
+            ) : null}
           </div>
         ) : null}
 
