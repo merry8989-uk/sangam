@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import * as FileSystem from "expo-file-system";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiUrl?: string };
 export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || extra.apiUrl || "http://10.0.2.2:3000";
@@ -372,4 +373,30 @@ export function revokeShare(shareId: string) {
 
 export function sharedWithMe() {
   return api<{ items: { shareId: string; role: string; item: DriveItem }[] }>("/api/drive/shared");
+}
+
+export const SIMPLE_UPLOAD_MAX = 250 * 1024 * 1024;
+
+// Files above 250 MB go to WorkDrive's stream endpoint. expo-file-system
+// uploads straight from disk, so a large video never enters JS memory.
+export async function uploadLargeToWorkDrive(
+  file: { uri: string; name: string; mimeType: string; size: number },
+  parentId?: string | null
+) {
+  const headers: Record<string, string> = {
+    "x-filename": encodeURIComponent(file.name),
+    "x-size": String(file.size),
+    "x-content-type": file.mimeType || "application/octet-stream"
+  };
+  const t = getToken();
+  if (t) headers.Authorization = "Bearer " + t;
+  if (parentId) headers["x-parent-id"] = parentId;
+
+  const res = await FileSystem.uploadAsync(BASE_URL + "/api/drive/zoho/upload-large", file.uri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers
+  });
+  if (res.status < 200 || res.status >= 300) throw new Error("HTTP " + res.status);
+  return JSON.parse(res.body) as { item: DriveItem };
 }

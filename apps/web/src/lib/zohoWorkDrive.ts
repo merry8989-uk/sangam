@@ -1,3 +1,5 @@
+import { randomBytes } from "crypto";
+
 // Thin client over the Zoho WorkDrive REST API. No SDK: plain fetch calls.
 // Docs: https://www.zoho.com/workdrive/developer/docs/api/v1/
 
@@ -98,4 +100,74 @@ export async function listFiles(base: string, accessToken: string, folderId: str
 export async function deleteFile(base: string, accessToken: string, fileId: string): Promise<boolean> {
   const res = await fetch(`${base}/files/${fileId}`, { method: "DELETE", headers: authHeaders(accessToken) });
   return res.ok;
+}
+
+// ---- large files -------------------------------------------------------
+//
+// WorkDrive's simple /upload takes up to 250 MB. Anything bigger goes to the
+// stream endpoint on a per-DC upload host, which splits the file server-side.
+// We never buffer the whole thing: the request body is piped straight through.
+export const SIMPLE_UPLOAD_MAX = 250 * 1024 * 1024;
+
+export function uploadRouteFor(sizeBytes: number): "simple" | "stream" {
+  return sizeBytes > SIMPLE_UPLOAD_MAX ? "stream" : "simple";
+}
+
+// The filename goes in a header, so it must be URL-encoded UTF-8.
+export function encodeFilenameForHeader(name: string): string {
+  return encodeURIComponent(name);
+}
+
+export function newUploadId(): string {
+  return randomBytes(16).toString("hex");
+}
+
+export function streamUploadHeaders(opts: {
+  accessToken: string;
+  uploadId: string;
+  filename: string;
+  parentId: string;
+  overrideExisting?: boolean;
+}): Record<string, string> {
+  return {
+    Authorization: `Zoho-oauthtoken ${opts.accessToken}`,
+    "Content-Type": "application/octet-stream",
+    "upload-id": opts.uploadId,
+    "x-filename": encodeFilenameForHeader(opts.filename),
+    "x-parent_id": opts.parentId,
+    "x-streammode": "1",
+    ...(opts.overrideExisting ? { "x-override-name-exist": "true" } : {})
+  };
+}
+
+// Push a stream to WorkDrive. `body` is a web ReadableStream, so a 10 GB file
+// costs us a constant amount of memory.
+export async function streamUpload(
+  uploadBase: string,
+  accessToken: string,
+  opts: { parentId: string; filename: string; body: ReadableStream<Uint8Array>; overrideExisting?: boolean }
+): Promise<WdFile | null> {
+  const uploadId = newUploadId();
+  const res = await fetch(`${uploadBase}/stream/upload`, {
+    method: "POST",
+    headers: streamUploadHeaders({
+      accessToken,
+      uploadId,
+      filename: opts.filename,
+      parentId: opts.parentId,
+      overrideExisting: opts.overrideExisting
+    }),
+    body: opts.body,
+    // Required by Node's fetch when streaming a request body.
+    duplex: "half"
+  } as RequestInit & { duplex: "half" });
+
+  if (!res.ok) return null;
+  const data = await asJson(res);
+  const first = Array.isArray(data.data)
+    ? (data.data[0] as { id?: string; attributes?: Record<string, unknown> })
+    : (data.data as { id?: string; attributes?: Record<string, unknown> });
+  if (!first?.id) return null;
+  const attrs = (first.attributes ?? {}) as { name?: string; extn?: string; permalink?: string };
+  return { id: first.id, name: attrs.name ?? opts.filename, type: "file", permalink: attrs.permalink, extn: attrs.extn };
 }

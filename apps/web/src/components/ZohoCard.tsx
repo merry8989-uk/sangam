@@ -63,9 +63,24 @@ export default function ZohoCard() {
     setError(null);
     try {
       for (const f of Array.from(files)) {
-        const form = new FormData();
-        form.append("file", f);
-        const res = await fetch("/api/drive/zoho/upload", { method: "POST", body: form });
+        // Under 250 MB goes through the simple endpoint; anything larger is
+        // streamed straight through so the server never holds it in memory.
+        const res =
+          f.size > 250 * 1024 * 1024
+            ? await fetch("/api/drive/zoho/upload-large", {
+                method: "POST",
+                headers: {
+                  "x-filename": encodeURIComponent(f.name),
+                  "x-size": String(f.size),
+                  "x-content-type": f.type || "application/octet-stream"
+                },
+                body: f
+              })
+            : await (async () => {
+                const form = new FormData();
+                form.append("file", f);
+                return fetch("/api/drive/zoho/upload", { method: "POST", body: form });
+              })();
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setError(data.error ?? `Could not upload ${f.name}.`);

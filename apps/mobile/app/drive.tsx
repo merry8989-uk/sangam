@@ -11,6 +11,7 @@ import {
   zohoList,
   zohoStatus,
   uploadToWorkDrive,
+  uploadLargeToWorkDrive,
   type ZohoStatus,
   linkTerabox,
   listDrive,
@@ -116,7 +117,10 @@ export default function DriveScreen() {
       const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
       if (res.canceled) return;
       for (const a of res.assets) {
-        await uploadToWorkDrive({ uri: a.uri, name: a.name, mimeType: a.mimeType ?? "application/octet-stream" }, parentId);
+        const info = { uri: a.uri, name: a.name, mimeType: a.mimeType ?? "application/octet-stream", size: a.size ?? 0 };
+        // Big files stream straight from disk; small ones go the simple way.
+        if (info.size > 250 * 1024 * 1024) await uploadLargeToWorkDrive(info, parentId);
+        else await uploadToWorkDrive({ uri: info.uri, name: info.name, mimeType: info.mimeType }, parentId);
       }
       setNotice("Uploaded to WorkDrive.");
       await load();

@@ -210,8 +210,13 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Upload files into WorkDrive (through our server, since WorkDrive uploads
       are token-authenticated) and list what is there.
 - [x] Web and Android both offer it from the drive.
-- [ ] WorkDrive's large-file stream API (>250 MB).
+- [x] WorkDrive large-file upload through the stream endpoint: the request
+      body is piped straight through, so a multi-GB file costs the server a
+      constant amount of memory. Web and Android both switch to it above
+      250 MB.
 - [ ] Two-way sync that mirrors WorkDrive changes back into the drive.
+- [ ] WorkDrive's chunked upload for files above 1 GB (the stream path already
+      handles them, but chunking resumes better on a flaky connection).
 
 ## Phase 16 - Drive sharing
 - [x] Share an item with a person (view or edit) or mint a link anyone holding

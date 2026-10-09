@@ -77,6 +77,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Terabox linking from the drive (official OAuth or session token) | ✅ |
 | Zoho WorkDrive: create sheets/documents/slides and upload from the drive | ✅ |
 | Drive sharing: with people or by link, folders inherit | ✅ |
+| Zoho WorkDrive large-file upload (streamed, not buffered) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 
