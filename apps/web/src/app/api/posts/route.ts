@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redis, feedKey } from "@/lib/redis";
 import { moderateText, processImage, processVideo } from "@/lib/ai";
+import { extractTags } from "@/lib/hashtags";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -137,7 +138,27 @@ export async function POST(req: Request) {
     }
   }
 
-  // 3. Flagged posts are withheld from public distribution.
+  // 3. Index hashtags from the caption.
+  if (caption) {
+    try {
+      for (const tag of extractTags(caption)) {
+        const hashtag = await prisma.hashtag.upsert({
+          where: { tag },
+          update: {},
+          create: { tag }
+        });
+        await prisma.postHashtag.upsert({
+          where: { postId_hashtagId: { postId: post.id, hashtagId: hashtag.id } },
+          update: {},
+          create: { postId: post.id, hashtagId: hashtag.id }
+        });
+      }
+    } catch {
+      /* hashtag indexing is best effort */
+    }
+  }
+
+  // 4. Flagged posts are withheld from public distribution.
   if (flagged) {
     post = await prisma.post.update({
       where: { id: post.id },
@@ -147,7 +168,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ post, flagged: true }, { status: 201 });
   }
 
-  // 4. Fan-out-on-write into each follower's Redis timeline (capped at 1000).
+  // 5. Fan-out-on-write into each follower's Redis timeline (capped at 1000).
   if (visibility !== "PRIVATE") {
     const followers = await prisma.follow.findMany({
       where: { followeeId: userId, status: "ACCEPTED" },

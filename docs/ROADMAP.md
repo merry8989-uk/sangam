@@ -15,9 +15,10 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Image processing worker: validate, read dimensions, WebP thumbnails at 320/640/1080.
 - [x] Feed, profile grid and post cards render thumbnails via public media URLs.
 - [x] Likes and comments wired through the UI (counts, toggle, post detail page).
-- [ ] Stories with 24h TTL (Redis + expiry sweeper).
-- [ ] Explore/discovery page (heuristic first, then ML).
-- [ ] Search (profiles + hashtags) via Postgres full-text, then Meilisearch.
+- [x] Stories with 24h TTL (expiry enforced on read; background sweeper still TODO).
+- [x] Explore page: trending posts, popular hashtags, people to follow.
+- [x] Search: people, hashtags and posts (Postgres `contains`; Meilisearch still TODO).
+- [x] Hashtag extraction on post creation + hashtag pages.
 
 ## Phase 2 - Video
 - [x] Async-style transcoding worker (FFmpeg) -> ABR ladder -> HLS + poster.

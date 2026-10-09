@@ -32,6 +32,7 @@ channel follows) into **one** product, built on our **own stack**.
 | AI service: multi-stage recommender + multilingual moderation | ✅ |
 | Ranked 'For you' feed + moderation review queue | ✅ |
 | Likes, comments, follow (API + UI) | ✅ |
+| Stories (24h), Search, Explore, hashtag pages | ✅ |
 | Creator studio: analytics + agent assist | ✅ |
 | AI chat (Sarvam Indus / sarvam-105b), no login required | ✅ |
 | One agent per user + public Agent API (Bearer key) | ✅ |
