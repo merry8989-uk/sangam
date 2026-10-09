@@ -13,7 +13,7 @@ Sangam is one platform that folds together three familiar media experiences:
   text + link + photo posts, events, a marketplace.
 - **Instagram-style**: a visual grid, ephemeral stories, short vertical video
   (Reels), discovery/Explore, creator profiles.
-- **YouTube-style**: channels, long-form video, subscriptions, playlists,
+- **YouTube-style**: channels, long-form video, channel follows, playlists,
   comments, and a recommendation surface built for watch time.
 
 **The honest part.** Each of these is a multi-year product built by thousands
@@ -45,7 +45,6 @@ Messenger, Groups, Watch).
 - Reels (the old Videos tab was folded into Reels in June 2025), Stories,
   Live.
 - Messenger (direct messaging), reactions, comments, shares.
-- Ads Manager — an unusually deep targeting and campaign system.
 
 **Coded settings (what the product exposes as configuration).**
 - Privacy: per-post audience (Public / Friends / Custom / Only me).
@@ -71,7 +70,7 @@ login-with (which we deliberately do **not** use).
 **AI & agents.** Feed ranking (RecSys) is a graph-based execution service:
 candidate retrieval → filtering → point-wise ranking → list-wise ranking →
 diversity control, with privacy checks applied on the server after ranking.
-[cite:6383dac5] Automated moderation, ad optimisation, and assistant/"Meta AI"
+[cite:6383dac5] Automated moderation and assistant/"Meta AI"
 surfaces.
 
 ### 2.2 Instagram
@@ -95,7 +94,7 @@ consistent icon and type language.
 **Media types.** Photos (square 1080×1080 or 4:5 1080×1350), carousels, video
 (3s–60min), Reels (9:16), Stories (9:16, 1080×1920), Live. [cite:da677b12]
 
-**Integrations.** Facebook's Ads Manager (shared), shopping, Threads.
+**Integrations.** Shopping, Threads.
 
 **AI & agents.** Explore and suggested-follows use collaborative filtering +
 deep learning on interaction data. Feeds use a hybrid push/pull fan-out:
@@ -109,12 +108,10 @@ the world's second-most-used search destination, behind Google. [cite:f2f6d2dd]
 Long shelf life: a video keeps earning for 20+ days versus hours for a social
 post. [cite:f2f6d2dd]
 
-**Core features.** Channels, uploads, subscriptions, playlists, watch page,
-comments, live streaming, Shorts, and a comprehensive monetisation system
-(Partner Program). [cite:4126c94c]
+**Core features.** Channels, uploads, channel follows, playlists, watch page,
+comments, live streaming and Shorts. [cite:4126c94c]
 
-**Coded settings.** Video visibility (public/unlisted/private), monetisation
-toggles, channel permissions, comment moderation, end screens/cards.
+**Coded settings.** Video visibility (public/unlisted/private), channel permissions, comment moderation, end screens/cards.
 
 **Security.** Account security, copyright (Content ID-style matching), and
 community-guideline enforcement.
@@ -126,7 +123,7 @@ layout that pushes related content.
 (9:16 or 1:1, up to 3 minutes), Live. YouTube supports resolutions from 240p
 to 8K. [cite:da677b12]
 
-**Integrations.** Embeddable player, Google Search/SEO, ad network.
+**Integrations.** Embeddable player, Google Search/SEO.
 
 **AI & agents.** A multi-stage recommendation pipeline (retrieve → rank →
 business rules) optimising watch time; automatic captions; content ID;
@@ -153,7 +150,6 @@ starter code, ⏳ on the roadmap, 💭 deliberate later/optional.
 | Search & discovery | ✅ | Explore | ✅ search | ⏳ | ⏳ |
 | Comments / reactions | ✅ | ✅ | ✅ | Comment/Like | ✅ (data) |
 | Live streaming | ✅ | ✅ | ✅ | 💭 | 💭 |
-| Monetisation | Ads | Ads/Shop | Partner | 💭 | 💭 |
 | Moderation (AI) | ✅ | ✅ | ✅ | moderation service | ✅ (starter) |
 | Recommendation ML | ✅ | ✅ | ✅ | ranking service | ✅ (starter) |
 | Analytics for creators | ✅ | ✅ | ✅ | ⏳ | ⏳ |
@@ -173,7 +169,7 @@ Three ideas make the three experiences coexist cleanly:
    and permissions do not.
 3. **One feed engine, pluggable ranking.** The timeline is assembled the same
    way everywhere (fan-out + ranking). "Feed", "Explore", "Shorts" and
-   "Subscriptions" are the *same* engine with different candidate sources and
+   "Following" are the *same* engine with different candidate sources and
    rankers.
 
 ---
@@ -346,7 +342,7 @@ actions for auditability.
 See [ROADMAP.md](ROADMAP.md) for the phased plan. In short: **Phase 0**
 foundation (this repo) → **Phase 1** images + stories + discovery → **Phase 2**
 video (transcoding, HLS, shorts) → **Phase 3** ranking ML + moderation at
-scale → **Phase 4** monetisation + creators + agents.
+scale → **Phase 4** creators + agents.
 
 ---
 

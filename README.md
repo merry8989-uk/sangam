@@ -3,7 +3,7 @@
 **A homegrown, India-hosted social + video media platform** — combining the
 best ideas from Facebook (social graph, groups, feed), Instagram (visual
 posts, stories, reels, discovery) and YouTube (long-form video, channels,
-subscriptions) into **one** product, built on our **own stack**.
+channel follows) into **one** product, built on our **own stack**.
 
 > Sangam (संगम) means *confluence* — the meeting of rivers. Here, the meeting
 > of three media experiences in one platform.

@@ -24,7 +24,7 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] /process/video endpoint; VIDEO media enriched on post creation.
 - [x] HLS player component (native HLS + hls.js fallback).
 - [x] Shorts surface: full-height vertical video feed.
-- [ ] Long-form "channel" pages + subscriptions.
+- [ ] Long-form "channel" pages + channel follows.
 - [ ] Preview clip generation; processing status polling.
 
 ## Phase 3 - Ranking & trust
@@ -41,8 +41,6 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Creator studio: post/follower/like/comment/view analytics.
 - [x] Creator-assist agents: captions, hashtags, title & description, alt-text, translation seam.
 - [x] App shell (navigation) and post detail page.
-- [ ] Monetisation primitives (subscriptions/tips) - NOT built; needs payment
-      compliance (RBI rules, GST, KYC). Deliberately left as a design note.
 - [ ] Groups/communities, direct messaging, live streaming.
 
 ## Cross-cutting, ongoing
