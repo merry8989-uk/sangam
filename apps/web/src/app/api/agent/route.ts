@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureAgent } from "@/lib/agent";
+import { embedKnowledgeBase, ensureAgent } from "@/lib/agent";
 
 const Body = z.object({
   name: z.string().max(60).optional(),
@@ -45,5 +45,15 @@ export async function PUT(req: Request) {
 
   await ensureAgent(userId);
   const agent = await prisma.agent.update({ where: { userId }, data: parsed.data });
-  return NextResponse.json({ agent });
+
+  // (Re)embed the knowledge base so retrieval has vectors to rank.
+  let embedded = 0;
+  try {
+    embedded = await embedKnowledgeBase(agent);
+  } catch {
+    // leave unembedded; retrieval falls back to the first entries
+  }
+
+  const fresh = embedded ? await prisma.agent.findUnique({ where: { userId } }) : agent;
+  return NextResponse.json({ agent: fresh, knowledgeEmbedded: embedded });
 }

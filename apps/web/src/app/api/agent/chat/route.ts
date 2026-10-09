@@ -30,8 +30,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   try {
+    const last = parsed.data.messages[parsed.data.messages.length - 1];
     const reply = await sarvamChat(parsed.data.messages, {
-      system: buildSystemPrompt(agent),
+      system: await buildSystemPrompt(agent, last.content),
       model: parsed.data.model ?? agent.model
     });
     return NextResponse.json({

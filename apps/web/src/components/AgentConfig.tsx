@@ -109,7 +109,7 @@ export default function AgentConfig({ initial }: { initial: Agent }) {
 
       <section id="knowledge" className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-2 font-semibold">Knowledge base</h2>
-        <p className="mb-2 text-xs text-ink-500">One entry per line, as <code>Title :: content</code>.</p>
+        <p className="mb-2 text-xs text-ink-500">One entry per line, as <code>Title :: content</code>. Entries are embedded on save so the agent can retrieve the relevant ones per question.</p>
         <textarea className={field} rows={4} value={kb} onChange={(e) => setKb(e.target.value)}
                   placeholder="Pricing :: We are free to use." />
       </section>

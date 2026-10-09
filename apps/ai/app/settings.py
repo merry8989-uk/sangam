@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     moderation_text_threshold: float = 0.7
     moderation_image_threshold: float = 0.7
 
+    # Embeddings for knowledge-base retrieval. Same opt-in pattern as
+    # moderation: a real multilingual model when enabled, a dependency-free
+    # lexical hashing embedding otherwise (so retrieval works out of the box).
+    embeddings_enabled: bool = False
+    embeddings_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embeddings_top_k: int = 4
+
     class Config:
         env_file = ".env"
 

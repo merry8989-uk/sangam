@@ -61,7 +61,8 @@ Narrow, sequential phases. Each phase ships something usable.
       dot shown while collapsed.
 - [x] Streaming responses (SSE), end to end: Sarvam -> AI service -> web -> chat UI.
 - [x] Scheduler job that runs due agent tasks (docs/JOBS.md).
-- [ ] Embeddings-based knowledge base retrieval (today the KB is injected as text).
+- [x] Embeddings-based knowledge-base retrieval: entries embedded on save, top-K
+      retrieved per query (multilingual model, lexical hashing fallback).
 
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.

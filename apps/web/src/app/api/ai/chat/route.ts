@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   let system: string | undefined;
   if (userId && useAgent) {
     const agent = await getAgentForUser(userId);
-    if (agent) system = buildSystemPrompt(agent);
+    if (agent) system = await buildSystemPrompt(agent, messages[messages.length - 1].content);
   }
 
   let reply;

@@ -68,6 +68,8 @@ services:
       MODERATION_ENABLED: ${MODERATION_ENABLED:-false}
       MODERATION_TEXT_MODEL: ${MODERATION_TEXT_MODEL:-unitary/multilingual-toxic-xlm-roberta}
       MODERATION_IMAGE_MODEL: ${MODERATION_IMAGE_MODEL:-Falconsai/nsfw_image_detection}
+      EMBEDDINGS_ENABLED: ${EMBEDDINGS_ENABLED:-false}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
     ports:
       - "8000:8000"
     depends_on:

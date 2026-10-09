@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
       try {
         const reply = await sarvamChat([{ role: "user", content: task.prompt }], {
-          system: buildSystemPrompt(agent),
+          system: await buildSystemPrompt(agent, task.prompt),
           model: agent.model
         });
         const chat = await prisma.chatSession.create({

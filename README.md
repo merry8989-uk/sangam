@@ -38,6 +38,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Streaming chat (SSE) + scheduler job for agent tasks | ✅ |
 | Structured logs + /metrics; /api/health | ✅ |
 | Real moderation models (multilingual text + NSFW vision), opt-in | ✅ |
+| Embeddings-based knowledge retrieval for agents | ✅ |
 | Creator studio: analytics + agent assist | ✅ |
 | AI chat (Sarvam Indus / sarvam-105b), no login required | ✅ |
 | One agent per user + public Agent API (Bearer key) | ✅ |

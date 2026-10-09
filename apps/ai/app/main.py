@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from .agents import alt_text, draft_title_description, suggest_captions, suggest_hashtags, translate
+from .embeddings import embed
 from .media import InvalidImage, process_image
 from .moderation import moderate_text
 from .observability import ObservabilityMiddleware, metrics_snapshot
@@ -22,7 +23,7 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 app.add_middleware(ObservabilityMiddleware)
@@ -257,3 +258,21 @@ def chat_stream_endpoint(payload: ChatIn) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class EmbedIn(BaseModel):
+    texts: list[str]
+
+
+class EmbedOut(BaseModel):
+    embeddings: list[list[float]]
+    dim: int
+    engine: str
+
+
+@app.post("/embed", response_model=EmbedOut)
+def embed_endpoint(payload: EmbedIn) -> EmbedOut:
+    """Embed texts for knowledge-base retrieval."""
+    if not payload.texts or len(payload.texts) > 256:
+        raise HTTPException(status_code=400, detail="texts must contain 1..256 items")
+    return EmbedOut(**embed(payload.texts))

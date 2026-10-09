@@ -47,6 +47,18 @@ actually produced the verdict in the `engine` field of the response.
 Resource note: `unitary/multilingual-toxic-xlm-roberta` needs roughly 2 GB of
 RAM to load (plus torch). Run it on a host with enough memory, or a GPU.
 
+## Embeddings (knowledge-base retrieval)
+
+Agent knowledge bases are embedded so the assistant retrieves only the entries
+relevant to each question, instead of the whole KB being pasted into the prompt.
+
+- `POST /embed` returns L2-normalised vectors.
+- Backend: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` when
+  `EMBEDDINGS_ENABLED=true`; otherwise a dependency-free lexical hashing
+  embedding (256-dim), so retrieval works with no ML install.
+- The web layer embeds KB entries when the agent is saved, then embeds only the
+  query at chat time and ranks by cosine similarity.
+
 ## Notes
 
 The Sarvam API key is held server-side only (`SARVAM_API_KEY`); it is never
