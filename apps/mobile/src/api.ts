@@ -47,7 +47,14 @@ export type Post = {
   createdAt: string;
   viewCount: number;
   author: { username: string; displayName: string };
-  media: { id: string; kind: string; thumbnailKey: string | null; hlsKey: string | null; storageKey: string }[];
+  media: {
+    id: string;
+    kind: string;
+    storageKey: string;
+    thumbnailKey: string | null;
+    hlsKey: string | null;
+    previewKey: string | null;
+  }[];
 };
 
 export const mediaUrl = (key: string) => BASE_URL + "/api/media/" + encodeURIComponent(key);

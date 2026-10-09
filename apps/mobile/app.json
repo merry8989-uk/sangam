@@ -10,11 +10,26 @@
     "android": {
       "package": "uk.merry8989.sangam",
       "versionCode": 1,
-      "adaptiveIcon": { "backgroundColor": "#ea580c" },
-      "permissions": ["INTERNET", "READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO"],
+      "adaptiveIcon": {
+        "backgroundColor": "#ea580c"
+      },
+      "permissions": [
+        "INTERNET",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO"
+      ],
       "softwareKeyboardLayoutMode": "resize"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ]
+    ],
     "extra": {
       "apiUrl": "http://10.0.2.2:3000"
     }

@@ -67,11 +67,20 @@ cd android && ./gradlew assembleRelease
 # APK: android/app/build/outputs/apk/release/app-release.apk
 ```
 
+## Video controls need a real build
+
+Picture-in-picture and background play are **native capabilities**. They are
+enabled in `app.json` through the expo-video config plugin, which only takes
+effect in a development or EAS build - **not in Expo Go**. Everything else
+(play, skip, speed, mute, audio-only) works in Expo Go too.
+
 ## Notes
 
 - Media is served from the backend at `/api/media/<key>`; the app loads
   thumbnails and posters from there.
-- Video playback uses `expo-video` (HLS). Wire it into `post/[id].tsx` when you
-  want inline playback.
+- Video playback uses `expo-video` (HLS with an MP4 preview fallback) in
+  `src/VideoPlayer.tsx`, used by the post detail and Shorts screens. The
+  control bar has play/pause, skip +/-10s, speed (0.5x-2x), mute, audio-only,
+  background play and picture-in-picture.
 - Direct messages currently refresh on open; live updates need an SSE or
   WebSocket client, which is not wired up yet.

@@ -116,7 +116,8 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Same 480-theme engine as the web, verified to produce identical themes.
 - [x] Bearer-token auth so one backend serves both clients
       (`POST /api/mobile/login`).
-- [ ] Inline video playback (expo-video is installed but not wired in).
+- [x] Inline video playback: HLS player with skip, speed, mute, audio-only,
+      background play and picture-in-picture.
 - [ ] Live DM updates on mobile (SSE/WebSocket client).
 - [ ] Push notifications.
 
