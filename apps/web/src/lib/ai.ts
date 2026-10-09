@@ -1,5 +1,6 @@
 // Thin client for the Python AI/media service.
 import { newTraceparent } from "./trace";
+import type { Rendition } from "./quality";
 import { recordAiCall } from "./metrics";
 class AiError extends Error {}
 
@@ -30,6 +31,7 @@ export type ProcessedVideo = {
   hlsKey: string;
   previewKey: string;
   renditions: number[];
+  variants: Rendition[];
 };
 export type ModerationResult = {
   flagged: boolean;
@@ -49,8 +51,15 @@ export function processImage(key: string): Promise<ProcessedImage> {
   return callAi<ProcessedImage>("/process/image", { key });
 }
 
-export function processVideo(key: string): Promise<ProcessedVideo> {
-  return callAi<ProcessedVideo>("/process/video", { key });
+export function processVideo(
+  key: string,
+  opts: { maxHeight?: number | null; audioBitrate?: string | null } = {}
+): Promise<ProcessedVideo> {
+  return callAi<ProcessedVideo>("/process/video", {
+    key,
+    max_height: opts.maxHeight ?? null,
+    audio_bitrate: opts.audioBitrate ?? null
+  });
 }
 
 export function moderateText(text: string): Promise<ModerationResult> {

@@ -13,6 +13,7 @@ import LikeButton from "@/components/LikeButton";
 import PreviewThumb from "@/components/PreviewThumb";
 import DeletePostButton from "@/components/DeletePostButton";
 import { getSettingsOptional } from "@/lib/settings";
+import { playbackCap, type Rendition } from "@/lib/quality";
 import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +99,8 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
               className="w-full rounded-xl bg-black"
               segments={skipSegments}
               skipEnabled={settings?.sponsorSkip ?? false}
+              variants={(video.renditions ?? []) as unknown as Rendition[]}
+              cap={playbackCap(settings?.videoQuality, settings?.audioQuality)}
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element

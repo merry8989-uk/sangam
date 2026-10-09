@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api, hasToken, setToken } from "../src/api";
 import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
@@ -24,6 +24,40 @@ export default function Settings() {
   }, []);
 
   if (loading) return <Screen><Loading /></Screen>;
+
+  async function save(patch: Record<string, unknown>) {
+    setSettings({ ...(settings ?? {}), ...patch });
+    try {
+      await api("/api/settings", { method: "PUT", body: JSON.stringify(patch) });
+    } catch {
+      // not signed in: revert
+      setSettings({ ...(settings ?? {}) });
+    }
+  }
+
+  function Picker({
+    label,
+    field,
+    options
+  }: {
+    label: string;
+    field: string;
+    options: string[];
+  }) {
+    const current = (settings?.[field] as string) ?? options[0];
+    return (
+      <View style={{ marginTop: 10 }}>
+        <Text style={{ color: c.ink500, fontSize: 12 }}>{label}</Text>
+        <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          {options.map((o) => (
+            <Pressable key={o} onPress={() => save({ [field]: o })}>
+              <Pill label={o} active={current === o} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    );
+  }
 
   const mode = (settings?.themeMode as string) ?? "daily";
   const theme = pickTheme(mode, (settings?.themeId as string) || undefined);
@@ -57,6 +91,16 @@ export default function Settings() {
               />
             ))}
           </View>
+        </Card>
+
+        <Card>
+          <Heading>Quality</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            A lower setting caps the rendition the player loads, so it uses less data.
+          </Text>
+          <Picker label="Video quality" field="videoQuality" options={["auto", "1080", "720", "480", "360"]} />
+          <Picker label="Audio quality" field="audioQuality" options={["auto", "high", "medium", "low"]} />
+          <Picker label="Upload quality" field="uploadQuality" options={["original", "high", "medium", "low"]} />
         </Card>
 
         <Card>

@@ -79,7 +79,7 @@ def _even(n: float) -> int:
     return v - (v % 2)
 
 
-def _rendition(src: Path, outdir: Path, height: int, bitrate_k: int) -> None:
+def _rendition(src: Path, outdir: Path, height: int, bitrate_k: int, audio_bitrate: str = AUDIO_BITRATE) -> None:
     d = outdir / f"{height}p"
     d.mkdir(parents=True, exist_ok=True)
     _run([
@@ -89,7 +89,7 @@ def _rendition(src: Path, outdir: Path, height: int, bitrate_k: int) -> None:
         "-b:v", f"{bitrate_k}k",
         "-maxrate", f"{int(bitrate_k * 1.07)}k", "-bufsize", f"{bitrate_k * 2}k",
         "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
-        "-c:a", "aac", "-b:a", AUDIO_BITRATE, "-ac", "2",
+        "-c:a", "aac", "-b:a", audio_bitrate, "-ac", "2",
         "-f", "hls", "-hls_time", str(SEGMENT_SECONDS), "-hls_playlist_type", "vod",
         "-hls_segment_filename", str(d / "seg_%03d.ts"),
         str(d / "index.m3u8"),
@@ -112,7 +112,7 @@ _CONTENT_TYPES = {
 }
 
 
-def transcode_video(key: str) -> dict:
+def transcode_video(key: str, max_height: int | None = None, audio_bitrate: str | None = None) -> dict:
     """Download ``key``, build an HLS ladder + poster, store and describe it."""
     with tempfile.TemporaryDirectory() as td:
         tdp = Path(td)
@@ -120,13 +120,17 @@ def transcode_video(key: str) -> dict:
         src.write_bytes(s3.get_bytes(key))
 
         meta = probe(src)
-        ladder = [r for r in LADDER if r[0] <= meta["height"]] or [LADDER[0]]
+        # An upload quality can cap the ladder so a "low" upload never stores 1080p.
+        ladder = [
+            r for r in LADDER
+            if r[0] <= meta["height"] and (max_height is None or r[0] <= max_height)
+        ] or [LADDER[0]]
 
         outdir = tdp / "out"
         outdir.mkdir()
         rends: list[tuple[int, int, int]] = []
         for height, bitrate_k in ladder:
-            _rendition(src, outdir, height, bitrate_k)
+            _rendition(src, outdir, height, bitrate_k, audio_bitrate or AUDIO_BITRATE)
             out_w = _even(height * meta["width"] / meta["height"])
             rends.append((height, bitrate_k, out_w))
         _write_master(outdir, rends)
@@ -153,6 +157,16 @@ def transcode_video(key: str) -> dict:
                 ctype = _CONTENT_TYPES.get(f.suffix, "application/octet-stream")
                 s3.put_bytes(f"{prefix}/{rel}", f.read_bytes(), ctype)
 
+        variants = [
+            {
+                "height": height,
+                "width": out_w,
+                "bitrateK": bitrate_k,
+                "playlistKey": f"{prefix}/{height}p/index.m3u8",
+            }
+            for height, bitrate_k, out_w in rends
+        ]
+
         return {
             "width": meta["width"],
             "height": meta["height"],
@@ -161,4 +175,5 @@ def transcode_video(key: str) -> dict:
             "hlsKey": f"{prefix}/master.m3u8",
             "previewKey": f"{prefix}/preview.mp4",
             "renditions": [h for h, _, _ in rends],
+            "variants": variants,
         }

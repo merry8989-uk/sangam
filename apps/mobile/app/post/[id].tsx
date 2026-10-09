@@ -7,6 +7,7 @@ import {
   deleteSkipSegment,
   getSkipSegments,
   mediaUrl,
+  playbackCap,
   voteSkipSegment,
   SKIP_CATEGORIES,
   type Post,
@@ -30,6 +31,7 @@ export default function PostDetail() {
 
   const [segments, setSegments] = useState<SkipSegment[]>([]);
   const [skipEnabled, setSkipEnabled] = useState(true);
+  const [cap, setCap] = useState<number | null>(null);
   const [now, setNow] = useState(0);
 
   // Skip-point editor state
@@ -62,8 +64,11 @@ export default function PostDetail() {
         // not found
       }
       try {
-        const s = await api<{ settings: { sponsorSkip?: boolean } }>("/api/settings");
+        const s = await api<{ settings: { sponsorSkip?: boolean; videoQuality?: string; audioQuality?: string } }>(
+          "/api/settings"
+        );
         setSkipEnabled(s.settings?.sponsorSkip ?? true);
+        setCap(playbackCap(s.settings?.videoQuality, s.settings?.audioQuality));
       } catch {
         setSkipEnabled(true); // guest: community skipping stays on
       }
@@ -146,6 +151,8 @@ export default function PostDetail() {
                 segments={segments}
                 skipEnabled={skipEnabled}
                 onTimeUpdate={setNow}
+                variants={(video.renditions ?? []).map((r) => ({ height: r.height, url: mediaUrl(r.playlistKey) }))}
+                cap={cap}
               />
             </View>
           ) : null}

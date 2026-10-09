@@ -40,6 +40,13 @@ export async function signIn(email: string, password: string) {
   return data;
 }
 
+export type Rendition = {
+  height: number;
+  width: number;
+  bitrateK: number;
+  playlistKey: string;
+};
+
 export type Post = {
   id: string;
   caption: string | null;
@@ -54,6 +61,7 @@ export type Post = {
     thumbnailKey: string | null;
     hlsKey: string | null;
     previewKey: string | null;
+    renditions: Rendition[];
   }[];
 };
 
@@ -111,4 +119,13 @@ export function voteSkipSegment(id: string, value: 1 | -1) {
     method: "POST",
     body: JSON.stringify({ value })
   });
+}
+
+// The viewer's quality ceiling: the stricter of video and audio quality.
+export function playbackCap(videoQuality?: string | null, audioQuality?: string | null): number | null {
+  const video = videoQuality && videoQuality !== "auto" ? Number(videoQuality) : null;
+  const audio = audioQuality === "low" ? 480 : audioQuality === "medium" ? 720 : null;
+  if (video === null) return audio;
+  if (audio === null) return video;
+  return Math.min(video, audio);
 }

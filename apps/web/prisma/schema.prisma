@@ -184,6 +184,8 @@ model Media {
   hlsKey     String?
   // Short muted preview clip for hover previews
   previewKey String?
+  // Rendition ladder for videos: [{height,width,bitrateK,playlistKey}]
+  renditions Json      @default("[]")
   createdAt  DateTime  @default(now())
 
   post       Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)

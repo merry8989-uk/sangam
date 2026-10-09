@@ -67,6 +67,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Theme engine: 480 themes, day/week/month/year rotation, mood-driven | ✅ |
 | Android app (Expo / React Native) with Bearer-token auth | ✅ |
 | Custom skip points (per-user or shared, with community voting) | ✅ |
+| Video quality control: per-rendition selection, upload caps, data saver | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

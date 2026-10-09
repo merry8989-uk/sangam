@@ -4,6 +4,8 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { useColors } from "./ui";
 import type { SkipSegment } from "./api";
 
+export type QualityOption = { height: number; url: string };
+
 // A video player with the controls from the design notes: play/pause, skip,
 // speed, mute, audio-only, background play, picture-in-picture - and automatic
 // skipping of skip points (the author's own, plus community ones when enabled).
@@ -18,6 +20,8 @@ export type VideoPlayerProps = {
   segments?: SkipSegment[];
   skipEnabled?: boolean;
   onTimeUpdate?: (t: number) => void;
+  variants?: QualityOption[];
+  cap?: number | null;
 };
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -37,13 +41,44 @@ export default function VideoPlayer(props: VideoPlayerProps) {
   const [dur, setDur] = useState(0);
   const [barW, setBarW] = useState(0);
   const [skipped, setSkipped] = useState<string | null>(null);
+  const [quality, setQuality] = useState<number | null>(null);
   const viewRef = useRef<VideoView>(null);
 
-  const player = useVideoPlayer(uri, (p) => {
+  // Pick the rendition that fits the viewer's cap, or the master for auto.
+  const cappedUrl =
+    props.cap != null && props.variants && props.variants.length
+      ? ([...props.variants].sort((a, b) => b.height - a.height).find((v) => v.height <= (props.cap as number)) ?? null)
+      : null;
+  const initialUri = cappedUrl ? cappedUrl.url : uri;
+
+  const player = useVideoPlayer(initialUri, (p) => {
     p.loop = Boolean(props.loop);
     p.muted = Boolean(props.mutedByDefault ?? props.autoPlay);
     if (props.autoPlay) p.play();
   });
+
+  useEffect(() => {
+    if (cappedUrl) setQuality(cappedUrl.height);
+  }, [cappedUrl]);
+
+  // Switching quality means loading a different playlist, keeping the position.
+  const applyQuality = async (height: number | null) => {
+    const target =
+      height === null
+        ? props.hlsUrl || props.mp4Url || null
+        : props.variants?.find((v) => v.height === height)?.url ?? null;
+    if (!target) return;
+    const at = player.currentTime ?? 0;
+    const wasPlaying = player.playing;
+    setQuality(height);
+    try {
+      await player.replaceAsync({ uri: target, contentType: "hls" });
+      player.currentTime = at;
+      if (wasPlaying) player.play();
+    } catch {
+      // Keep playing what we already have.
+    }
+  };
 
   // expo-video's values are not reactive, so poll. This also drives auto-skip.
   useEffect(() => {
@@ -201,6 +236,22 @@ export default function VideoPlayer(props: VideoPlayerProps) {
           {mmss(time)} / {mmss(dur)}
         </Text>
       </View>
+
+      {props.variants && props.variants.length > 1 ? (
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, paddingHorizontal: 8, paddingBottom: 8, backgroundColor: c.surface }}>
+          <Text style={{ color: c.ink500, fontSize: 11 }}>Quality</Text>
+          <Pressable onPress={() => applyQuality(null)} style={btn(quality === null)}>
+            <Text style={label(quality === null)}>Auto</Text>
+          </Pressable>
+          {[...props.variants]
+            .sort((a, b) => b.height - a.height)
+            .map((v) => (
+              <Pressable key={v.height} onPress={() => applyQuality(v.height)} style={btn(quality === v.height)}>
+                <Text style={label(quality === v.height)}>{v.height}p</Text>
+              </Pressable>
+            ))}
+        </View>
+      ) : null}
     </View>
   );
 }

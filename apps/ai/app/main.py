@@ -75,8 +75,18 @@ class ProcessImageOut(BaseModel):
     thumbs: dict[str, str]
 
 
+class VideoVariant(BaseModel):
+    height: int
+    width: int
+    bitrateK: int
+    playlistKey: str
+
+
 class ProcessVideoIn(BaseModel):
     key: str
+    # Optional upload-quality cap and audio bitrate for the ladder.
+    max_height: int | None = None
+    audio_bitrate: str | None = None
 
 
 class ProcessVideoOut(BaseModel):
@@ -87,6 +97,7 @@ class ProcessVideoOut(BaseModel):
     hlsKey: str
     previewKey: str
     renditions: list[int]
+    variants: list[VideoVariant] = []
 
 
 @app.get("/metrics")
@@ -159,7 +170,13 @@ def process_image_endpoint(payload: ProcessImageIn) -> ProcessImageOut:
 @app.post("/process/video", response_model=ProcessVideoOut)
 def process_video_endpoint(payload: ProcessVideoIn) -> ProcessVideoOut:
     try:
-        return ProcessVideoOut(**transcode_video(payload.key))
+        return ProcessVideoOut(
+            **transcode_video(
+                payload.key,
+                max_height=payload.max_height,
+                audio_bitrate=payload.audio_bitrate,
+            )
+        )
     except TranscodeError as exc:
         raise HTTPException(status_code=422, detail=f"Could not transcode video: {exc}") from exc
 

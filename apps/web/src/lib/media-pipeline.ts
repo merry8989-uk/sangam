@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { redis, feedKey } from "./redis";
 import { processImage, processVideo } from "./ai";
+import { getSettingsOptional } from "./settings";
+import { uploadCapHeight, uploadAudioBitrate } from "./quality";
 
 export const POST_INCLUDE = { author: true, media: true } as const;
 
@@ -23,6 +25,12 @@ export async function fanOut(userId: string, postId: string, visibility: string)
 // Enrich every media item on a post (thumbnails, HLS, poster, preview clip).
 export async function enrichMedia(postId: string) {
   const media = await prisma.media.findMany({ where: { postId } });
+
+  // The author's upload quality decides how high the transcoder may go.
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  const authorSettings = await getSettingsOptional(post?.authorId);
+  const maxHeight = uploadCapHeight(authorSettings?.uploadQuality);
+  const audioBitrate = uploadAudioBitrate(authorSettings?.uploadQuality);
   await Promise.all(
     media.map(async (m) => {
       if (m.kind === "IMAGE") {
@@ -32,7 +40,7 @@ export async function enrichMedia(postId: string) {
           data: { width: r.width, height: r.height, thumbnailKey: r.thumbnailKey }
         });
       } else if (m.kind === "VIDEO") {
-        const r = await processVideo(m.storageKey);
+        const r = await processVideo(m.storageKey, { maxHeight, audioBitrate });
         await prisma.media.update({
           where: { id: m.id },
           data: {
@@ -41,7 +49,8 @@ export async function enrichMedia(postId: string) {
             durationMs: r.durationMs,
             thumbnailKey: r.thumbnailKey,
             hlsKey: r.hlsKey,
-            previewKey: r.previewKey
+            previewKey: r.previewKey,
+            renditions: (r.variants ?? []) as unknown as object[]
           }
         });
       }

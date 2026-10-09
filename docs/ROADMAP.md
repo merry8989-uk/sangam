@@ -131,6 +131,17 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] SponsorBlock-style category presets and an import/export of a user's
       own skip list.
 
+## Phase 10 - Quality control
+- [x] The transcoder now stores its rendition ladder
+      (`Media.renditions`), so clients know what is available.
+- [x] Web player: a quality menu backed by hls.js levels.
+- [x] Android player: a quality menu that swaps the rendition playlist.
+- [x] `videoQuality` / `audioQuality` act as a playback ceiling; the stricter
+      of the two wins.
+- [x] `uploadQuality` caps the ladder at upload time, so a "low" upload never
+      stores 1080p.
+- [ ] Thumbnail control (choosing the poster frame).
+
 
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
