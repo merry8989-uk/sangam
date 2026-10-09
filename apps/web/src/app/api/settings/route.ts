@@ -47,6 +47,41 @@ const Body = z.object({
   historyEnabled: z.boolean().optional(),
   autoDeleteDays: z.number().int().min(0).max(3650).optional(),
 
+  // Calls
+  callRingtone: z.enum(["classic", "chime", "pulse", "silent"]).optional(),
+  callVibrate: z.boolean().optional(),
+  whoCanCallMe: z.enum(["EVERYONE", "FOLLOWERS", "NOBODY"]).optional(),
+  callAutoAnswer: z.boolean().optional(),
+  dndEnabled: z.boolean().optional(),
+  dndFrom: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  dndTo: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  callDefaultCamera: z.enum(["front", "back"]).optional(),
+  callStartWithMic: z.boolean().optional(),
+  callStartWithVideo: z.boolean().optional(),
+  noiseSuppression: z.boolean().optional(),
+  mirrorOwnVideo: z.boolean().optional(),
+  blurBackground: z.boolean().optional(),
+  virtualBackground: z.string().max(500).optional(),
+  screenShareAudio: z.boolean().optional(),
+
+  // Meetings
+  joinMuted: z.boolean().optional(),
+  joinVideoOff: z.boolean().optional(),
+  meetingLayout: z.enum(["grid", "speaker", "sidebar"]).optional(),
+  meetingMaxTiles: z.number().int().min(1).max(49).optional(),
+  waitingRoom: z.boolean().optional(),
+  allowGuests: z.boolean().optional(),
+  meetingRecording: z.boolean().optional(),
+
+  // Live
+  liveDefaultTitle: z.string().max(120).optional(),
+  liveChatEnabled: z.boolean().optional(),
+  liveQaEnabled: z.boolean().optional(),
+  liveAutoRecord: z.boolean().optional(),
+  liveLatencyMode: z.enum(["low", "high"]).optional(),
+  liveFilterChat: z.boolean().optional(),
+  liveWhoCanChat: z.enum(["EVERYONE", "FOLLOWERS", "NOBODY"]).optional(),
+
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });

@@ -16,7 +16,11 @@
       "permissions": [
         "INTERNET",
         "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO"
+        "READ_MEDIA_VIDEO",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "BLUETOOTH_CONNECT"
       ],
       "softwareKeyboardLayoutMode": "resize"
     },
@@ -28,7 +32,8 @@
           "supportsBackgroundPlayback": true,
           "supportsPictureInPicture": true
         }
-      ]
+      ],
+      "@livekit/react-native-expo-plugin"
     ],
     "extra": {
       "apiUrl": "http://10.0.2.2:3000"

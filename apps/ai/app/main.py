@@ -113,6 +113,7 @@ class FrameOut(BaseModel):
 class SampleFramesOut(BaseModel):
     frames: list[FrameOut]
     durationMs: int
+    cached: bool = False
 
 
 class PosterIn(BaseModel):

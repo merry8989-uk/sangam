@@ -148,3 +148,16 @@ Narrow, sequential phases. Each phase ships something usable.
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.
 - Keep the AI service interfaces stable so models swap without rewrites.
+
+## Phase 11 - Live, calling and meetings on one backbone
+- [x] One `Room` model for CALL, MEETING and LIVE, backed by a self-hosted
+      LiveKit server - so all three share one media path.
+- [x] LiveKit access tokens minted in-process (HS256 JWT via node:crypto, no
+      SDK), with per-role grants.
+- [x] RTMP ingress for live, so a phone broadcaster app or OBS can push.
+- [x] Rooms: create, join (with a join code), end, live start/stop.
+- [x] Web `/live` and a unified `/room/[id]`; Android Live tab and room screen.
+- [x] `docker compose --profile live up` starts the media server.
+- [ ] Recording and playback of calls/meetings.
+- [ ] Push notifications for incoming calls.
+- [ ] Waiting room enforcement and guest links.

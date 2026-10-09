@@ -52,6 +52,8 @@ model User {
 
   skipSegments  SkipSegment[]
   skipVotes     SkipVote[]
+  roomsOwned    Room[]
+  roomParticipations RoomParticipant[]
 
   @@index([username])
 }
@@ -542,6 +544,41 @@ model UserSettings {
 
   skipCategories Json    @default("[]") // empty = all categories
 
+  // Calls, meetings & live
+  callRingtone       String  @default("classic")
+  callVibrate        Boolean @default(true)
+  whoCanCallMe       String  @default("FOLLOWERS") // EVERYONE | FOLLOWERS | NOBODY
+  callAutoAnswer     Boolean @default(false)
+  dndEnabled         Boolean @default(false)
+  dndFrom            String  @default("22:00")
+  dndTo              String  @default("07:00")
+  callDefaultCamera  String  @default("front")     // front | back
+  callStartWithMic   Boolean @default(true)
+  callStartWithVideo Boolean @default(true)
+  noiseSuppression   Boolean @default(true)
+  mirrorOwnVideo     Boolean @default(true)
+  blurBackground     Boolean @default(false)
+  virtualBackground  String  @default("")
+  screenShareAudio   Boolean @default(true)
+
+  // Meetings
+  joinMuted          Boolean @default(true)
+  joinVideoOff       Boolean @default(false)
+  meetingLayout      String  @default("grid")      // grid | speaker | sidebar
+  meetingMaxTiles    Int     @default(9)
+  waitingRoom        Boolean @default(true)
+  allowGuests        Boolean @default(false)
+  meetingRecording   Boolean @default(false)
+
+  // Live
+  liveDefaultTitle   String  @default("")
+  liveChatEnabled    Boolean @default(true)
+  liveQaEnabled      Boolean @default(false)
+  liveAutoRecord     Boolean @default(false)
+  liveLatencyMode    String  @default("low")       // low | high
+  liveFilterChat     Boolean @default(true)
+  liveWhoCanChat     String  @default("EVERYONE")  // EVERYONE | FOLLOWERS | NOBODY
+
   // Moderation
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")
@@ -598,5 +635,49 @@ model SkipVote {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([segmentId, userId])
+  @@index([userId])
+}
+
+// One table for calls, meetings and live streams. Each maps to a LiveKit room,
+// so a single self-hosted media server backs all three.
+model Room {
+  id             String   @id @default(cuid())
+  kind           String   // CALL | MEETING | LIVE
+  name           String
+  ownerId        String
+  joinCode       String   @unique
+  status         String   @default("ACTIVE")   // ACTIVE | ENDED
+  visibility     String   @default("PRIVATE")  // PRIVATE | FOLLOWERS | PUBLIC
+
+  // Live only
+  isLive         Boolean  @default(false)
+  rtmpUrl        String?
+  hlsPlaybackUrl String?
+  ingressId      String?
+  peakViewers    Int      @default(0)
+
+  startedAt      DateTime @default(now())
+  endedAt        DateTime?
+  createdAt      DateTime @default(now())
+
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  participants   RoomParticipant[]
+
+  @@index([kind, status])
+  @@index([ownerId])
+}
+
+model RoomParticipant {
+  id       String    @id @default(cuid())
+  roomId   String
+  userId   String
+  role     String    @default("VIEWER")  // HOST | SPEAKER | VIEWER
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  room     Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
   @@index([userId])
 }

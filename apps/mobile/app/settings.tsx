@@ -35,6 +35,16 @@ export default function Settings() {
     }
   }
 
+  function Toggle({ label, field }: { label: string; field: string }) {
+    const on = Boolean(settings?.[field]);
+    return (
+      <Pressable onPress={() => save({ [field]: !on })} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Pill label={on ? "on" : "off"} active={on} />
+        <Text style={{ color: c.ink700, fontSize: 13, flex: 1 }}>{label}</Text>
+      </Pressable>
+    );
+  }
+
   function Picker({
     label,
     field,
@@ -124,6 +134,41 @@ export default function Settings() {
               }}
             />
           </View>
+        </Card>
+
+        <Card>
+          <Heading>Calls</Heading>
+          <Picker label="Who can call me" field="whoCanCallMe" options={["EVERYONE", "FOLLOWERS", "NOBODY"]} />
+          <Picker label="Ringtone" field="callRingtone" options={["classic", "chime", "pulse", "silent"]} />
+          <Picker label="Default camera" field="callDefaultCamera" options={["front", "back"]} />
+          <Toggle label="Vibrate on incoming call" field="callVibrate" />
+          <Toggle label="Do not disturb" field="dndEnabled" />
+          <Toggle label="Start calls with my microphone on" field="callStartWithMic" />
+          <Toggle label="Start calls with my camera on" field="callStartWithVideo" />
+          <Toggle label="Noise suppression" field="noiseSuppression" />
+          <Toggle label="Mirror my own video" field="mirrorOwnVideo" />
+          <Toggle label="Blur my background" field="blurBackground" />
+          <Toggle label="Share system audio when screen sharing" field="screenShareAudio" />
+        </Card>
+
+        <Card>
+          <Heading>Meetings</Heading>
+          <Picker label="Default layout" field="meetingLayout" options={["grid", "speaker", "sidebar"]} />
+          <Toggle label="Join muted" field="joinMuted" />
+          <Toggle label="Join with camera off" field="joinVideoOff" />
+          <Toggle label="Waiting room" field="waitingRoom" />
+          <Toggle label="Allow guests without an account" field="allowGuests" />
+          <Toggle label="Record my meetings by default" field="meetingRecording" />
+        </Card>
+
+        <Card>
+          <Heading>Live</Heading>
+          <Picker label="Latency mode" field="liveLatencyMode" options={["low", "high"]} />
+          <Picker label="Who can chat" field="liveWhoCanChat" options={["EVERYONE", "FOLLOWERS", "NOBODY"]} />
+          <Toggle label="Live chat" field="liveChatEnabled" />
+          <Toggle label="Filter chat through the word filter" field="liveFilterChat" />
+          <Toggle label="Q and A panel" field="liveQaEnabled" />
+          <Toggle label="Record my streams by default" field="liveAutoRecord" />
         </Card>
 
         <Card>

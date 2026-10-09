@@ -144,3 +144,61 @@ export function setPoster(mediaId: string, atSec: number) {
     body: JSON.stringify({ atSec })
   });
 }
+
+// ---- rooms: calls, meetings and live streams ----
+export type RoomKind = "CALL" | "MEETING" | "LIVE";
+
+export type RoomSummary = {
+  id: string;
+  kind: string;
+  name: string;
+  joinCode: string;
+  status: string;
+  visibility: string;
+  isLive: boolean;
+  hlsPlaybackUrl: string | null;
+  startedAt: string;
+  owner: { username: string; displayName: string | null };
+};
+
+export function createRoom(kind: RoomKind, visibility: "PRIVATE" | "FOLLOWERS" | "PUBLIC" = "PRIVATE") {
+  return api<{ room: RoomSummary; rtmp?: { url: string; key: string } }>("/api/rooms", {
+    method: "POST",
+    body: JSON.stringify({ kind, visibility })
+  });
+}
+
+export function listRooms(kind?: RoomKind) {
+  return api<{ items: RoomSummary[]; livekitConfigured: boolean }>(
+    "/api/rooms" + (kind ? "?kind=" + kind : "")
+  );
+}
+
+export function joinRoom(roomId: string, code?: string) {
+  return api<{
+    role: string;
+    roomName: string;
+    token: string | null;
+    wsUrl: string | null;
+    canPublish?: boolean;
+    warning?: string;
+  }>("/api/rooms/" + roomId + "/join", {
+    method: "POST",
+    body: JSON.stringify({ code: code ?? "" })
+  });
+}
+
+export function endRoom(roomId: string) {
+  return api<{ ok: boolean }>("/api/rooms/" + roomId + "/end", { method: "POST" });
+}
+
+export function liveAction(roomId: string, action: "start" | "stop") {
+  return api<{ room: RoomSummary; rtmp?: { url: string; key: string } }>(
+    "/api/rooms/" + roomId + "/live",
+    { method: "POST", body: JSON.stringify({ action }) }
+  );
+}
+
+export function resolveJoinCode(code: string) {
+  return api<{ room: RoomSummary }>("/api/rooms/code/" + encodeURIComponent(code.toUpperCase()));
+}

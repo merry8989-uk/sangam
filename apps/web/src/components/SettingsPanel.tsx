@@ -15,6 +15,15 @@ type S = {
   profileVisible: boolean; whoCanViewPosts: string;
   autoSaveDrafts: boolean; historyEnabled: boolean; autoDeleteDays: number;
   hideSensitive: boolean; blockedWords: string[];
+  callRingtone: string; callVibrate: boolean; whoCanCallMe: string; callAutoAnswer: boolean;
+  dndEnabled: boolean; dndFrom: string; dndTo: string;
+  callDefaultCamera: string; callStartWithMic: boolean; callStartWithVideo: boolean;
+  noiseSuppression: boolean; mirrorOwnVideo: boolean; blurBackground: boolean;
+  virtualBackground: string; screenShareAudio: boolean;
+  joinMuted: boolean; joinVideoOff: boolean; meetingLayout: string; meetingMaxTiles: number;
+  waitingRoom: boolean; allowGuests: boolean; meetingRecording: boolean;
+  liveDefaultTitle: string; liveChatEnabled: boolean; liveQaEnabled: boolean;
+  liveAutoRecord: boolean; liveLatencyMode: string; liveFilterChat: boolean; liveWhoCanChat: string;
 };
 
 const SEL = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm";
@@ -222,6 +231,66 @@ export default function SettingsPanel({
         <button onClick={clearHistory} className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50">
           Clear history now
         </button>
+      </Section>
+
+      <Section title="Calls" hint="Audio and video calls, and when people may reach you.">
+        <Row label="Who can call me">
+          <select className={SEL} value={s.whoCanCallMe} onChange={(e) => set("whoCanCallMe", e.target.value)}>{opts(["EVERYONE", "FOLLOWERS", "NOBODY"])}</select>
+        </Row>
+        <Row label="Ringtone">
+          <select className={SEL} value={s.callRingtone} onChange={(e) => set("callRingtone", e.target.value)}>{opts(["classic", "chime", "pulse", "silent"])}</select>
+        </Row>
+        <Toggle label="Vibrate on incoming call" value={s.callVibrate} onChange={(v) => set("callVibrate", v)} />
+        <Toggle label="Auto-answer" hint="Only applies to people you follow." value={s.callAutoAnswer} onChange={(v) => set("callAutoAnswer", v)} />
+        <Toggle label="Do not disturb" hint="Calls are silenced between the hours below." value={s.dndEnabled} onChange={(v) => set("dndEnabled", v)} />
+        <Row label="Do not disturb from">
+          <input className={INP} placeholder="22:00" value={s.dndFrom} onChange={(e) => set("dndFrom", e.target.value)} />
+        </Row>
+        <Row label="Do not disturb until">
+          <input className={INP} placeholder="07:00" value={s.dndTo} onChange={(e) => set("dndTo", e.target.value)} />
+        </Row>
+        <Row label="Default camera">
+          <select className={SEL} value={s.callDefaultCamera} onChange={(e) => set("callDefaultCamera", e.target.value)}>{opts(["front", "back"])}</select>
+        </Row>
+        <Toggle label="Start calls with my microphone on" value={s.callStartWithMic} onChange={(v) => set("callStartWithMic", v)} />
+        <Toggle label="Start calls with my camera on" value={s.callStartWithVideo} onChange={(v) => set("callStartWithVideo", v)} />
+        <Toggle label="Noise suppression" value={s.noiseSuppression} onChange={(v) => set("noiseSuppression", v)} />
+        <Toggle label="Mirror my own video" value={s.mirrorOwnVideo} onChange={(v) => set("mirrorOwnVideo", v)} />
+        <Toggle label="Blur my background" value={s.blurBackground} onChange={(v) => set("blurBackground", v)} />
+        <Row label="Virtual background (image key or colour)">
+          <input className={INP} value={s.virtualBackground} onChange={(e) => set("virtualBackground", e.target.value)} />
+        </Row>
+        <Toggle label="Share system audio when screen sharing" value={s.screenShareAudio} onChange={(v) => set("screenShareAudio", v)} />
+      </Section>
+
+      <Section title="Meetings" hint="How you join and how the room is laid out.">
+        <Toggle label="Join muted" value={s.joinMuted} onChange={(v) => set("joinMuted", v)} />
+        <Toggle label="Join with camera off" value={s.joinVideoOff} onChange={(v) => set("joinVideoOff", v)} />
+        <Row label="Default layout">
+          <select className={SEL} value={s.meetingLayout} onChange={(e) => set("meetingLayout", e.target.value)}>{opts(["grid", "speaker", "sidebar"])}</select>
+        </Row>
+        <Row label="Max tiles on screen">
+          <input type="number" min="1" max="49" className={INP} value={s.meetingMaxTiles} onChange={(e) => set("meetingMaxTiles", Number(e.target.value))} />
+        </Row>
+        <Toggle label="Waiting room for my meetings" hint="Guests wait until you let them in." value={s.waitingRoom} onChange={(v) => set("waitingRoom", v)} />
+        <Toggle label="Allow guests without an account" value={s.allowGuests} onChange={(v) => set("allowGuests", v)} />
+        <Toggle label="Record my meetings by default" value={s.meetingRecording} onChange={(v) => set("meetingRecording", v)} />
+      </Section>
+
+      <Section title="Live" hint="Defaults for your live streams, on phone or laptop.">
+        <Row label="Default stream title">
+          <input className={INP} value={s.liveDefaultTitle} onChange={(e) => set("liveDefaultTitle", e.target.value)} />
+        </Row>
+        <Row label="Latency mode">
+          <select className={SEL} value={s.liveLatencyMode} onChange={(e) => set("liveLatencyMode", e.target.value)}>{opts(["low", "high"])}</select>
+        </Row>
+        <Toggle label="Live chat" value={s.liveChatEnabled} onChange={(v) => set("liveChatEnabled", v)} />
+        <Toggle label="Filter chat through the word filter" value={s.liveFilterChat} onChange={(v) => set("liveFilterChat", v)} />
+        <Row label="Who can chat">
+          <select className={SEL} value={s.liveWhoCanChat} onChange={(e) => set("liveWhoCanChat", e.target.value)}>{opts(["EVERYONE", "FOLLOWERS", "NOBODY"])}</select>
+        </Row>
+        <Toggle label="Q&amp;A panel" value={s.liveQaEnabled} onChange={(v) => set("liveQaEnabled", v)} />
+        <Toggle label="Record my streams by default" value={s.liveAutoRecord} onChange={(v) => set("liveAutoRecord", v)} />
       </Section>
 
       <Section title="Moderation" hint="Filter what you see, and block words.">

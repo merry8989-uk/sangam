@@ -69,6 +69,9 @@ channel follows) into **one** product, built on our **own stack**.
 | Custom skip points (per-user or shared, with community voting) | ✅ |
 | Video quality control: per-rendition selection, upload caps, data saver | ✅ |
 | Thumbnail control: pick the poster frame from a generated filmstrip | ✅ |
+| Live streaming: RTMP ingest, go live from phone or laptop | ✅ |
+| Calls (1:1) and meetings (group), one room model | ✅ |
+| Calls / meetings / live control settings | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

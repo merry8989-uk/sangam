@@ -104,6 +104,12 @@ services:
       MEDIA_QUEUE_ENABLED: ${MEDIA_QUEUE_ENABLED:-false}
       MEILISEARCH_URL: ${MEILISEARCH_URL:-}
       MEILISEARCH_KEY: ${MEILISEARCH_KEY:-change-me-in-prod}
+      # LiveKit: LIVEKIT_URL is what clients connect to; LIVEKIT_API_URL is the
+      # in-network address the server uses for its admin calls.
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_API_URL: ${LIVEKIT_API_URL:-ws://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret_change_me_at_least_32_chars}
     ports:
       - "3000:3000"
     depends_on:
@@ -113,6 +119,21 @@ services:
         condition: service_healthy
       ai:
         condition: service_started
+
+  # Self-hosted media server for calls, meetings and live streaming.
+  # Start it with:  docker compose --profile live up
+  livekit:
+    image: livekit/livekit-server:v1.7.2
+    profiles: ["live"]
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./infra/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"     # websocket / http
+      - "7881:7881"     # rtc over tcp
+      - "7882:7882/udp" # rtc over udp
+      - "1935:1935"     # rtmp ingest (phone / OBS)
+    restart: unless-stopped
 
   # Media enrichment worker. Enable it by setting MEDIA_QUEUE_ENABLED=true.
   worker:

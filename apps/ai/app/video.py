@@ -187,8 +187,27 @@ def _frame_at(src: Path, at_sec: float, out: Path, width: int = 640) -> None:
 
 
 def sample_frames(key: str, count: int = 8) -> dict:
-    """Extract evenly spaced frames so an author can pick a poster."""
+    """Extract evenly spaced frames so an author can pick a poster.
+
+    The strip is cached under the media's HLS prefix, so asking again for the
+    same count is a single small object read instead of a full re-extract.
+    """
     count = max(1, min(int(count), 20))
+    prefix = f"{key.rsplit('.', 1)[0]}_hls"
+    index_key = f"{prefix}/frames/index.json"
+
+    try:
+        cached = json.loads(s3.get_bytes(index_key).decode("utf-8"))
+        if cached.get("count") == count and cached.get("frames"):
+            return {
+                "frames": cached["frames"],
+                "durationMs": int(cached.get("durationMs") or 0),
+                "cached": True,
+            }
+    except Exception:
+        # No cache yet, or unreadable: fall through and build it.
+        pass
+
     with tempfile.TemporaryDirectory() as td:
         tdp = Path(td)
         src = tdp / "src"
@@ -207,7 +226,9 @@ def sample_frames(key: str, count: int = 8) -> dict:
             s3.put_bytes(outkey, out.read_bytes(), "image/jpeg")
             frames.append({"atSec": round(at, 2), "key": outkey})
 
-        return {"frames": frames, "durationMs": int(duration * 1000)}
+        payload = {"count": count, "durationMs": int(duration * 1000), "frames": frames}
+        s3.put_bytes(index_key, json.dumps(payload).encode("utf-8"), "application/json")
+        return {"frames": frames, "durationMs": int(duration * 1000), "cached": False}
 
 
 def extract_poster(key: str, at_sec: float) -> dict:

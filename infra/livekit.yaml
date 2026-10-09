@@ -1,0 +1,23 @@
+# LiveKit server config for local development.
+# In production run this in an India region (ap-south-1 or an Indian provider)
+# and set use_external_ip with your public address.
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  # Set true when the server sits behind NAT and clients connect over the
+  # internet, so LiveKit advertises the right candidate address.
+  use_external_ip: false
+
+# Replace both values before exposing this to anyone. The secret must be at
+# least 32 characters; LiveKit refuses to start otherwise.
+keys:
+  devkey: devsecret_change_me_at_least_32_chars
+
+# RTMP ingest, so a phone broadcaster app or OBS can push a live stream.
+rtmp:
+  port: 1935
+
+logging:
+  level: info

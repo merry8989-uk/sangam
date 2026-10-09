@@ -6,6 +6,16 @@ import { ThemeContext } from "../src/ui";
 import { colorsOf, pickTheme } from "../src/theme";
 import { api, loadToken } from "../src/api";
 
+// LiveKit's React Native SDK needs its WebRTC globals registered before use.
+// Guarded so the app still runs where the native module is absent (Expo Go).
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const lk = require("@livekit/react-native");
+  lk.registerGlobals?.();
+} catch {
+  // Native WebRTC is only present in a development or EAS build.
+}
+
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const [themeMode, setThemeMode] = useState("daily");
@@ -46,11 +56,13 @@ export default function RootLayout() {
           <Tabs.Screen name="index" options={{ title: "Feed" }} />
           <Tabs.Screen name="shorts" options={{ title: "Shorts" }} />
           <Tabs.Screen name="explore" options={{ title: "Explore" }} />
+          <Tabs.Screen name="live" options={{ title: "Live" }} />
           <Tabs.Screen name="messages" options={{ title: "Messages" }} />
           <Tabs.Screen name="ai" options={{ title: "AI" }} />
           <Tabs.Screen name="settings" options={{ title: "Settings" }} />
           <Tabs.Screen name="login" options={{ href: null, title: "Sign in" }} />
           <Tabs.Screen name="post/[id]" options={{ href: null, title: "Post" }} />
+          <Tabs.Screen name="room/[id]" options={{ href: null, title: "Room" }} />
         </Tabs>
       </SafeAreaProvider>
     </ThemeContext.Provider>

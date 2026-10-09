@@ -22,6 +22,15 @@ def get_bytes(key: str) -> bytes:
     return obj["Body"].read()
 
 
+def exists(key: str) -> bool:
+    """True if the object is already stored. Used to skip repeat work."""
+    try:
+        _client.head_object(Bucket=settings.s3_bucket_media, Key=key)
+        return True
+    except Exception:
+        return False
+
+
 def put_bytes(key: str, data: bytes, content_type: str) -> None:
     _client.put_object(
         Bucket=settings.s3_bucket_media,
