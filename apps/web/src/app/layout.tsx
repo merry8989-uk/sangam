@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import AiLauncher from "@/components/AiLauncher";
 
 export const metadata: Metadata = {
   title: "Sangam",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <Nav />
         {children}
+        <AiLauncher />
       </body>
     </html>
   );

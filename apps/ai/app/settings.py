@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     ffmpeg_bin: str = ""
     ffprobe_bin: str = ""
 
+    # Sarvam AI (powers the Indus chat experience). The key is held
+    # server-side only and never sent to the browser.
+    sarvam_api_key: str = ""
+    sarvam_base_url: str = "https://api.sarvam.ai"
+    sarvam_model: str = "sarvam-105b"
+
     class Config:
         env_file = ".env"
 

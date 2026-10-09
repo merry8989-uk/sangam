@@ -62,6 +62,9 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-sangam-minio}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-in-prod}
       S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:-sangam-media}
+      SARVAM_API_KEY: ${SARVAM_API_KEY:-}
+      SARVAM_BASE_URL: ${SARVAM_BASE_URL:-https://api.sarvam.ai}
+      SARVAM_MODEL: ${SARVAM_MODEL:-sarvam-105b}
     ports:
       - "8000:8000"
     depends_on:

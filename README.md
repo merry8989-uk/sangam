@@ -33,6 +33,9 @@ channel follows) into **one** product, built on our **own stack**.
 | Ranked 'For you' feed + moderation review queue | ✅ |
 | Likes, comments, follow (API + UI) | ✅ |
 | Creator studio: analytics + agent assist | ✅ |
+| AI chat (Sarvam Indus / sarvam-105b), no login required | ✅ |
+| One agent per user + public Agent API (Bearer key) | ✅ |
+| AI launcher: skills, knowledge base, scheduled task, connector | ✅ |
 | Image pipeline: upload -> thumbnails (WebP) -> feed | ✅ |
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |

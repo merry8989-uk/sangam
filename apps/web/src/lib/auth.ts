@@ -7,6 +7,9 @@ import { prisma } from "./prisma";
 // Own authentication only - no dependency on Meta/Google sign-in.
 // Production India setup: add an OTP provider (MSG91 / Gupshup) for
 // phone-first login, which is the dominant pattern in India.
+//
+// Session typing (session.user.id) comes from src/types/next-auth.d.ts,
+// so no `as` casts are needed here.
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -32,12 +35,13 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.uid = (user as { id: string }).id;
+      if (user) token.uid = user.id;
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as { id?: string }).id = token.uid as string;
+      const uid = typeof token.uid === "string" ? token.uid : undefined;
+      if (session.user && uid) session.user.id = uid;
       return session;
     }
   }
-});
+};

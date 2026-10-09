@@ -43,6 +43,19 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] App shell (navigation) and post detail page.
 - [ ] Groups/communities, direct messaging, live streaming.
 
+
+## Phase 5 - AI chat & agents
+- [x] In-app chat on Sarvam's 105B model (the model behind Indus); no login required.
+- [x] Public chat endpoint with the Sarvam key held server-side only.
+- [x] One agent per user (unique index), configurable: system prompt, model, skills,
+      knowledge base, scheduled tasks, connectors.
+- [x] Agent API: call your agent from anywhere with a Bearer key.
+- [x] AI launcher button - tap to reveal options (new chat, recent chat, skills,
+      knowledge base, scheduled task, connector); shows a dot when collapsed.
+- [ ] Streaming responses (SSE) instead of waiting for the full reply.
+- [ ] A scheduler worker to actually run the agent's scheduled tasks.
+- [ ] Embeddings-based knowledge base retrieval (today the KB is injected as text).
+
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.

@@ -51,3 +51,26 @@ export function rankFeed(
 ): Promise<{ post_ids: string[] }> {
   return callAi<{ post_ids: string[] }>("/feed/rank", { sources, ...opts });
 }
+
+export type ChatTurn = { role: "system" | "user" | "assistant"; content: string };
+export type ChatReply = {
+  content: string;
+  model?: string | null;
+  reasoning?: string | null;
+  usage?: unknown;
+};
+
+// Public chat via Sarvam AI (model sarvam-105b, the model behind Indus).
+// Runs server-side so the Sarvam key never reaches the browser.
+export function sarvamChat(
+  messages: ChatTurn[],
+  opts: { system?: string; model?: string; temperature?: number; maxTokens?: number } = {}
+): Promise<ChatReply> {
+  return callAi<ChatReply>("/chat", {
+    messages,
+    system: opts.system,
+    model: opts.model,
+    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? 2048
+  });
+}

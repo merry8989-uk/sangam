@@ -35,6 +35,8 @@ model User {
   following     Follow[]  @relation("follower")
   followers     Follow[]  @relation("followee")
   notifications Notification[] @relation("recipient")
+  agent         Agent?
+  chatSessions  ChatSession[]
 
   @@index([username])
 }
@@ -244,4 +246,52 @@ model ModerationFlag {
   resolved   Boolean  @default(false)
   createdAt  DateTime @default(now())
   @@index([entityType, entityId])
+}
+
+// ---------- AI agents & chat ----------
+model Agent {
+  id             String   @id @default(cuid())
+  userId         String   @unique   // ONE agent per user, enforced by the unique index
+  name           String   @default("My agent")
+  model          String   @default("sarvam-105b")
+  systemPrompt   String   @default("")
+  temperature    Float    @default(0.7)
+  skills         Json     @default("[]")
+  knowledgeBase  Json     @default("[]")
+  scheduledTasks Json     @default("[]")
+  connectors     Json     @default("[]")
+  apiKey         String   @unique   // used by external callers of the Agent API
+  isPublic       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions ChatSession[]
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String?
+  agentId   String?
+  title     String   @default("New chat")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent    Agent?        @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }

@@ -7,6 +7,7 @@ from .agents import alt_text, draft_title_description, suggest_captions, suggest
 from .media import InvalidImage, process_image
 from .moderation import moderate_text
 from .recommend import Candidate, recommend, similar
+from .sarvam import SarvamError, chat as sarvam_chat, is_configured as sarvam_configured
 from .settings import settings
 from .video import TranscodeError, transcode_video
 from .vision import classify_image
@@ -14,7 +15,7 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.5.0",
+    version="0.6.0",
 )
 
 
@@ -77,7 +78,7 @@ class ProcessVideoOut(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "region": settings.s3_region}
+    return {"status": "ok", "region": settings.s3_region, "sarvam_configured": sarvam_configured()}
 
 
 @app.post("/moderate", response_model=ModerateOut)
@@ -163,3 +164,44 @@ def agents_assist(payload: AssistIn) -> AssistOut:
     if payload.task == "translate":
         return AssistOut(result=translate(payload.text, payload.target))
     raise HTTPException(status_code=400, detail="unknown task")
+
+
+class ChatMessageIn(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+
+class ChatIn(BaseModel):
+    messages: list[ChatMessageIn]
+    system: str | None = None
+    model: str | None = None
+    temperature: float = 0.7
+    max_tokens: int = 2048
+    reasoning_effort: str | None = None
+
+
+class ChatOut(BaseModel):
+    content: str
+    model: str | None = None
+    reasoning: str | None = None
+    usage: dict | None = None
+
+
+@app.post("/chat", response_model=ChatOut)
+def chat_endpoint(payload: ChatIn) -> ChatOut:
+    """Public chat endpoint (no login required). The caller may pass a system
+    prompt - the web layer uses this to inject a user's agent configuration."""
+    messages: list[dict] = []
+    if payload.system:
+        messages.append({"role": "system", "content": payload.system})
+    messages.extend(m.model_dump() for m in payload.messages)
+    try:
+        return ChatOut(**sarvam_chat(
+            messages,
+            model=payload.model,
+            temperature=payload.temperature,
+            max_tokens=payload.max_tokens,
+            reasoning_effort=payload.reasoning_effort,
+        ))
+    except SarvamError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
