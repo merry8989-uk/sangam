@@ -15,6 +15,7 @@ import DeletePostButton from "@/components/DeletePostButton";
 import { getSettingsOptional } from "@/lib/settings";
 import { playbackCap, type Rendition } from "@/lib/quality";
 import ReportButton from "@/components/ReportButton";
+import ThumbnailPicker from "@/components/ThumbnailPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,10 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
               src={mediaUrl(post.media[0]?.thumbnailKey ?? post.media[0]?.storageKey ?? "")}
             />
           )}
+
+          {viewerId === post.authorId && video ? (
+            <ThumbnailPicker mediaId={video.id} initialThumbnailKey={video.thumbnailKey} />
+          ) : null}
 
           <h1 className="mt-3 text-xl font-semibold">{post.caption || "(no title)"}</h1>
 

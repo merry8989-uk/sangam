@@ -140,7 +140,8 @@ Narrow, sequential phases. Each phase ships something usable.
       of the two wins.
 - [x] `uploadQuality` caps the ladder at upload time, so a "low" upload never
       stores 1080p.
-- [ ] Thumbnail control (choosing the poster frame).
+- [x] Thumbnail control: the author picks the poster frame from a filmstrip of
+      evenly spaced frames, on the web watch page and in the Android app.
 
 
 ## Cross-cutting, ongoing

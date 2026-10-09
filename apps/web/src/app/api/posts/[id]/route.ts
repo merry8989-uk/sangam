@@ -10,11 +10,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     include: { author: { select: { username: true, displayName: true } }, media: true }
   });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (post.visibility === "PRIVATE") {
-    const viewerId = await getViewerId(req);
-    if (viewerId !== post.authorId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const viewerId = await getViewerId(req);
+  if (post.visibility === "PRIVATE" && viewerId !== post.authorId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ post });
+  return NextResponse.json({ post, isOwner: Boolean(viewerId) && viewerId === post.authorId });
 }
 
 // Delete a post. Only the author may delete it. Media, likes, comments and

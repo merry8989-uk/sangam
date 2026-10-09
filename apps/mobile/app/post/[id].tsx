@@ -6,11 +6,14 @@ import {
   createSkipSegment,
   deleteSkipSegment,
   getSkipSegments,
+  getThumbnailFrames,
   mediaUrl,
   playbackCap,
+  setPoster,
   voteSkipSegment,
   SKIP_CATEGORIES,
   type Post,
+  type SampledFrame,
   type SkipCategory,
   type SkipSegment
 } from "../../src/api";
@@ -33,6 +36,12 @@ export default function PostDetail() {
   const [skipEnabled, setSkipEnabled] = useState(true);
   const [cap, setCap] = useState<number | null>(null);
   const [now, setNow] = useState(0);
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Thumbnail picker
+  const [frames, setFrames] = useState<SampledFrame[]>([]);
+  const [posterKey, setPosterKey] = useState<string | null>(null);
+  const [framesBusy, setFramesBusy] = useState(false);
 
   // Skip-point editor state
   const [startAt, setStartAt] = useState<number | null>(null);
@@ -56,10 +65,14 @@ export default function PostDetail() {
   useEffect(() => {
     (async () => {
       try {
-        const d = await api<{ post: Post }>(`/api/posts/${id}`);
+        const d = await api<{ post: Post; isOwner?: boolean }>(`/api/posts/${id}`);
         setPost(d.post);
+        setIsOwner(Boolean(d.isOwner));
         const v = d.post.media.find((m) => m.kind === "VIDEO" && m.hlsKey);
-        if (v) await loadSegments(v.id);
+        if (v) {
+          await loadSegments(v.id);
+          setPosterKey(v.thumbnailKey);
+        }
       } catch {
         // not found
       }
@@ -251,6 +264,67 @@ export default function PostDetail() {
                 </View>
               </View>
             ))}
+          </Card>
+        ) : null}
+
+        {video && isOwner ? (
+          <Card>
+            <Heading>Thumbnail</Heading>
+            <Text style={{ color: c.ink500, fontSize: 12, marginTop: 4 }}>
+              Pick the frame people see before they play.
+            </Text>
+            {posterKey ? (
+              <Image
+                source={{ uri: mediaUrl(posterKey) }}
+                style={{ height: 120, borderRadius: 8, marginTop: 10 }}
+                resizeMode="cover"
+              />
+            ) : null}
+            <View style={{ marginTop: 10 }}>
+              <Button
+                label={framesBusy ? "Working..." : frames.length ? "Refresh frames" : "Choose a frame"}
+                variant="ghost"
+                disabled={framesBusy}
+                onPress={async () => {
+                  setFramesBusy(true);
+                  try {
+                    const d = await getThumbnailFrames(video.id, 8);
+                    setFrames(d.frames ?? []);
+                  } catch {
+                    setNote("Could not generate frames.");
+                  }
+                  setFramesBusy(false);
+                }}
+              />
+            </View>
+            {frames.length > 0 ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {frames.map((f) => (
+                  <Pressable
+                    key={f.key}
+                    disabled={framesBusy}
+                    onPress={async () => {
+                      setFramesBusy(true);
+                      try {
+                        const r = await setPoster(video.id, f.atSec);
+                        setPosterKey(r.thumbnailKey);
+                        setFrames([]);
+                        setNote("Thumbnail updated.");
+                      } catch {
+                        setNote("Could not set the poster.");
+                      }
+                      setFramesBusy(false);
+                    }}
+                    style={{ width: "31%", borderRadius: 6, overflow: "hidden", borderWidth: 1, borderColor: c.line }}
+                  >
+                    <Image source={{ uri: mediaUrl(f.key) }} style={{ height: 64, width: "100%" }} resizeMode="cover" />
+                    <Text style={{ color: c.ink500, fontSize: 10, textAlign: "center", paddingVertical: 2 }}>
+                      {f.atSec}s
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </Card>
         ) : null}
       </ScrollView>

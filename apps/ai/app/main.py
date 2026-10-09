@@ -17,7 +17,7 @@ from .sarvam import (
     is_configured as sarvam_configured,
 )
 from .settings import settings
-from .video import TranscodeError, transcode_video
+from .video import TranscodeError, transcode_video, sample_frames, extract_poster
 from .vision import classify_image
 
 app = FastAPI(
@@ -98,6 +98,47 @@ class ProcessVideoOut(BaseModel):
     previewKey: str
     renditions: list[int]
     variants: list[VideoVariant] = []
+
+
+class SampleFramesIn(BaseModel):
+    key: str
+    count: int = 8
+
+
+class FrameOut(BaseModel):
+    atSec: float
+    key: str
+
+
+class SampleFramesOut(BaseModel):
+    frames: list[FrameOut]
+    durationMs: int
+
+
+class PosterIn(BaseModel):
+    key: str
+    atSec: float
+
+
+class PosterOut(BaseModel):
+    thumbnailKey: str
+    atSec: float
+
+
+@app.post("/thumbnail/frames", response_model=SampleFramesOut)
+def thumbnail_frames_endpoint(payload: SampleFramesIn) -> SampleFramesOut:
+    try:
+        return SampleFramesOut(**sample_frames(payload.key, payload.count))
+    except TranscodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Could not sample frames: {exc}") from exc
+
+
+@app.post("/thumbnail/poster", response_model=PosterOut)
+def thumbnail_poster_endpoint(payload: PosterIn) -> PosterOut:
+    try:
+        return PosterOut(**extract_poster(payload.key, payload.atSec))
+    except TranscodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Could not set poster: {exc}") from exc
 
 
 @app.get("/metrics")

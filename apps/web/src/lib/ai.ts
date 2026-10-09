@@ -95,3 +95,15 @@ export function sarvamChat(
     max_tokens: opts.maxTokens ?? 2048
   });
 }
+
+export type SampledFrame = { atSec: number; key: string };
+
+// Candidate poster frames for the author to choose from.
+export function sampleFrames(key: string, count = 8): Promise<{ frames: SampledFrame[]; durationMs: number }> {
+  return callAi<{ frames: SampledFrame[]; durationMs: number }>("/thumbnail/frames", { key, count });
+}
+
+// Bake the chosen second into the poster image.
+export function extractPoster(key: string, atSec: number): Promise<{ thumbnailKey: string; atSec: number }> {
+  return callAi<{ thumbnailKey: string; atSec: number }>("/thumbnail/poster", { key, atSec });
+}

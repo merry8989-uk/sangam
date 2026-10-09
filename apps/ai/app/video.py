@@ -177,3 +177,52 @@ def transcode_video(key: str, max_height: int | None = None, audio_bitrate: str 
             "renditions": [h for h, _, _ in rends],
             "variants": variants,
         }
+
+
+def _frame_at(src: Path, at_sec: float, out: Path, width: int = 640) -> None:
+    _run([
+        _ffmpeg(), "-y", "-ss", f"{max(0.0, at_sec):.2f}", "-i", str(src),
+        "-frames:v", "1", "-vf", f"scale={width}:-2", str(out),
+    ])
+
+
+def sample_frames(key: str, count: int = 8) -> dict:
+    """Extract evenly spaced frames so an author can pick a poster."""
+    count = max(1, min(int(count), 20))
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        src = tdp / "src"
+        src.write_bytes(s3.get_bytes(key))
+        meta = probe(src)
+        duration = float(meta["duration"] or 0)
+        prefix = f"{key.rsplit('.', 1)[0]}_hls"
+
+        frames = []
+        for i in range(count):
+            # Spread across the clip, avoiding the very first and last moments.
+            at = duration * (i + 0.5) / count if duration else 0.0
+            out = tdp / f"f{i}.jpg"
+            _frame_at(src, at, out)
+            outkey = f"{prefix}/frames/f{i}.jpg"
+            s3.put_bytes(outkey, out.read_bytes(), "image/jpeg")
+            frames.append({"atSec": round(at, 2), "key": outkey})
+
+        return {"frames": frames, "durationMs": int(duration * 1000)}
+
+
+def extract_poster(key: str, at_sec: float) -> dict:
+    """Store a poster frame taken at the requested second."""
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        src = tdp / "src"
+        src.write_bytes(s3.get_bytes(key))
+        meta = probe(src)
+        duration = float(meta["duration"] or 0)
+        at = max(0.0, min(float(at_sec), max(0.0, duration - 0.05)))
+        prefix = f"{key.rsplit('.', 1)[0]}_hls"
+
+        out = tdp / "poster.jpg"
+        _frame_at(src, at, out)
+        outkey = f"{prefix}/poster.jpg"
+        s3.put_bytes(outkey, out.read_bytes(), "image/jpeg")
+        return {"thumbnailKey": outkey, "atSec": round(at, 2)}

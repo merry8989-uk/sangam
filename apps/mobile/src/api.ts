@@ -129,3 +129,18 @@ export function playbackCap(videoQuality?: string | null, audioQuality?: string 
   if (audio === null) return video;
   return Math.min(video, audio);
 }
+
+export type SampledFrame = { atSec: number; key: string };
+
+export function getThumbnailFrames(mediaId: string, count = 8) {
+  return api<{ frames: SampledFrame[]; durationMs: number }>(
+    "/api/media/" + mediaId + "/frames?count=" + count
+  );
+}
+
+export function setPoster(mediaId: string, atSec: number) {
+  return api<{ thumbnailKey: string; atSec: number }>("/api/media/" + mediaId + "/poster", {
+    method: "POST",
+    body: JSON.stringify({ atSec })
+  });
+}
