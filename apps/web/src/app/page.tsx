@@ -11,12 +11,18 @@ export default function Home() {
         One platform for posts, photos, short videos and long-form video -
         built on our own stack and hosted in India. No third-party social APIs.
       </p>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Link href="/register" className="rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700">
           Create account
         </Link>
         <Link href="/feed" className="rounded-lg border border-slate-300 px-5 py-2.5 font-medium hover:bg-slate-100">
-          Open feed
+          Feed
+        </Link>
+        <Link href="/for-you" className="rounded-lg border border-slate-300 px-5 py-2.5 font-medium hover:bg-slate-100">
+          For you
+        </Link>
+        <Link href="/shorts" className="rounded-lg border border-slate-300 px-5 py-2.5 font-medium hover:bg-slate-100">
+          Shorts
         </Link>
       </div>
     </main>

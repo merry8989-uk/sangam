@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redis, feedKey } from "@/lib/redis";
-import { processImage, processVideo } from "@/lib/ai";
+import { moderateText, processImage, processVideo } from "@/lib/ai";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -20,7 +20,7 @@ const CreateBody = z.object({
   media: z.array(MediaIn).max(10).default([])
 });
 
-// GET /api/posts?cursor=<id>&limit=20 - cursor-paginated public feed.
+// GET /api/posts?cursor=<id>&limit=20&type=<TYPE> - cursor-paginated feed.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 50);
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
   });
 }
 
-// POST /api/posts - create a post, enrich media, then fan out to followers.
+// POST /api/posts - create, moderate, enrich media, then fan out to followers.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
@@ -75,9 +75,31 @@ export async function POST(req: Request) {
     include: { author: true, media: true }
   });
 
-  // Media enrichment. Production moves this onto a queue (post stays
-  // PROCESSING; a worker flips it to READY); the starter runs it inline so
-  // the vertical slice is observable end-to-end.
+  // 1. Moderation. A flagged caption is held for review: the post is hidden
+  //    (PRIVATE) and a flag is recorded rather than published. Fail-open on
+  //    service error, which is logged by the caller in production.
+  let flagged = false;
+  if (caption) {
+    try {
+      const m = await moderateText(caption);
+      if (m.flagged) {
+        flagged = true;
+        await prisma.moderationFlag.create({
+          data: {
+            entityType: "post",
+            entityId: post.id,
+            reason: m.categories.join(",") || "text",
+            score: m.score,
+            source: "ai"
+          }
+        });
+      }
+    } catch {
+      // moderation unavailable: proceed, but this should alert in production
+    }
+  }
+
+  // 2. Media enrichment (queue in production; inline here for a working slice).
   const images = post.media.filter((m) => m.kind === "IMAGE");
   const videos = post.media.filter((m) => m.kind === "VIDEO");
   if (images.length || videos.length) {
@@ -115,7 +137,17 @@ export async function POST(req: Request) {
     }
   }
 
-  // Fan-out-on-write into each follower's Redis timeline (capped at 1000).
+  // 3. Flagged posts are withheld from public distribution.
+  if (flagged) {
+    post = await prisma.post.update({
+      where: { id: post.id },
+      data: { visibility: "PRIVATE" },
+      include: { author: true, media: true }
+    });
+    return NextResponse.json({ post, flagged: true }, { status: 201 });
+  }
+
+  // 4. Fan-out-on-write into each follower's Redis timeline (capped at 1000).
   if (visibility !== "PRIVATE") {
     const followers = await prisma.follow.findMany({
       where: { followeeId: userId, status: "ACCEPTED" },
@@ -130,5 +162,5 @@ export async function POST(req: Request) {
     await pipeline.exec();
   }
 
-  return NextResponse.json(post, { status: 201 });
+  return NextResponse.json({ post, flagged: false }, { status: 201 });
 }

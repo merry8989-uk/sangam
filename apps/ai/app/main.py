@@ -3,14 +3,15 @@ from pydantic import BaseModel
 
 from .media import InvalidImage, process_image
 from .moderation import moderate_text
-from .recommend import Candidate, rank
+from .recommend import Candidate, recommend, similar
 from .settings import settings
 from .video import TranscodeError, transcode_video
+from .vision import classify_image
 
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 
@@ -22,15 +23,29 @@ class ModerateOut(BaseModel):
     flagged: bool
     score: float
     categories: list[str]
+    matches: list[str] = []
+
+
+class ModerateImageIn(BaseModel):
+    key: str
 
 
 class RankIn(BaseModel):
-    candidates: list[dict]
+    sources: dict[str, list[dict]]
+    seen_ids: list[str] = []
+    blocked_authors: list[str] = []
     limit: int = 20
+    max_per_author: int = 3
 
 
 class RankOut(BaseModel):
     post_ids: list[str]
+
+
+class SimilarIn(BaseModel):
+    query: list[float]
+    pool: list[dict]  # [{post_id, embedding}]
+    limit: int = 10
 
 
 class ProcessImageIn(BaseModel):
@@ -64,22 +79,45 @@ def health() -> dict:
 
 @app.post("/moderate", response_model=ModerateOut)
 def moderate(payload: ModerateIn) -> ModerateOut:
-    result = moderate_text(payload.text)
-    return ModerateOut(flagged=result.flagged, score=result.score, categories=result.categories)
+    r = moderate_text(payload.text)
+    return ModerateOut(flagged=r.flagged, score=r.score, categories=r.categories, matches=r.matches)
 
 
-@app.post("/recommend", response_model=RankOut)
-def recommend(payload: RankIn) -> RankOut:
-    candidates = [
-        Candidate(
-            post_id=c["post_id"],
-            engagement=float(c.get("engagement", 0.0)),
-            recency_hours=float(c.get("recency_hours", 0.0)),
-            affinity=float(c.get("affinity", 0.0)),
-        )
-        for c in payload.candidates
-    ]
-    return RankOut(post_ids=rank(candidates, payload.limit))
+@app.post("/moderate/image", response_model=ModerateOut)
+def moderate_image(payload: ModerateImageIn) -> ModerateOut:
+    r = classify_image(payload.key)
+    return ModerateOut(flagged=r.flagged, score=r.score, categories=r.categories, matches=r.matches)
+
+
+@app.post("/feed/rank", response_model=RankOut)
+def feed_rank(payload: RankIn) -> RankOut:
+    sources = {
+        name: [
+            Candidate(
+                post_id=c["post_id"],
+                author_id=c.get("author_id", ""),
+                engagement=float(c.get("engagement", 0.0)),
+                recency_hours=float(c.get("recency_hours", 0.0)),
+                affinity=float(c.get("affinity", 0.0)),
+            )
+            for c in items
+        ]
+        for name, items in payload.sources.items()
+    }
+    ids = recommend(
+        sources,
+        seen_ids=payload.seen_ids,
+        blocked_authors=payload.blocked_authors,
+        limit=payload.limit,
+        max_per_author=payload.max_per_author,
+    )
+    return RankOut(post_ids=ids)
+
+
+@app.post("/similar", response_model=RankOut)
+def similar_posts(payload: SimilarIn) -> RankOut:
+    pool = [(p["post_id"], [float(x) for x in p["embedding"]]) for p in payload.pool]
+    return RankOut(post_ids=similar(payload.query, pool, payload.limit))
 
 
 @app.post("/process/image", response_model=ProcessImageOut)

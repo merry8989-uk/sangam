@@ -27,11 +27,15 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Long-form "channel" pages + subscriptions.
 - [ ] Preview clip generation; processing status polling.
 
-## Phase 3 - Ranking & trust at scale
-- Real moderation: multilingual text + vision models.
-- Multi-stage recommender: retrieval -> rank -> diversity.
-- Counters moved to batched aggregation (Redis -> analytics store).
-- Observability: metrics, tracing, error budgets.
+## Phase 3 - Ranking & trust
+- [x] Multi-stage recommender: retrieval -> filter -> rank -> diversity.
+- [x] Content similarity (cosine over embeddings) for related posts.
+- [x] Multilingual text moderation (English + Hindi, Devanagari and romanised) with categories.
+- [x] Moderation wired into post creation: flagged posts withheld + queued.
+- [x] Ranked "For you" feed and a moderation review page.
+- [ ] Replace heuristics with trained models (Indic text classifier, vision/NSFW).
+- [ ] Counters moved to batched aggregation (Redis -> analytics store).
+- [ ] Observability: metrics, tracing, error budgets.
 
 ## Phase 4 - Creators, monetisation, agents
 - Creator analytics dashboard.

@@ -19,6 +19,19 @@ export type ProcessedVideo = {
   hlsKey: string;
   renditions: number[];
 };
+export type ModerationResult = {
+  flagged: boolean;
+  score: number;
+  categories: string[];
+  matches: string[];
+};
+export type RankCandidate = {
+  post_id: string;
+  author_id?: string;
+  engagement?: number;
+  recency_hours?: number;
+  affinity?: number;
+};
 
 export function processImage(key: string): Promise<ProcessedImage> {
   return callAi<ProcessedImage>("/process/image", { key });
@@ -26,4 +39,15 @@ export function processImage(key: string): Promise<ProcessedImage> {
 
 export function processVideo(key: string): Promise<ProcessedVideo> {
   return callAi<ProcessedVideo>("/process/video", { key });
+}
+
+export function moderateText(text: string): Promise<ModerationResult> {
+  return callAi<ModerationResult>("/moderate", { text });
+}
+
+export function rankFeed(
+  sources: Record<string, RankCandidate[]>,
+  opts: { seen_ids?: string[]; blocked_authors?: string[]; limit?: number; max_per_author?: number } = {}
+): Promise<{ post_ids: string[] }> {
+  return callAi<{ post_ids: string[] }>("/feed/rank", { sources, ...opts });
 }
