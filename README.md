@@ -64,6 +64,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Full Settings: appearance, quality, posts, comments, sharing, history, moderation | ✅ |
 | Reddit-style branch comments (toggleable) | ✅ |
 | DM custom wallpaper + watch history with reset | ✅ |
+| Theme engine: 480 themes, day/week/month/year rotation, mood-driven | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

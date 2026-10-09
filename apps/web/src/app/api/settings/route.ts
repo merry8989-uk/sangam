@@ -12,6 +12,9 @@ const Body = z.object({
   backgroundMode: z.enum(["static", "weekly", "daily", "custom"]).optional(),
   customBackground: z.string().max(500).optional(),
   chatBackground: z.string().max(500).optional(),
+  themeMode: z.enum(["daily", "weekly", "monthly", "yearly", "mood", "custom"]).optional(),
+  themeId: z.string().max(80).optional(),
+  moodThemeEnabled: z.boolean().optional(),
 
   videoQuality: z.enum(["auto", "1080", "720", "480", "360"]).optional(),
   audioQuality: z.enum(["auto", "high", "medium", "low"]).optional(),

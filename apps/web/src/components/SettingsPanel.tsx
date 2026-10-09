@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
+import { FAMILIES, THEMES } from "@/lib/themes";
 
 type S = {
   theme: string; accent: string; dailyBackground: boolean; backgroundMode: string;
   customBackground: string; chatBackground: string;
+  themeMode: string; themeId: string; moodThemeEnabled: boolean;
   videoQuality: string; audioQuality: string; uploadQuality: string; autoplay: boolean;
   playbackSpeed: number; captionsDefault: boolean; pipEnabled: boolean; backgroundPlay: boolean; sponsorSkip: boolean;
   defaultVisibility: string; allowDownloads: boolean;
@@ -51,7 +53,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 const opts = (arr: string[]) => arr.map((o) => <option key={o} value={o}>{o}</option>);
 
-export default function SettingsPanel({ initial }: { initial: S }) {
+export default function SettingsPanel({
+  initial,
+  currentTheme
+}: {
+  initial: S;
+  currentTheme: { name: string; vars: Record<string, string> };
+}) {
   const [s, setS] = useState<S>(initial);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -77,6 +85,50 @@ export default function SettingsPanel({ initial }: { initial: S }) {
 
   return (
     <div className="space-y-6">
+      <Section
+        id="theme"
+        title="Theme"
+        hint="480 combinations, rotating by day, week, month or year - or following your mood."
+      >
+        <Row label="Rotation">
+          <select className={SEL} value={s.themeMode} onChange={(e) => set("themeMode", e.target.value)}>
+            {opts(["daily", "weekly", "monthly", "yearly", "mood", "custom"])}
+          </select>
+        </Row>
+        <Toggle
+          label="Match the theme to my mood"
+          hint="What you like, save and watch decides the theme family - melancholy content pulls a dark theme, devotional content pulls a devotion theme."
+          value={s.moodThemeEnabled}
+          onChange={(v) => set("moodThemeEnabled", v)}
+        />
+        <Row label="Pick a specific theme (used when rotation = custom)">
+          <select className={SEL} value={s.themeId} onChange={(e) => set("themeId", e.target.value)}>
+            <option value="">-- none --</option>
+            {FAMILIES.map((f) => (
+              <optgroup key={f.key} label={f.name}>
+                {THEMES.filter((t) => t.family === f.key).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </Row>
+        <div className="rounded-lg border border-slate-200 p-3">
+          <div className="text-xs text-ink-500">Active now</div>
+          <div className="font-medium">{currentTheme.name}</div>
+          <div className="mt-2 flex gap-1">
+            {["brand-600", "brand-100", "canvas", "surface", "ink-900"].map((k) => (
+              <span
+                key={k}
+                className="h-6 w-6 rounded border border-slate-200"
+                style={{ backgroundColor: "rgb(" + currentTheme.vars[k] + ")" }}
+              />
+            ))}
+          </div>
+        </div>
+        <a href="/themes" className="block text-sm font-medium text-brand-700">Browse all 480 themes &rarr;</a>
+      </Section>
+
       <Section title="Appearance &amp; background" hint="Theme, and the background used across the app and in DMs.">
         <Row label="Theme">
           <select className={SEL} value={s.theme} onChange={(e) => set("theme", e.target.value)}>{opts(["system", "light", "dark"])}</select>

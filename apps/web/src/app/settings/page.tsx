@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import ProfileSettings from "@/components/ProfileSettings";
 import SettingsPanel from "@/components/SettingsPanel";
+import { detectUserMood } from "@/lib/mood";
+import { pickTheme } from "@/lib/themes";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,20 @@ export default async function SettingsPage() {
   ]);
   if (!user) redirect("/login");
 
+  let mood: string | null = null;
+  if (settings.moodThemeEnabled) {
+    try {
+      mood = (await detectUserMood(userId)).mood;
+    } catch {
+      mood = null;
+    }
+  }
+  const currentTheme = pickTheme({
+    mode: settings.themeMode,
+    customId: settings.themeId || undefined,
+    mood
+  });
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
@@ -35,6 +51,9 @@ export default async function SettingsPage() {
             backgroundMode: settings.backgroundMode,
             customBackground: settings.customBackground,
             chatBackground: settings.chatBackground,
+            themeMode: settings.themeMode,
+            themeId: settings.themeId,
+            moodThemeEnabled: settings.moodThemeEnabled,
             videoQuality: settings.videoQuality,
             audioQuality: settings.audioQuality,
             uploadQuality: settings.uploadQuality,
@@ -62,6 +81,7 @@ export default async function SettingsPage() {
             hideSensitive: settings.hideSensitive,
             blockedWords: (settings.blockedWords as string[]) ?? []
           }}
+          currentTheme={{ name: currentTheme.name, vars: currentTheme.vars }}
         />
       </div>
     </main>

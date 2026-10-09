@@ -2,10 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default palette. The ThemeProvider overwrites these on <html> for the
+   theme that applies today (see lib/themes.ts). */
 :root {
   color-scheme: light;
+  --canvas: 248 250 252;
+  --surface: 255 255 255;
+  --line: 226 232 240;
+  --ink-900: 15 23 42;
+  --ink-700: 51 65 85;
+  --ink-500: 100 116 139;
+  --brand-50: 255 247 237;
+  --brand-100: 255 237 213;
+  --brand-500: 249 115 22;
+  --brand-600: 234 88 12;
+  --brand-700: 194 65 12;
+}
+
+[data-mode="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-ink-900;
+  background-color: rgb(var(--canvas));
+  color: rgb(var(--ink-900));
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Surfaces written with Tailwind's built-in greys follow the theme too.
+   Scoped to the attribute the ThemeProvider sets, and only the classes the
+   app uses for surfaces / borders. */
+[data-sangam-theme] .bg-white {
+  background-color: rgb(var(--surface));
+}
+[data-sangam-theme] .bg-slate-50 {
+  background-color: rgb(var(--canvas));
+}
+[data-sangam-theme] .bg-slate-100 {
+  background-color: rgb(var(--brand-50));
+}
+[data-sangam-theme] .border-slate-200,
+[data-sangam-theme] .border-slate-300 {
+  border-color: rgb(var(--line));
 }

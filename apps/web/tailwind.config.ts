@@ -5,19 +5,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // "Sangam" brand palette - saffron/marigold primary, indigo ink
+        // These follow the active theme (see lib/themes.ts and globals.css).
         brand: {
-          50: "#fff7ed",
-          100: "#ffedd5",
-          500: "#f97316",
-          600: "#ea580c",
-          700: "#c2410c"
+          50: "rgb(var(--brand-50) / <alpha-value>)",
+          100: "rgb(var(--brand-100) / <alpha-value>)",
+          500: "rgb(var(--brand-500) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)"
         },
         ink: {
-          900: "#0f172a",
-          700: "#334155",
-          500: "#64748b"
-        }
+          900: "rgb(var(--ink-900) / <alpha-value>)",
+          700: "rgb(var(--ink-700) / <alpha-value>)",
+          500: "rgb(var(--ink-500) / <alpha-value>)"
+        },
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        canvas: "rgb(var(--canvas) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)"
       }
     }
   },

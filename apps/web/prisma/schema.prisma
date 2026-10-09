@@ -490,6 +490,9 @@ model UserSettings {
   backgroundMode   String  @default("static")  // static | weekly | daily | custom
   customBackground String  @default("")        // DIY colour / gradient / image key
   chatBackground   String  @default("")        // DM wallpaper
+  themeMode        String  @default("daily")   // daily | weekly | monthly | yearly | mood | custom
+  themeId          String  @default("")        // when themeMode = custom
+  moodThemeEnabled Boolean @default(false)     // let content mood pick the family
 
   // Playback & quality
   videoQuality    String  @default("auto")     // auto | 1080 | 720 | 480 | 360

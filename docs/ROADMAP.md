@@ -100,8 +100,13 @@ Narrow, sequential phases. Each phase ships something usable.
       show-my-profile (enforced on the profile page).
 - [x] Bookmarks & saving; History: record, manage, clear, auto-delete job.
 - [x] Moderation: hide sensitive, blocked words (enforced on the feed).
-- [ ] Theme (light/dark) and rotating/DIY backgrounds are stored but not applied
-      to the UI yet - needs a theme pass across components.
+- [x] Theme engine: 480 generated themes (10 families x 8 accents x 6 gradients),
+      applied to the whole UI through CSS variables.
+- [x] Rotation by day / week / month / year, or a specific theme.
+- [x] Mood-driven themes: content you like, save and watch decides the family
+      (melancholy -> dark, devotional -> devotion, evergreen -> nature).
+- [x] /themes gallery showing every combination.
+- [ ] Rotating/DIY background images are stored but not applied yet.
 - [ ] Playback settings are stored; the video player does not read them yet.
 - [ ] whoCanComment / whoCanShare / whoCanReshare are stored but not enforced.
 
