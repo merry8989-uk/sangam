@@ -250,4 +250,9 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] The backup document is encrypted before it leaves us: AES-256-GCM, with
       a self-describing envelope so a restore knows what it is looking at.
       Either a per-user server key, or a passphrase (scrypt).
-- [ ] Restore: reading a backup back into the account.
+- [x] Restore: list the backups in the connected account, preview what a file
+      holds, then merge it back in. Nothing is duplicated - a chat or search
+      already present is skipped, and watch history upserts per post.
+- [x] A backup file is treated as untrusted input: it is validated field by
+      field, with hard caps, and bad entries are dropped and reported rather
+      than allowed to flood the account.

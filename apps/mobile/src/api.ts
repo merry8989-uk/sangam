@@ -427,3 +427,20 @@ export function runBackupNow() {
 export function googleConnectUrl() {
   return BASE_URL + "/api/google/connect";
 }
+
+export function backupFiles() {
+  return api<{ provider: string; files: { id: string; name: string; url?: string }[] }>("/api/backup/files");
+}
+
+export function restoreBackup(input: { fileId: string; passphrase?: string; dryRun?: boolean }) {
+  return api<{
+    ok: boolean;
+    dryRun: boolean;
+    error?: string;
+    encrypted?: boolean;
+    period?: string;
+    wouldImport?: { chats: number; chatMessages: number; search: number; watch: number };
+    imported?: { chats: number; chatMessages: number; search: number; watch: number };
+    skipped?: { chats: number; search: number };
+  }>("/api/backup/restore", { method: "POST", body: JSON.stringify(input) });
+}

@@ -54,3 +54,24 @@ export async function ensureFolder(accessToken: string, name: string): Promise<s
   const made = (await create.json()) as { id?: string };
   return made.id ?? null;
 }
+
+// Files whose name looks like one of our backups.
+export async function listBackupFiles(accessToken: string): Promise<DriveFile[]> {
+  const q = encodeURIComponent("name contains 'sangam-backup-' and trashed=false");
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,webViewLink,createdTime)&orderBy=createdTime desc&pageSize=50`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { files?: DriveFile[] };
+  return data.files ?? [];
+}
+
+// Read a file's bytes back.
+export async function downloadFileText(accessToken: string, fileId: string): Promise<string | null> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!res.ok) return null;
+  return await res.text();
+}

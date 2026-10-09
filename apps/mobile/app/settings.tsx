@@ -2,7 +2,18 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
-import { api, backupStatus, googleConnectUrl, hasToken, runBackupNow, setToken, zohoConnectUrl, type BackupStatus } from "../src/api";
+import {
+  api,
+  backupFiles,
+  backupStatus,
+  googleConnectUrl,
+  hasToken,
+  restoreBackup,
+  runBackupNow,
+  setToken,
+  zohoConnectUrl,
+  type BackupStatus
+} from "../src/api";
 import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
 import { pickTheme, THEME_COUNT } from "../src/theme";
 
@@ -15,6 +26,8 @@ export default function Settings() {
   const [backupBusy, setBackupBusy] = useState<string | null>(null);
   const [backupNote, setBackupNote] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState("");
+  const [files, setFiles] = useState<{ id: string; name: string; url?: string }[] | null>(null);
+  const [restoreBusy, setRestoreBusy] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -289,6 +302,78 @@ export default function Settings() {
                 : "No backup has run yet."}
             </Text>
             {backupNote ? <Text style={{ color: c.brand700, fontSize: 12, marginTop: 6 }}>{backupNote}</Text> : null}
+
+            <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 10 }}>
+              <Text style={{ color: c.ink500, fontSize: 12 }}>
+                Restore: read a backup back in. Nothing is duplicated - a chat or search already here is skipped.
+              </Text>
+              <View style={{ marginTop: 8 }}>
+                <Button
+                  label={restoreBusy === "list" ? "Looking..." : "Find my backups"}
+                  variant="ghost"
+                  disabled={restoreBusy !== null}
+                  onPress={async () => {
+                    setRestoreBusy("list");
+                    setBackupNote(null);
+                    try {
+                      const d = await backupFiles();
+                      setFiles(d.files ?? []);
+                    } catch {
+                      setBackupNote("Could not list backups.");
+                    }
+                    setRestoreBusy(null);
+                  }}
+                />
+              </View>
+              {files ? (
+                files.length === 0 ? (
+                  <Text style={{ color: c.ink500, fontSize: 11, marginTop: 8 }}>No backup files found.</Text>
+                ) : (
+                  files.map((f) => (
+                    <View key={f.id} style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 6 }}>
+                      <Text style={{ color: c.ink900, fontSize: 12 }} numberOfLines={1}>{f.name}</Text>
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
+                        <Button
+                          label={restoreBusy === f.id + ":dry" ? "..." : "Preview"}
+                          variant="ghost"
+                          disabled={restoreBusy !== null}
+                          onPress={async () => {
+                            setRestoreBusy(f.id + ":dry");
+                            setBackupNote(null);
+                            try {
+                              const d = await restoreBackup({ fileId: f.id, dryRun: true });
+                              const w = d.wouldImport ?? { chats: 0, chatMessages: 0, search: 0, watch: 0 };
+                              setBackupNote(
+                                `${w.chats} chats (${w.chatMessages} messages), ${w.search} searches, ${w.watch} watched items${d.encrypted ? " - encrypted" : ""}.`
+                              );
+                            } catch {
+                              setBackupNote("Could not read that backup.");
+                            }
+                            setRestoreBusy(null);
+                          }}
+                        />
+                        <Button
+                          label={restoreBusy === f.id + ":run" ? "Restoring..." : "Restore"}
+                          disabled={restoreBusy !== null}
+                          onPress={async () => {
+                            setRestoreBusy(f.id + ":run");
+                            setBackupNote(null);
+                            try {
+                              const d = await restoreBackup({ fileId: f.id, passphrase: passphrase || undefined });
+                              const i = d.imported ?? { chats: 0, search: 0, watch: 0 };
+                              setBackupNote(`Restored ${i.chats} chats, ${i.search} searches, ${i.watch} watched items.`);
+                            } catch {
+                              setBackupNote("Restore failed.");
+                            }
+                            setRestoreBusy(null);
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ))
+                )
+              ) : null}
+            </View>
 
             {backup.runs.length > 0 ? (
               <View style={{ marginTop: 10, gap: 4 }}>

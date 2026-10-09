@@ -171,3 +171,10 @@ export async function streamUpload(
   const attrs = (first.attributes ?? {}) as { name?: string; extn?: string; permalink?: string };
   return { id: first.id, name: attrs.name ?? opts.filename, type: "file", permalink: attrs.permalink, extn: attrs.extn };
 }
+
+// Read a file's bytes back. Used by restore to fetch a backup document.
+export async function downloadFileText(base: string, accessToken: string, fileId: string): Promise<string | null> {
+  const res = await fetch(`${base}/files/${fileId}/content`, { headers: authHeaders(accessToken) });
+  if (!res.ok) return null;
+  return await res.text();
+}

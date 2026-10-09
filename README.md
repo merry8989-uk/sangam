@@ -80,6 +80,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Zoho WorkDrive large-file upload (streamed, not buffered) | ✅ |
 | Backup to Zoho or Google Drive: chats, searches, watch history | ✅ |
 | Backups encrypted at rest (AES-256-GCM, server key or passphrase) | ✅ |
+| Restore a backup back in, with a preview and no duplicates | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

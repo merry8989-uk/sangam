@@ -63,6 +63,9 @@ export default function BackupPanel() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState("");
+  const [files, setFiles] = useState<{ id: string; name: string; url?: string }[] | null>(null);
+  const [restoreBusy, setRestoreBusy] = useState<string | null>(null);
+  const [restoreNote, setRestoreNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -287,6 +290,112 @@ export default function BackupPanel() {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {notice ? <p className="text-sm text-brand-700">{notice}</p> : null}
+
+      <div className="space-y-2 border-t border-slate-200 pt-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-500">Restore</p>
+        <p className="text-xs text-ink-500">
+          Read a backup back into your account. Nothing is duplicated - a chat or search already here is skipped.
+        </p>
+        <button
+          onClick={async () => {
+            setRestoreBusy("list");
+            setRestoreNote(null);
+            try {
+              const res = await fetch("/api/backup/files");
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                setRestoreNote(data.error ?? "Could not list backups.");
+                return;
+              }
+              setFiles(data.files ?? []);
+            } finally {
+              setRestoreBusy(null);
+            }
+          }}
+          disabled={restoreBusy !== null}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50"
+        >
+          {restoreBusy === "list" ? "Looking..." : "Find my backups"}
+        </button>
+
+        {files ? (
+          files.length === 0 ? (
+            <p className="text-xs text-ink-500">No backup files found in your account.</p>
+          ) : (
+            <ul className="space-y-2">
+              {files.map((f) => (
+                <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 text-xs">
+                  <span className="font-mono">{f.name}</span>
+                  <button
+                    onClick={async () => {
+                      setRestoreBusy(f.id + ":dry");
+                      setRestoreNote(null);
+                      try {
+                        const res = await fetch("/api/backup/restore", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ fileId: f.id, dryRun: true })
+                        });
+                        const d = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          setRestoreNote(d.error ?? "Could not read that backup.");
+                          return;
+                        }
+                        const w = d.wouldImport ?? {};
+                        setRestoreNote(
+                          `${f.name}: ${w.chats ?? 0} chats (${w.chatMessages ?? 0} messages), ${w.search ?? 0} searches, ${w.watch ?? 0} watched items${d.encrypted ? " - encrypted" : ""}.`
+                        );
+                      } finally {
+                        setRestoreBusy(null);
+                      }
+                    }}
+                    disabled={restoreBusy !== null}
+                    className="rounded-md border border-slate-300 px-2 py-1 disabled:opacity-50"
+                  >
+                    {restoreBusy === f.id + ":dry" ? "..." : "Preview"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Restore ${f.name} into your account?`)) return;
+                      setRestoreBusy(f.id + ":run");
+                      setRestoreNote(null);
+                      try {
+                        const res = await fetch("/api/backup/restore", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ fileId: f.id, passphrase: passphrase || undefined })
+                        });
+                        const d = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          setRestoreNote(d.error ?? "Restore failed.");
+                          return;
+                        }
+                        const i = d.imported ?? {};
+                        setRestoreNote(
+                          `Restored ${i.chats ?? 0} chats, ${i.search ?? 0} searches, ${i.watch ?? 0} watched items. Skipped ${d.skipped?.chats ?? 0} chats and ${d.skipped?.search ?? 0} searches already here.`
+                        );
+                      } finally {
+                        setRestoreBusy(null);
+                      }
+                    }}
+                    disabled={restoreBusy !== null}
+                    className="rounded-md bg-brand-600 px-2 py-1 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    {restoreBusy === f.id + ":run" ? "Restoring..." : "Restore"}
+                  </button>
+                  {f.url ? (
+                    <a href={f.url} target="_blank" rel="noreferrer" className="text-brand-700 underline">
+                      open
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+
+        {restoreNote ? <p className="text-xs text-brand-700">{restoreNote}</p> : null}
+      </div>
 
       {status.runs.length > 0 ? (
         <div className="border-t border-slate-200 pt-3">
