@@ -1,0 +1,22 @@
+# deps
+node_modules/
+.pnpm-store/
+# next
+.next/
+out/
+# env
+.env
+.env.local
+*.local
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+# data
+*.log
+.DS_Store
+# prisma
+apps/web/prisma/migrations/dev.db*
+# uploads (local dev)
+uploads/
