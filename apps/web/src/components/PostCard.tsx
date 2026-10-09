@@ -1,4 +1,5 @@
 import type { Post, User, Media } from "@prisma/client";
+import { mediaUrl } from "@/lib/s3";
 
 type PostWith = Post & { author: User; media: Media[] };
 
@@ -7,15 +8,22 @@ export default function PostCard({ post }: { post: PostWith }) {
     <article className="rounded-xl border border-slate-200 bg-white p-4">
       <header className="mb-2 flex items-center gap-2">
         <span className="font-medium">@{post.author.username}</span>
-        <time className="text-xs text-ink-500">{new Date(post.createdAt).toLocaleString("en-IN")}</time>
+        <time className="text-xs text-ink-500">
+          {new Date(post.createdAt).toLocaleString("en-IN")}
+        </time>
       </header>
       {post.caption && <p className="mb-3">{post.caption}</p>}
       {post.media.map((m) =>
         m.kind === "VIDEO" ? (
-          <video key={m.id} controls className="w-full rounded-lg" src={m.storageKey} />
+          <video key={m.id} controls className="w-full rounded-lg" src={mediaUrl(m.storageKey)} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={m.id} alt="" className="w-full rounded-lg" src={m.storageKey} />
+          <img
+            key={m.id}
+            alt={post.caption ?? ""}
+            className="w-full rounded-lg"
+            src={mediaUrl(m.thumbnailKey ?? m.storageKey)}
+          />
         )
       )}
       <footer className="mt-3 text-sm text-ink-500">

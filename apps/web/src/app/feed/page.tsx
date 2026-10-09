@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mediaUrl } from "@/lib/s3";
 import Composer from "@/components/Composer";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +29,20 @@ export default async function FeedPage() {
             {p.caption && <p className="mb-3">{p.caption}</p>}
             {p.media.map((m) =>
               m.kind === "VIDEO" ? (
-                <video key={m.id} controls className="w-full rounded-lg" src={m.storageKey} />
+                <video key={m.id} controls className="w-full rounded-lg" src={mediaUrl(m.storageKey)} />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={m.id} alt="" className="w-full rounded-lg" src={m.storageKey} />
+                <img
+                  key={m.id}
+                  alt={p.caption ?? ""}
+                  className="w-full rounded-lg"
+                  src={mediaUrl(m.thumbnailKey ?? m.storageKey)}
+                />
               )
             )}
-            <div className="mt-3 text-sm text-ink-500">{p.likeCount} likes · {p.commentCount} comments</div>
+            <div className="mt-3 text-sm text-ink-500">
+              {p.likeCount} likes · {p.commentCount} comments
+            </div>
           </li>
         ))}
       </ul>

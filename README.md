@@ -30,6 +30,7 @@ subscriptions) into **one** product, built on our **own stack**.
 | Posts (text/image/video/short) + feed with Redis fan-out | ✅ |
 | Direct-to-storage uploads via pre-signed URLs | ✅ |
 | AI service (moderation + ranking interfaces) | ✅ (heuristic starters) |
+| Image pipeline: upload -> thumbnails (WebP) -> feed | ✅ |
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |
 | Video transcoding pipeline (FFmpeg/HLS) | ⏳ roadmap |

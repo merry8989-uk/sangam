@@ -1,24 +1,72 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export default function Composer() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [caption, setCaption] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function kindOf(f: File): "IMAGE" | "VIDEO" | "AUDIO" {
+    if (f.type.startsWith("video")) return "VIDEO";
+    if (f.type.startsWith("audio")) return "AUDIO";
+    return "IMAGE";
+  }
 
   async function submit() {
-    if (!caption.trim()) return;
+    if (!caption.trim() && !file) return;
     setBusy(true);
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caption, type: "TEXT", visibility: "PUBLIC" })
-    });
-    setBusy(false);
-    if (res.ok) {
+    setError(null);
+    try {
+      const media: unknown[] = [];
+      if (file) {
+        const contentType = file.type || "application/octet-stream";
+        const kind = kindOf(file);
+
+        // 1. ask the server for a pre-signed PUT URL
+        const pres = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, contentType, kind })
+        });
+        if (!pres.ok) throw new Error("Could not start upload");
+        const { key, url } = (await pres.json()) as { key: string; url: string };
+
+        // 2. upload bytes straight to object storage
+        const put = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: file
+        });
+        if (!put.ok) throw new Error("Upload to storage failed");
+
+        media.push({ key, kind, mimeType: contentType, sizeBytes: file.size });
+      }
+
+      // 3. create the post
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption,
+          type: file ? kindOf(file) : "TEXT",
+          visibility: "PUBLIC",
+          media
+        })
+      });
+      if (!res.ok) throw new Error("Could not create post");
+
       setCaption("");
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
       router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -31,7 +79,17 @@ export default function Composer() {
         rows={3}
         className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-brand-500"
       />
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,video/*,audio/*"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-xs text-ink-500"
+          />
+          {error && <span className="text-xs text-red-600">{error}</span>}
+        </div>
         <button
           onClick={submit}
           disabled={busy}
