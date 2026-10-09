@@ -1,11 +1,9 @@
 FROM node:20-alpine AS base
 WORKDIR /app
-COPY package.json ./
-# Root workspace manifest is needed for npm workspaces resolution
-COPY ../../package.json /root-workspace-package.json
 
 FROM base AS deps
-RUN npm install --omit=dev=false
+COPY package.json ./
+RUN npm install
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
@@ -15,6 +13,8 @@ RUN npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public

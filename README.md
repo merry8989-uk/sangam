@@ -86,13 +86,26 @@ channel follows) into **one** product, built on our **own stack**.
 
 ## Quickstart (local)
 
+**Prerequisites:** Docker Desktop (or Docker Engine + Compose). Nothing else is
+needed - Postgres, Redis, MinIO, Meilisearch, the AI service and the media
+worker all run in containers.
+
 ```bash
-cp .env.example .env          # then edit secrets
-docker compose up --build     # postgres, redis, minio, ai, web
+git clone https://github.com/merry8989-uk/sangam.git
+cd sangam
+cp .env.example .env          # then edit the secrets
+docker compose up --build     # first build takes a few minutes
 ```
 
-The web container applies the database schema on startup (`prisma db push`),
-so there is no separate migration step. Then open http://localhost:3000.
+Open http://localhost:3000 and register an account.
+
+Notes:
+- The web container applies the database schema on startup (`prisma db push`),
+  so there is no separate migration step.
+- **Chat needs a key.** Put `SARVAM_API_KEY=...` in `.env` (get one from
+  https://dashboard.sarvam.ai/). Everything else works without it.
+- To use the durable media queue and the GPU/ML inference worker, see
+  [docs/JOBS.md](docs/JOBS.md) and set `MEDIA_QUEUE_ENABLED=true`.
 
 Running the web app outside Docker instead? Apply the schema yourself:
 
