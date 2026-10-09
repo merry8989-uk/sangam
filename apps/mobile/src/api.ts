@@ -406,6 +406,8 @@ export type BackupStatus = {
   enabled: boolean;
   frequency: string;
   provider: string;
+  encryption: string;
+  hasPassphrase: boolean;
   sections: { chats: boolean; search: boolean; watch: boolean };
   lastBackupAt: string | null;
   due: boolean;

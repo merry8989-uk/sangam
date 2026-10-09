@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
+import { sealPassphrase } from "@/lib/backupCrypto";
 
 const Body = z.object({
   theme: z.enum(["system", "light", "dark"]).optional(),
@@ -90,6 +91,9 @@ const Body = z.object({
   backupFrequency: z.enum(["daily", "weekly", "monthly", "halfyearly", "yearly"]).optional(),
   backupProvider: z.enum(["ZOHO", "GOOGLE", "TERABOX"]).optional(),
   backupFolder: z.string().max(200).optional(),
+  backupEncryption: z.enum(["off", "server", "passphrase"]).optional(),
+  // Write-only: we seal it and never send it back.
+  backupPassphrase: z.string().min(8).max(200).optional(),
 
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
@@ -109,6 +113,16 @@ export async function PUT(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   await getSettings(userId);
-  const settings = await prisma.userSettings.update({ where: { userId }, data: parsed.data });
-  return NextResponse.json({ settings });
+
+  // The passphrase is never stored as written - it is sealed with the server
+  // key and dropped from the row we return.
+  const { backupPassphrase, ...rest } = parsed.data;
+  const data: Record<string, unknown> = { ...rest };
+  if (backupPassphrase !== undefined) {
+    data.backupPassphraseCipher = sealPassphrase(backupPassphrase, userId);
+  }
+
+  const settings = await prisma.userSettings.update({ where: { userId }, data });
+  const { backupPassphraseCipher: _omit, ...safe } = settings;
+  return NextResponse.json({ settings: safe });
 }

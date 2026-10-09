@@ -5,6 +5,8 @@ type Status = {
   enabled: boolean;
   frequency: string;
   provider: string;
+  encryption: string;
+  hasPassphrase: boolean;
   sections: { chats: boolean; search: boolean; watch: boolean };
   lastBackupAt: string | null;
   due: boolean;
@@ -60,6 +62,7 @@ export default function BackupPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [passphrase, setPassphrase] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -183,6 +186,68 @@ export default function BackupPanel() {
               Terabox cannot receive files - it has no supported way to write one. Pick Zoho or Google, or keep
               Terabox for storing links.
             </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t border-slate-200 pt-3">
+        <div>
+          <label className="block text-sm">Encrypt the backup</label>
+          <select
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            value={status.encryption}
+            onChange={(e) => save({ backupEncryption: e.target.value })}
+          >
+            <option value="off">No - plain JSON</option>
+            <option value="server">Yes - with a key only this server holds</option>
+            <option value="passphrase">Yes - with my own passphrase</option>
+          </select>
+
+          {status.encryption === "server" ? (
+            <p className="mt-1 text-xs text-ink-500">
+              The file in your Drive is unreadable without this server&apos;s key, so a leaked link or a shared folder
+              does not expose it. We can still restore it for you.
+            </p>
+          ) : null}
+
+          {status.encryption === "passphrase" ? (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs text-amber-900">
+                <span className="font-semibold">Read this first.</span> The file is locked with your passphrase, so it is
+                useless to anyone who finds it - including us. But scheduled backups have to run while you are away, so
+                we keep your passphrase encrypted on our side. That protects the backup in your Drive; it is not
+                zero-knowledge. If you forget it, the backup cannot be opened.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  type="password"
+                  className="min-w-[220px] flex-1 rounded-lg border border-amber-300 px-3 py-2 text-sm"
+                  placeholder={status.hasPassphrase ? "Passphrase saved - type a new one to change it" : "Choose a passphrase (at least 8 characters)"}
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                />
+                <button
+                  onClick={() => {
+                    if (passphrase.length < 8) {
+                      setError("A passphrase needs at least 8 characters.");
+                      return;
+                    }
+                    save({ backupPassphrase: passphrase });
+                    setPassphrase("");
+                    setNotice("Passphrase saved.");
+                  }}
+                  disabled={passphrase.length < 8}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                >
+                  Save passphrase
+                </button>
+              </div>
+              {status.hasPassphrase ? (
+                <p className="mt-1 text-xs text-amber-900">A passphrase is saved.</p>
+              ) : (
+                <p className="mt-1 text-xs text-red-700">No passphrase saved yet - backups will fail until you set one.</p>
+              )}
+            </div>
           ) : null}
         </div>
       </div>

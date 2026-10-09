@@ -25,6 +25,8 @@ export async function GET(req: Request) {
     enabled: Boolean(settings?.backupEnabled),
     frequency: settings?.backupFrequency ?? "weekly",
     provider: settings?.backupProvider ?? "ZOHO",
+    encryption: settings?.backupEncryption ?? "server",
+    hasPassphrase: Boolean(settings?.backupPassphraseCipher),
     sections: {
       chats: settings?.backupChats ?? true,
       search: settings?.backupSearchHistory ?? true,

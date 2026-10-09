@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import { api, backupStatus, googleConnectUrl, hasToken, runBackupNow, setToken, zohoConnectUrl, type BackupStatus } from "../src/api";
@@ -14,6 +14,7 @@ export default function Settings() {
   const [backup, setBackup] = useState<BackupStatus | null>(null);
   const [backupBusy, setBackupBusy] = useState<string | null>(null);
   const [backupNote, setBackupNote] = useState<string | null>(null);
+  const [passphrase, setPassphrase] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -221,6 +222,42 @@ export default function Settings() {
 
             <Picker label="How often" field="backupFrequency" options={["daily", "weekly", "monthly", "halfyearly", "yearly"]} />
             <Picker label="Where to keep it" field="backupProvider" options={["ZOHO", "GOOGLE", "TERABOX"]} />
+            <Picker label="Encrypt the backup" field="backupEncryption" options={["off", "server", "passphrase"]} />
+
+            {backup.encryption === "passphrase" ? (
+              <View style={{ marginTop: 10, borderWidth: 1, borderColor: "#fcd34d", backgroundColor: "#fffbeb", borderRadius: 8, padding: 10 }}>
+                <Text style={{ color: "#78350f", fontSize: 11 }}>
+                  The file is locked with your passphrase, so it is useless to anyone who finds it. But scheduled
+                  backups run while you are away, so we keep the passphrase encrypted on our side - this protects the
+                  backup in your Drive, it is not zero-knowledge. Forget it and the backup cannot be opened.
+                </Text>
+                <TextInput
+                  secureTextEntry
+                  style={{ borderColor: "#fcd34d", borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 8, color: c.ink900 }}
+                  placeholder={backup.hasPassphrase ? "Passphrase saved - type a new one" : "Choose a passphrase (8+ characters)"}
+                  placeholderTextColor={c.ink500}
+                  value={passphrase}
+                  onChangeText={setPassphrase}
+                />
+                <View style={{ marginTop: 8 }}>
+                  <Button
+                    label="Save passphrase"
+                    onPress={() => {
+                      if (passphrase.length < 8) { setBackupNote("A passphrase needs at least 8 characters."); return; }
+                      saveBackup({ backupPassphrase: passphrase });
+                      setPassphrase("");
+                      setBackupNote("Passphrase saved.");
+                    }}
+                    disabled={passphrase.length < 8}
+                  />
+                </View>
+                {!backup.hasPassphrase ? (
+                  <Text style={{ color: "#dc2626", fontSize: 11, marginTop: 6 }}>
+                    No passphrase saved yet - backups will fail until you set one.
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
 
             {backup.provider === "TERABOX" ? (
               <Text style={{ color: "#b45309", fontSize: 11, marginTop: 8 }}>

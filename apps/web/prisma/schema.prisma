@@ -592,6 +592,11 @@ model UserSettings {
   backupFrequency     String    @default("weekly") // daily | weekly | monthly | halfyearly | yearly
   backupProvider      String    @default("ZOHO")   // ZOHO | GOOGLE | TERABOX
   backupFolder        String    @default("")
+  // off | server | passphrase - see lib/backupCrypto.ts
+  backupEncryption    String    @default("server")
+  // The passphrase, encrypted under the server key, so scheduled backups can
+  // run while the user is away. Never returned to any client.
+  backupPassphraseCipher String @default("")
   lastBackupAt        DateTime?
 
   // Moderation

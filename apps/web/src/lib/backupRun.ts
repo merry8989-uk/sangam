@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
-import { buildManifest, backupFileName, periodLabel, providerCanReceive } from "./backup";
+import { buildManifest, periodLabel, providerCanReceive } from "./backup";
+import { encryptBackup, backupFileNameFor, openPassphrase, isBackupEncryptionMode } from "./backupCrypto";
 import { withZohoToken, workDriveBaseForAccount } from "./zohoAccount";
 import { getMyFolderId, uploadFile as workDriveUpload } from "./zohoWorkDrive";
 import { withGoogleToken } from "./googleAccount";
@@ -60,8 +61,31 @@ export async function runBackup(userId: string): Promise<{ ok: boolean; runId: s
       watch
     });
 
-    const json = JSON.stringify(manifest, null, 2);
-    const name = backupFileName(frequency, now);
+    const plain = JSON.stringify(manifest, null, 2);
+
+    // Encrypt before it leaves us, when the user asked for it.
+    const mode = isBackupEncryptionMode(settings?.backupEncryption) ? settings!.backupEncryption : "server";
+    let document = plain;
+    if (mode !== "off") {
+      const passphrase = mode === "passphrase" ? openPassphrase(settings?.backupPassphraseCipher ?? "", userId) : null;
+      if (mode === "passphrase" && !passphrase) {
+        return await fail("Passphrase encryption is on but no passphrase is saved. Set one in Settings.");
+      }
+      try {
+        document = encryptBackup(plain, {
+          mode,
+          userId,
+          period: manifest.period,
+          createdAt: now.toISOString(),
+          passphrase
+        });
+      } catch {
+        return await fail("Could not encrypt the backup.");
+      }
+    }
+
+    const json = document;
+    const name = backupFileNameFor(manifest.period, mode !== "off");
     const sizeBytes = Buffer.byteLength(json, "utf8");
 
     let fileUrl: string | null = null;

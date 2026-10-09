@@ -247,5 +247,7 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] A scheduler entry point (`/api/internal/run-backups`) that runs every
       backup that is due.
 - [x] Web and Android.
-- [ ] Encrypting the backup document before it leaves us.
+- [x] The backup document is encrypted before it leaves us: AES-256-GCM, with
+      a self-describing envelope so a restore knows what it is looking at.
+      Either a per-user server key, or a passphrase (scrypt).
 - [ ] Restore: reading a backup back into the account.
