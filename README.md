@@ -48,6 +48,8 @@ channel follows) into **one** product, built on our **own stack**.
 | CI (lint, build, import checks) | ✅ |
 | Video pipeline: FFmpeg -> ABR HLS ladder -> player -> Shorts | ✅ |
 | Hover preview clips + processing status polling | ✅ |
+| Notifications (like/comment/follow) + nav bell | ✅ |
+| Profile settings (name, bio, avatar, cover) + delete own post | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

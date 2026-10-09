@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NotificationBell from "./NotificationBell";
 
 const links = [
   { href: "/ai", label: "AI" },
@@ -9,7 +10,8 @@ const links = [
   { href: "/shorts", label: "Shorts" },
   { href: "/following", label: "Following" },
   { href: "/studio", label: "Studio" },
-  { href: "/moderation", label: "Moderation" }
+  { href: "/moderation", label: "Moderation" },
+  { href: "/settings", label: "Settings" }
 ];
 
 export default function Nav() {
@@ -28,6 +30,7 @@ export default function Nav() {
             {l.label}
           </Link>
         ))}
+        <NotificationBell />
       </nav>
     </header>
   );

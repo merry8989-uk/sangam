@@ -3,6 +3,7 @@ import type { Post, User, Media } from "@prisma/client";
 import { mediaUrl } from "@/lib/s3";
 import VideoPlayer from "./VideoPlayer";
 import LikeButton from "./LikeButton";
+import Avatar from "./Avatar";
 
 type PostWith = Post & { author: User; media: Media[] };
 
@@ -18,6 +19,9 @@ export default function PostCard({
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
       <header className="mb-2 flex items-center gap-2">
+        <Link href={`/profile/${post.author.username}`}>
+          <Avatar src={post.author.avatarUrl} name={post.author.displayName} size={36} />
+        </Link>
         <Link href={`/profile/${post.author.username}`} className="font-medium hover:underline">
           @{post.author.username}
         </Link>

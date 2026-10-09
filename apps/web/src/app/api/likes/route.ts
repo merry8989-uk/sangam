@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 
 const Body = z.object({ postId: z.string().min(1) });
 
@@ -29,6 +30,14 @@ export async function POST(req: Request) {
     await prisma.like.create({ data: { postId, userId } });
     await prisma.post.update({ where: { id: postId }, data: { likeCount: { increment: 1 } } });
     liked = true;
+
+    const [post, actor] = await Promise.all([
+      prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { username: true } })
+    ]);
+    if (post && actor) {
+      await notify(post.authorId, "like", { actorId: userId, actorUsername: actor.username, postId });
+    }
   }
 
   const post = await prisma.post.findUnique({ where: { id: postId }, select: { likeCount: true } });

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 
 const Body = z.object({ postId: z.string().min(1), body: z.string().min(1).max(1000) });
 
@@ -33,5 +34,16 @@ export async function POST(req: Request) {
     include: { author: { select: { username: true, displayName: true } } }
   });
   await prisma.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  if (post) {
+    await notify(post.authorId, "comment", {
+      actorId: userId,
+      actorUsername: comment.author.username,
+      postId,
+      preview: body.slice(0, 80)
+    });
+  }
+
   return NextResponse.json(comment, { status: 201 });
 }

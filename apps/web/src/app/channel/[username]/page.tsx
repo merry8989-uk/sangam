@@ -7,6 +7,7 @@ import { mediaUrl } from "@/lib/s3";
 import { formatCount, formatDuration, timeAgo } from "@/lib/format";
 import FollowButton from "@/components/FollowButton";
 import PreviewThumb from "@/components/PreviewThumb";
+import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,14 @@ export default async function ChannelPage({ params }: { params: { username: stri
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
-      <div className="h-32 rounded-xl bg-gradient-to-r from-brand-100 to-brand-50" />
+      <div className="h-32 overflow-hidden rounded-xl bg-gradient-to-r from-brand-100 to-brand-50">
+        {user.coverUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
+        )}
+      </div>
       <header className="-mt-8 flex flex-wrap items-center gap-4 px-2">
-        <div className="h-20 w-20 rounded-full border-4 border-white bg-brand-100" />
+        <Avatar src={user.avatarUrl} name={user.displayName} size={80} className="border-4 border-white" />
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{user.displayName}</h1>
           <p className="text-ink-500">

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import FollowButton from "@/components/FollowButton";
+import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,14 @@ export default async function ProfilePage({ params }: { params: { username: stri
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
+      {user.coverUrl && (
+        <div className="mb-4 h-32 overflow-hidden rounded-xl bg-gradient-to-r from-brand-100 to-brand-50">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      )}
       <header className="flex items-center gap-4">
-        <div className="h-20 w-20 rounded-full bg-brand-100" />
+        <Avatar src={user.avatarUrl} name={user.displayName} size={80} />
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">{user.displayName}</h1>
           <p className="text-ink-500">@{user.username}</p>

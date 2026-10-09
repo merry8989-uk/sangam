@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 
 const Body = z.object({ targetId: z.string(), action: z.enum(["follow", "unfollow"]) });
 
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
       update: { status: "ACCEPTED" },
       create: { followerId: userId, followeeId: targetId, status: "ACCEPTED" }
     });
+    const actor = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } });
+    if (actor) {
+      await notify(targetId, "follow", { actorId: userId, actorUsername: actor.username });
+    }
   } else {
     await prisma.follow.deleteMany({ where: { followerId: userId, followeeId: targetId } });
   }

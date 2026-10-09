@@ -65,6 +65,16 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Embeddings-based knowledge-base retrieval: entries embedded on save, top-K
       retrieved per query (multilingual model, lexical hashing fallback).
 
+## Phase 6 - App essentials
+- [x] Notifications: created on like/comment/follow; alerts page + nav bell with unread count.
+- [x] Profile settings: edit display name, bio, avatar and cover.
+- [x] Delete your own post (author-only), cascading media/likes/comments/hashtags.
+- [x] Avatars shown across feed, profile and channel pages.
+- [ ] Direct messaging (1:1 conversations).
+- [ ] Groups / communities.
+- [ ] Block and mute, and reporting content.
+- [ ] Bookmarks / saved posts.
+
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.

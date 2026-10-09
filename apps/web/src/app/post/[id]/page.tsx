@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import PostCard from "@/components/PostCard";
 import Comments from "@/components/Comments";
+import DeletePostButton from "@/components/DeletePostButton";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,11 @@ export default async function PostPage({ params }: { params: { id: string } }) {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
+      {userId === post.authorId && (
+        <div className="mb-3 flex justify-end">
+          <DeletePostButton postId={post.id} />
+        </div>
+      )}
       <PostCard post={post} liked={liked} />
       <Comments postId={post.id} />
     </main>
