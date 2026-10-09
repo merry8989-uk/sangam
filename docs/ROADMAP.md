@@ -196,3 +196,25 @@ Narrow, sequential phases. Each phase ships something usable.
       copy - the bytes stay on Terabox).
 - [ ] A background sync that mirrors Terabox files locally. This needs the
       official API; without it we would be scraping, which we do not do.
+
+## Phase 15 - Zoho WorkDrive
+- [x] Zoho is the primary cloud integration, because it has a real, self-serve
+      OAuth 2.0 setup (register a client yourself, no approval wait) and an
+      India data centre (`ZOHO_DC=in`).
+- [x] Consent flow with a state cookie, then the authorization code is
+      exchanged for an access token and a long-lived refresh token.
+- [x] Tokens are stored encrypted; the access token is refreshed automatically
+      once it nears expiry.
+- [x] Create native Zoho files from the drive: `zohosheet` (Sheet),
+      `zw` (Writer document) and `zohoshow` (Slides).
+- [x] Upload files into WorkDrive (through our server, since WorkDrive uploads
+      are token-authenticated) and list what is there.
+- [x] Web and Android both offer it from the drive.
+- [ ] WorkDrive's large-file stream API (>250 MB).
+- [ ] Two-way sync that mirrors WorkDrive changes back into the drive.
+
+## Parking - Drive sharing (started, not wired)
+- [x] `DriveShare` model and an access resolver (`lib/drive-share.ts`), with
+      the resolver unit-tested.
+- [ ] The routes and UI that use them. Kept in the tree so the work is not
+      lost; nothing calls it yet.

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import DriveBrowser from "@/components/DriveBrowser";
 import TeraboxCard from "@/components/TeraboxCard";
+import ZohoCard from "@/components/ZohoCard";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function DrivePage() {
       <p className="mb-4 text-sm text-ink-500">
         Notes, sheets, documents, slides and any file you upload - all in one place.
       </p>
+      <ZohoCard />
       <TeraboxCard />
       <DriveBrowser
         items={items.map((i) => ({ ...i, updatedAt: i.updatedAt.toISOString(), trashedAt: i.trashedAt ? i.trashedAt.toISOString() : null, sourceUrl: i.sourceUrl }))}

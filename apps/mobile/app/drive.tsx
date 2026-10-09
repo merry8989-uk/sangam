@@ -2,9 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as Linking from "expo-linking";
 import {
   createDriveItem,
   importTeraboxLink,
+  zohoConnectUrl,
+  zohoCreate,
+  zohoList,
+  zohoStatus,
+  uploadToWorkDrive,
+  type ZohoStatus,
   linkTerabox,
   listDrive,
   listLinkedAccounts,
@@ -49,6 +56,8 @@ export default function DriveScreen() {
   const [tbToken, setTbToken] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [zoho, setZoho] = useState<ZohoStatus | null>(null);
+  const [zohoFiles, setZohoFiles] = useState<{ id: string; name: string; permalink?: string }[] | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -70,13 +79,63 @@ export default function DriveScreen() {
     setTbLoaded(true);
   }, []);
 
+  const loadZoho = useCallback(async () => {
+    try {
+      setZoho(await zohoStatus());
+    } catch {
+      // signed out
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       await load();
       await loadTerabox();
+      await loadZoho();
       setLoading(false);
     })();
-  }, [load, loadTerabox]);
+  }, [load, loadTerabox, loadZoho]);
+
+  async function zohoMake(kind: "SHEET" | "DOC" | "SLIDES") {
+    setBusy("ZOHO");
+    setError(null);
+    try {
+      const d = await zohoCreate(kind);
+      setNotice(`Created "${d.item.name}" in WorkDrive.`);
+      await load();
+    } catch {
+      setError("Could not create that in Zoho.");
+    }
+    setBusy(null);
+  }
+
+  async function zohoUpload() {
+    setBusy("ZUP");
+    setError(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
+      if (res.canceled) return;
+      for (const a of res.assets) {
+        await uploadToWorkDrive({ uri: a.uri, name: a.name, mimeType: a.mimeType ?? "application/octet-stream" }, parentId);
+      }
+      setNotice("Uploaded to WorkDrive.");
+      await load();
+    } catch {
+      setError("Upload to WorkDrive failed.");
+    }
+    setBusy(null);
+  }
+
+  async function zohoShowFiles() {
+    setBusy("ZLIST");
+    try {
+      const d = await zohoList();
+      setZohoFiles(d.files ?? []);
+    } catch {
+      setError("Could not read WorkDrive.");
+    }
+    setBusy(null);
+  }
 
   async function linkTb() {
     setBusy("TB");
@@ -180,6 +239,57 @@ export default function DriveScreen() {
           {error ? <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{error}</Text> : null}
           {notice ? <Text style={{ color: c.brand700, fontSize: 12, marginTop: 8 }}>{notice}</Text> : null}
         </Card>
+
+        {zoho ? (
+          <Card>
+            <Heading>Zoho WorkDrive</Heading>
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+              <Pill label={zoho.linked ? "linked" : "not linked"} active={zoho.linked} />
+              <Pill label={zoho.dc === "in" ? "India data centre" : `DC: ${zoho.dc}`} />
+            </View>
+            {!zoho.configured ? (
+              <Text style={{ color: c.ink500, fontSize: 12, marginTop: 8 }}>
+                Zoho is not set up on this server. Register a client at api-console.zoho.{zoho.dc} and set
+                ZOHO_CLIENT_ID / ZOHO_CLIENT_SECRET.
+              </Text>
+            ) : !zoho.linked ? (
+              <>
+                <Text style={{ color: c.ink500, fontSize: 12, marginTop: 8 }}>
+                  Connect Zoho WorkDrive to create documents, sheets and slides there, and upload files into it.
+                </Text>
+                <View style={{ marginTop: 10 }}>
+                  <Button label="Connect Zoho WorkDrive" onPress={() => Linking.openURL(zohoConnectUrl())} />
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={{ color: c.ink500, fontSize: 12, marginTop: 8 }}>
+                  Linked to {zoho.account?.label}. New files land in your Zoho My Folders.
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  <Button label={busy === "ZOHO" ? "..." : "New sheet"} onPress={() => zohoMake("SHEET")} disabled={busy !== null} />
+                  <Button label="New document" variant="ghost" onPress={() => zohoMake("DOC")} disabled={busy !== null} />
+                  <Button label="New slides" variant="ghost" onPress={() => zohoMake("SLIDES")} disabled={busy !== null} />
+                  <Button label={busy === "ZUP" ? "Uploading..." : "Upload to WorkDrive"} variant="ghost" onPress={zohoUpload} disabled={busy !== null} />
+                  <Button label={busy === "ZLIST" ? "Reading..." : "Show WorkDrive files"} variant="ghost" onPress={zohoShowFiles} disabled={busy !== null} />
+                </View>
+                {zohoFiles ? (
+                  <View style={{ marginTop: 10, gap: 4 }}>
+                    {zohoFiles.length === 0 ? (
+                      <Text style={{ color: c.ink500, fontSize: 12 }}>Your WorkDrive folder is empty.</Text>
+                    ) : (
+                      zohoFiles.map((f) => (
+                        <Pressable key={f.id} onPress={() => f.permalink && Linking.openURL(f.permalink)}>
+                          <Text style={{ color: c.brand700, fontSize: 13 }}>{f.name}</Text>
+                        </Pressable>
+                      ))
+                    )}
+                  </View>
+                ) : null}
+              </>
+            )}
+          </Card>
+        ) : null}
 
         {tbLoaded ? (
           <Card>

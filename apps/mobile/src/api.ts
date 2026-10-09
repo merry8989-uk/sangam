@@ -300,3 +300,45 @@ export function importTeraboxLink(url: string, parentId?: string | null) {
     body: JSON.stringify({ url, parentId: parentId ?? null })
   });
 }
+
+// ---- Zoho WorkDrive ----
+export type ZohoStatus = {
+  configured: boolean;
+  dc: string;
+  accountsBase: string;
+  linked: boolean;
+  account: { id: string; label: string; apiDomain: string } | null;
+};
+
+export function zohoStatus() {
+  return api<ZohoStatus>("/api/zoho/status");
+}
+
+export function zohoCreate(kind: "SHEET" | "DOC" | "SLIDES") {
+  return api<{ item: DriveItem }>("/api/drive/zoho/create", {
+    method: "POST",
+    body: JSON.stringify({ kind })
+  });
+}
+
+export function zohoList() {
+  return api<{ files: { id: string; name: string; extn?: string; permalink?: string }[] }>("/api/drive/zoho/list");
+}
+
+// The WorkDrive upload is authenticated with the OAuth token, so it goes
+// through our server rather than straight to storage.
+export async function uploadToWorkDrive(file: { uri: string; name: string; mimeType: string }, parentId?: string | null) {
+  const form = new FormData();
+  form.append("file", { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+  if (parentId) form.append("parentId", parentId);
+  const headers: Record<string, string> = {};
+  if (getToken()) headers.Authorization = "Bearer " + getToken();
+  const res = await fetch(BASE_URL + "/api/drive/zoho/upload", { method: "POST", headers, body: form });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return (await res.json()) as { item: DriveItem };
+}
+
+// Where to send the user to start the Zoho consent flow.
+export function zohoConnectUrl() {
+  return BASE_URL + "/api/zoho/connect";
+}

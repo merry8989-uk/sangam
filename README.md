@@ -75,6 +75,7 @@ channel follows) into **one** product, built on our **own stack**.
 | My Drive: notes, sheets, documents, slides and uploads of any file type | ✅ |
 | Nav folded into a More menu | ✅ |
 | Terabox linking from the drive (official OAuth or session token) | ✅ |
+| Zoho WorkDrive: create sheets/documents/slides and upload from the drive | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

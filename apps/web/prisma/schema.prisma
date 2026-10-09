@@ -56,6 +56,7 @@ model User {
   roomParticipations RoomParticipant[]
   driveItems    DriveItem[]
   linkedAccounts LinkedAccount[]
+  driveSharesReceived DriveShare[] @relation("DriveSharedWith")
 
   @@index([username])
 }
@@ -708,6 +709,7 @@ model DriveItem {
   owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   parent     DriveItem?  @relation("DriveTree", fields: [parentId], references: [id], onDelete: Cascade)
   children   DriveItem[] @relation("DriveTree")
+  shares     DriveShare[]
 
   @@index([ownerId, parentId])
   @@index([ownerId, kind])
@@ -735,4 +737,28 @@ model LinkedAccount {
 
   @@unique([userId, provider])
   @@index([userId])
+}
+
+// Sharing a drive item, either with a named person or through a link anyone
+// holding the token can open.
+model DriveShare {
+  id           String    @id @default(cuid())
+  itemId       String
+  ownerId      String
+  // Set for a person share; null for a link share.
+  sharedWithId String?
+  // VIEWER can read; EDITOR can also change content.
+  role         String    @default("VIEWER")
+  // Set for a link share; unguessable.
+  token        String?   @unique
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  item         DriveItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  sharedWith   User?     @relation("DriveSharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, sharedWithId])
+  @@index([sharedWithId])
+  @@index([ownerId])
+  @@index([token])
 }

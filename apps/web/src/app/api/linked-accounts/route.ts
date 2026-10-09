@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { encryptSecret, maskSecret, decryptSecret } from "@/lib/secrets";
 import { TERABOX_PROVIDER, looksLikeNdusToken, teraboxOAuthConfigured } from "@/lib/terabox";
+import { ZOHO_PROVIDER, zohoConfigured } from "@/lib/zoho";
 
-const PROVIDERS = [TERABOX_PROVIDER] as const;
+const PROVIDERS = [TERABOX_PROVIDER, ZOHO_PROVIDER] as const;
 
 // Which third-party accounts this user has connected. Secrets never leave here.
 export async function GET(req: Request) {
@@ -33,6 +34,10 @@ export async function GET(req: Request) {
     }),
     terabox: {
       oauthAvailable: teraboxOAuthConfigured()
+    },
+    zoho: {
+      configured: zohoConfigured(),
+      linked: accounts.some((a) => a.provider === ZOHO_PROVIDER)
     }
   });
 }
