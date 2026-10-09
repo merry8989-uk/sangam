@@ -20,11 +20,12 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Search (profiles + hashtags) via Postgres full-text, then Meilisearch.
 
 ## Phase 2 - Video
-- Async transcoding worker (FFmpeg) -> ABR ladder -> HLS.
-- Video player component (hls.js).
-- Shorts surface (9:16 vertical feed).
-- Long-form "channel" pages + subscriptions.
-- Thumbnail/preview generation; processing status polling.
+- [x] Async-style transcoding worker (FFmpeg) -> ABR ladder -> HLS + poster.
+- [x] /process/video endpoint; VIDEO media enriched on post creation.
+- [x] HLS player component (native HLS + hls.js fallback).
+- [x] Shorts surface: full-height vertical video feed.
+- [ ] Long-form "channel" pages + subscriptions.
+- [ ] Preview clip generation; processing status polling.
 
 ## Phase 3 - Ranking & trust at scale
 - Real moderation: multilingual text + vision models.

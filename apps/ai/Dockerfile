@@ -1,4 +1,10 @@
 FROM python:3.12-slim
+
+# FFmpeg powers the video pipeline (probe, transcode to HLS, poster frames).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .

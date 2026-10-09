@@ -33,7 +33,7 @@ subscriptions) into **one** product, built on our **own stack**.
 | Image pipeline: upload -> thumbnails (WebP) -> feed | ✅ |
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |
-| Video transcoding pipeline (FFmpeg/HLS) | ⏳ roadmap |
+| Video pipeline: FFmpeg -> ABR HLS ladder -> player -> Shorts | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

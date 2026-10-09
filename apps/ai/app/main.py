@@ -5,11 +5,12 @@ from .media import InvalidImage, process_image
 from .moderation import moderate_text
 from .recommend import Candidate, rank
 from .settings import settings
+from .video import TranscodeError, transcode_video
 
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 
@@ -43,6 +44,19 @@ class ProcessImageOut(BaseModel):
     thumbs: dict[str, str]
 
 
+class ProcessVideoIn(BaseModel):
+    key: str
+
+
+class ProcessVideoOut(BaseModel):
+    width: int
+    height: int
+    durationMs: int
+    thumbnailKey: str
+    hlsKey: str
+    renditions: list[int]
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "region": settings.s3_region}
@@ -74,3 +88,11 @@ def process_image_endpoint(payload: ProcessImageIn) -> ProcessImageOut:
         return ProcessImageOut(**process_image(payload.key))
     except InvalidImage as exc:
         raise HTTPException(status_code=422, detail=f"Not a valid image: {exc}") from exc
+
+
+@app.post("/process/video", response_model=ProcessVideoOut)
+def process_video_endpoint(payload: ProcessVideoIn) -> ProcessVideoOut:
+    try:
+        return ProcessVideoOut(**transcode_video(payload.key))
+    except TranscodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Could not transcode video: {exc}") from exc

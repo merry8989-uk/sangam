@@ -1,5 +1,6 @@
 import type { Post, User, Media } from "@prisma/client";
 import { mediaUrl } from "@/lib/s3";
+import VideoPlayer from "./VideoPlayer";
 
 type PostWith = Post & { author: User; media: Media[] };
 
@@ -14,8 +15,13 @@ export default function PostCard({ post }: { post: PostWith }) {
       </header>
       {post.caption && <p className="mb-3">{post.caption}</p>}
       {post.media.map((m) =>
-        m.kind === "VIDEO" ? (
-          <video key={m.id} controls className="w-full rounded-lg" src={mediaUrl(m.storageKey)} />
+        m.kind === "VIDEO" && m.hlsKey ? (
+          <VideoPlayer
+            key={m.id}
+            src={mediaUrl(m.hlsKey)}
+            poster={m.thumbnailKey ? mediaUrl(m.thumbnailKey) : undefined}
+            className="w-full rounded-lg bg-black"
+          />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img

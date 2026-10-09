@@ -11,7 +11,19 @@ export async function callAi<T>(path: string, body: unknown): Promise<T> {
 }
 
 export type ProcessedImage = { width: number; height: number; thumbnailKey: string };
+export type ProcessedVideo = {
+  width: number;
+  height: number;
+  durationMs: number;
+  thumbnailKey: string;
+  hlsKey: string;
+  renditions: number[];
+};
 
 export function processImage(key: string): Promise<ProcessedImage> {
   return callAi<ProcessedImage>("/process/image", { key });
+}
+
+export function processVideo(key: string): Promise<ProcessedVideo> {
+  return callAi<ProcessedVideo>("/process/video", { key });
 }

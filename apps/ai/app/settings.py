@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     s3_bucket_media: str = "sangam-media"
     s3_region: str = "ap-south-1"
 
+    # Media tooling. Blank means "find on PATH" (the Docker image installs
+    # system ffmpeg/ffprobe). Override for local or bundled builds.
+    ffmpeg_bin: str = ""
+    ffprobe_bin: str = ""
+
     class Config:
         env_file = ".env"
 

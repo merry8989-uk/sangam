@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redis, feedKey } from "@/lib/redis";
-import { processImage } from "@/lib/ai";
+import { processImage, processVideo } from "@/lib/ai";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -25,9 +25,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 50);
   const cursor = url.searchParams.get("cursor");
+  const type = url.searchParams.get("type");
 
   const posts = await prisma.post.findMany({
-    where: { visibility: "PUBLIC", status: "READY" },
+    where: {
+      visibility: "PUBLIC",
+      status: "READY",
+      ...(type ? { type: type as "IMAGE" | "VIDEO" | "SHORT" | "TEXT" } : {})
+    },
     orderBy: { createdAt: "desc" },
     take: limit,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -40,7 +45,7 @@ export async function GET(req: Request) {
   });
 }
 
-// POST /api/posts - create a post, process images, then fan out to followers.
+// POST /api/posts - create a post, enrich media, then fan out to followers.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
@@ -70,21 +75,35 @@ export async function POST(req: Request) {
     include: { author: true, media: true }
   });
 
-  // Media enrichment. Production moves this onto a queue (the post stays
-  // PROCESSING and a worker flips it to READY); the starter does it inline
-  // so the vertical slice is observable end-to-end.
+  // Media enrichment. Production moves this onto a queue (post stays
+  // PROCESSING; a worker flips it to READY); the starter runs it inline so
+  // the vertical slice is observable end-to-end.
   const images = post.media.filter((m) => m.kind === "IMAGE");
-  if (images.length) {
+  const videos = post.media.filter((m) => m.kind === "VIDEO");
+  if (images.length || videos.length) {
     try {
-      await Promise.all(
-        images.map(async (m) => {
+      await Promise.all([
+        ...images.map(async (m) => {
           const r = await processImage(m.storageKey);
           await prisma.media.update({
             where: { id: m.id },
             data: { width: r.width, height: r.height, thumbnailKey: r.thumbnailKey }
           });
+        }),
+        ...videos.map(async (m) => {
+          const r = await processVideo(m.storageKey);
+          await prisma.media.update({
+            where: { id: m.id },
+            data: {
+              width: r.width,
+              height: r.height,
+              durationMs: r.durationMs,
+              thumbnailKey: r.thumbnailKey,
+              hlsKey: r.hlsKey
+            }
+          });
         })
-      );
+      ]);
       post = await prisma.post.update({
         where: { id: post.id },
         data: { status: "READY" },
