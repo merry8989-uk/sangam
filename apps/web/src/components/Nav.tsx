@@ -1,23 +1,29 @@
 import Link from "next/link";
 import NotificationBell from "./NotificationBell";
+import NavMore from "./NavMore";
 
-const links = [
-  { href: "/ai", label: "AI" },
+const primary = [
   { href: "/feed", label: "Feed" },
   { href: "/explore", label: "Explore" },
-  { href: "/search", label: "Search" },
-  { href: "/for-you", label: "For you" },
   { href: "/shorts", label: "Shorts" },
   { href: "/live", label: "Live" },
+  { href: "/messages", label: "Messages" },
+  { href: "/drive", label: "Drive" },
+  { href: "/ai", label: "AI" },
+  { href: "/settings", label: "Settings" }
+];
+
+// Everything that is real but reached less often.
+const more = [
+  { href: "/search", label: "Search" },
+  { href: "/for-you", label: "For you" },
   { href: "/following", label: "Following" },
   { href: "/studio", label: "Studio" },
-  { href: "/moderation", label: "Moderation" },
-  { href: "/messages", label: "Messages" },
+  { href: "/groups", label: "Groups" },
   { href: "/saved", label: "Saved" },
   { href: "/history", label: "History" },
-  { href: "/groups", label: "Groups" },
-  { href: "/ops", label: "Ops" },
-  { href: "/settings", label: "Settings" }
+  { href: "/moderation", label: "Moderation" },
+  { href: "/ops", label: "Ops" }
 ];
 
 export default function Nav() {
@@ -27,7 +33,7 @@ export default function Nav() {
         <Link href="/" className="mr-4 font-bold tracking-tight text-brand-700">
           Sangam
         </Link>
-        {links.map((l) => (
+        {primary.map((l) => (
           <Link
             key={l.href}
             href={l.href}
@@ -36,6 +42,7 @@ export default function Nav() {
             {l.label}
           </Link>
         ))}
+        <NavMore links={more} />
         <NotificationBell />
       </nav>
     </header>

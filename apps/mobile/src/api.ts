@@ -202,3 +202,69 @@ export function liveAction(roomId: string, action: "start" | "stop") {
 export function resolveJoinCode(code: string) {
   return api<{ room: RoomSummary }>("/api/rooms/code/" + encodeURIComponent(code.toUpperCase()));
 }
+
+// ---- drive: notes, documents, sheets, slides and any file ----
+export type DriveKind = "FOLDER" | "FILE" | "NOTE" | "SHEET" | "DOC" | "SLIDES";
+
+export type DriveItem = {
+  id: string;
+  kind: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string | null;
+  content: string;
+  starred: boolean;
+  updatedAt: string;
+};
+
+export function listDrive(parentId?: string | null) {
+  return api<{ items: DriveItem[]; parent: { id: string; name: string; parentId: string | null } | null }>(
+    "/api/drive" + (parentId ? "?parentId=" + parentId : "")
+  );
+}
+
+export function createDriveItem(kind: DriveKind, parentId?: string | null, name?: string) {
+  return api<{ item: DriveItem }>("/api/drive", {
+    method: "POST",
+    body: JSON.stringify({ kind, parentId: parentId ?? null, name })
+  });
+}
+
+export function getDriveItem(id: string) {
+  return api<{ item: DriveItem }>("/api/drive/" + id);
+}
+
+export function updateDriveItem(id: string, patch: { name?: string; content?: string; starred?: boolean }) {
+  return api<{ item: DriveItem }>("/api/drive/" + id, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export function trashDriveItem(id: string) {
+  return api<{ ok: boolean }>("/api/drive/" + id, { method: "DELETE" });
+}
+
+// Presign, PUT the bytes, then register the item.
+export async function uploadToDrive(file: { uri: string; name: string; mimeType: string; size: number }, parentId?: string | null) {
+  const pres = await api<{ key: string; url: string; kind: string }>("/api/drive/upload", {
+    method: "POST",
+    body: JSON.stringify({ filename: file.name, contentType: file.mimeType || "application/octet-stream", sizeBytes: file.size })
+  });
+  const blob = await (await fetch(file.uri)).blob();
+  const put = await fetch(pres.url, {
+    method: "PUT",
+    headers: { "Content-Type": file.mimeType || "application/octet-stream" },
+    body: blob
+  });
+  if (!put.ok) throw new Error("upload failed");
+  return api<{ item: DriveItem }>("/api/drive", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: "FILE",
+      name: file.name,
+      parentId: parentId ?? null,
+      storageKey: pres.key,
+      mimeType: file.mimeType,
+      sizeBytes: file.size
+    })
+  });
+}

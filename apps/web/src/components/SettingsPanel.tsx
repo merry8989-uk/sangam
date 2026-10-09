@@ -293,6 +293,16 @@ export default function SettingsPanel({
         <Toggle label="Record my streams by default" value={s.liveAutoRecord} onChange={(v) => set("liveAutoRecord", v)} />
       </Section>
 
+      <Section title="Notes &amp; Drive" hint="Your own space for notes, documents, sheets, slides and any file.">
+        <p className="text-sm text-ink-500">
+          Open My Drive to write a note, create a sheet, document or slides, or upload almost any file
+          (audio, video, images, PDF, text, HTML, zip, epub and more).
+        </p>
+        <a href="/drive" className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+          Open My Drive
+        </a>
+      </Section>
+
       <Section title="Moderation" hint="Filter what you see, and block words.">
         <Toggle label="Hide sensitive content" value={s.hideSensitive} onChange={(v) => set("hideSensitive", v)} />
         <Row label="Blocked words (comma separated)">

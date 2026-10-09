@@ -4,10 +4,11 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { presignUpload } from "@/lib/s3";
 
+// Any file type is allowed; the kind is only a hint for the caller.
 const Body = z.object({
-  filename: z.string().min(1),
-  contentType: z.string().min(3),
-  kind: z.enum(["IMAGE", "VIDEO", "AUDIO"])
+  filename: z.string().min(1).max(300),
+  contentType: z.string().min(3).max(200),
+  kind: z.enum(["IMAGE", "VIDEO", "AUDIO", "DOCUMENT", "ARCHIVE", "OTHER"]).default("OTHER")
 });
 
 // Returns a pre-signed PUT URL so the browser uploads bytes directly to

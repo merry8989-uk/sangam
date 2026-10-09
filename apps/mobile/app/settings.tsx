@@ -172,6 +172,16 @@ export default function Settings() {
         </Card>
 
         <Card>
+          <Heading>Notes &amp; Drive</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            Your own space for notes, documents, sheets, slides and any file.
+          </Text>
+          <View style={{ marginTop: 10 }}>
+            <Button label="Open My Drive" onPress={() => router.push("/drive")} />
+          </View>
+        </Card>
+
+        <Card>
           <Heading>Account</Heading>
           {hasToken() ? (
             <View style={{ marginTop: 8, gap: 8 }}>

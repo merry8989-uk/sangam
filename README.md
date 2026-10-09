@@ -72,6 +72,8 @@ channel follows) into **one** product, built on our **own stack**.
 | Live streaming: RTMP ingest, go live from phone or laptop | ✅ |
 | Calls (1:1) and meetings (group), one room model | ✅ |
 | Calls / meetings / live control settings | ✅ |
+| My Drive: notes, sheets, documents, slides and uploads of any file type | ✅ |
+| Nav folded into a More menu | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

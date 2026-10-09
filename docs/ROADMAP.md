@@ -161,3 +161,23 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Recording and playback of calls/meetings.
 - [ ] Push notifications for incoming calls.
 - [ ] Waiting room enforcement and guest links.
+
+## Phase 12 - My Drive (notes and files)
+- [x] One `DriveItem` tree per user: folders, uploaded files, and documents
+      created in the app (note, sheet, document, slides).
+- [x] Uploads accept any file type - audio, video, image, PDF, text, HTML,
+      zip, epub, office documents - with a 512 MB per-file cap and a 15 GB
+      per-user quota.
+- [x] Pre-signed direct-to-storage uploads; the app tier never proxies bytes.
+- [x] Web browser with a + menu (folder / note / sheet / document / slides /
+      upload), search, and a trash.
+- [x] Editors for notes and documents (markdown with a preview), sheets
+      (a grid), and slides (a slide list). Files get a preview or download.
+- [x] Android Drive screen with a document picker for uploads.
+- [x] Reached from Settings (Notes & Drive) and the More menu.
+- [ ] Sharing a drive item with other people.
+- [ ] Zoho Notes import/export (needs Zoho OAuth credentials).
+
+## Phase 13 - Navigation tidy-up
+- [x] The nav bar shows eight primary destinations; the rest moved into a
+      More menu.

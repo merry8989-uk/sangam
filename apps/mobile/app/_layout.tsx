@@ -63,6 +63,8 @@ export default function RootLayout() {
           <Tabs.Screen name="login" options={{ href: null, title: "Sign in" }} />
           <Tabs.Screen name="post/[id]" options={{ href: null, title: "Post" }} />
           <Tabs.Screen name="room/[id]" options={{ href: null, title: "Room" }} />
+          <Tabs.Screen name="drive" options={{ href: null, title: "Drive" }} />
+          <Tabs.Screen name="drive/[id]" options={{ href: null, title: "Drive item" }} />
         </Tabs>
       </SafeAreaProvider>
     </ThemeContext.Provider>

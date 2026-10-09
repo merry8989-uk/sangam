@@ -54,6 +54,7 @@ model User {
   skipVotes     SkipVote[]
   roomsOwned    Room[]
   roomParticipations RoomParticipant[]
+  driveItems    DriveItem[]
 
   @@index([username])
 }
@@ -680,4 +681,32 @@ model RoomParticipant {
 
   @@unique([roomId, userId])
   @@index([userId])
+}
+
+// A personal drive: folders, uploaded files, and documents you create in the
+// app (notes, sheets, docs, slides). One tree per user.
+model DriveItem {
+  id         String    @id @default(cuid())
+  ownerId    String
+  parentId   String?
+  // FOLDER | FILE | NOTE | SHEET | DOC | SLIDES
+  kind       String
+  name       String
+  mimeType   String    @default("")
+  sizeBytes  Int       @default(0)
+  storageKey String?
+  // NOTE / DOC / SLIDES hold markdown; SHEET holds a JSON grid.
+  content    String    @default("")
+  starred    Boolean   @default(false)
+  trashedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parent     DriveItem?  @relation("DriveTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   DriveItem[] @relation("DriveTree")
+
+  @@index([ownerId, parentId])
+  @@index([ownerId, kind])
+  @@index([ownerId, trashedAt])
 }
