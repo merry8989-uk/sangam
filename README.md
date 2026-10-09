@@ -31,6 +31,8 @@ subscriptions) into **one** product, built on our **own stack**.
 | Direct-to-storage uploads via pre-signed URLs | ✅ |
 | AI service: multi-stage recommender + multilingual moderation | ✅ |
 | Ranked 'For you' feed + moderation review queue | ✅ |
+| Likes, comments, follow (API + UI) | ✅ |
+| Creator studio: analytics + agent assist | ✅ |
 | Image pipeline: upload -> thumbnails (WebP) -> feed | ✅ |
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |

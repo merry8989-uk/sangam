@@ -14,9 +14,9 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Image upload end-to-end: presign -> PUT -> create post -> thumbnail -> feed.
 - [x] Image processing worker: validate, read dimensions, WebP thumbnails at 320/640/1080.
 - [x] Feed, profile grid and post cards render thumbnails via public media URLs.
+- [x] Likes and comments wired through the UI (counts, toggle, post detail page).
 - [ ] Stories with 24h TTL (Redis + expiry sweeper).
 - [ ] Explore/discovery page (heuristic first, then ML).
-- [ ] Comments and likes wired through the UI.
 - [ ] Search (profiles + hashtags) via Postgres full-text, then Meilisearch.
 
 ## Phase 2 - Video
@@ -37,11 +37,13 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Counters moved to batched aggregation (Redis -> analytics store).
 - [ ] Observability: metrics, tracing, error budgets.
 
-## Phase 4 - Creators, monetisation, agents
-- Creator analytics dashboard.
-- Creator agents: captions, alt-text, hashtags, translation.
-- Monetisation primitives (subscriptions/tips) - carefully, with compliance.
-- Groups/communities, direct messaging, live streaming.
+## Phase 4 - Creators & agents
+- [x] Creator studio: post/follower/like/comment/view analytics.
+- [x] Creator-assist agents: captions, hashtags, title & description, alt-text, translation seam.
+- [x] App shell (navigation) and post detail page.
+- [ ] Monetisation primitives (subscriptions/tips) - NOT built; needs payment
+      compliance (RBI rules, GST, KYC). Deliberately left as a design note.
+- [ ] Groups/communities, direct messaging, live streaming.
 
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.

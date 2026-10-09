@@ -1,10 +1,16 @@
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
+import FollowButton from "@/components/FollowButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage({ params }: { params: { username: string } }) {
+  const session = await getServerSession(authOptions);
+  const viewerId = (session?.user as { id?: string } | undefined)?.id;
+
   const user = await prisma.user.findUnique({
     where: { username: params.username },
     include: {
@@ -19,17 +25,29 @@ export default async function ProfilePage({ params }: { params: { username: stri
   });
   if (!user) notFound();
 
+  const isFollowing =
+    viewerId && viewerId !== user.id
+      ? Boolean(
+          await prisma.follow.findUnique({
+            where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } }
+          })
+        )
+      : false;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header className="flex items-center gap-4">
         <div className="h-20 w-20 rounded-full bg-brand-100" />
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold">{user.displayName}</h1>
           <p className="text-ink-500">@{user.username}</p>
           <p className="mt-1 text-sm text-ink-700">
             {user._count.posts} posts · {user._count.followers} followers · {user._count.following} following
           </p>
         </div>
+        {viewerId && viewerId !== user.id && (
+          <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+        )}
       </header>
       {user.bio && <p className="mt-4">{user.bio}</p>}
       <div className="mt-6 grid grid-cols-3 gap-2">

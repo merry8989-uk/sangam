@@ -1,6 +1,9 @@
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .agents import alt_text, draft_title_description, suggest_captions, suggest_hashtags, translate
 from .media import InvalidImage, process_image
 from .moderation import moderate_text
 from .recommend import Candidate, recommend, similar
@@ -11,7 +14,7 @@ from .vision import classify_image
 app = FastAPI(
     title="Sangam AI service",
     description="Moderation, recommendation and media-enrichment endpoints for Sangam.",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 
@@ -134,3 +137,29 @@ def process_video_endpoint(payload: ProcessVideoIn) -> ProcessVideoOut:
         return ProcessVideoOut(**transcode_video(payload.key))
     except TranscodeError as exc:
         raise HTTPException(status_code=422, detail=f"Could not transcode video: {exc}") from exc
+
+
+class AssistIn(BaseModel):
+    task: Literal["captions", "hashtags", "title", "alt_text", "translate"]
+    text: str = ""
+    tone: str = "friendly"
+    target: str = "hi-IN"
+
+
+class AssistOut(BaseModel):
+    result: dict
+
+
+@app.post("/agents/assist", response_model=AssistOut)
+def agents_assist(payload: AssistIn) -> AssistOut:
+    if payload.task == "captions":
+        return AssistOut(result={"captions": suggest_captions(payload.text, payload.tone)})
+    if payload.task == "hashtags":
+        return AssistOut(result={"hashtags": suggest_hashtags(payload.text)})
+    if payload.task == "title":
+        return AssistOut(result=draft_title_description(payload.text))
+    if payload.task == "alt_text":
+        return AssistOut(result={"alt_text": alt_text(payload.text)})
+    if payload.task == "translate":
+        return AssistOut(result=translate(payload.text, payload.target))
+    raise HTTPException(status_code=400, detail="unknown task")

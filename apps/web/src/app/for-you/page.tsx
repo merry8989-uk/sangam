@@ -63,6 +63,12 @@ export default async function ForYouPage() {
     // ranking service down - fall back to the trending order already loaded
   }
 
+  const ids = ordered.map((p) => p.id);
+  const liked = userId && ids.length
+    ? await prisma.like.findMany({ where: { userId, postId: { in: ids } }, select: { postId: true } })
+    : [];
+  const likedSet = new Set(liked.map((l) => l.postId));
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">For you</h1>
@@ -70,7 +76,7 @@ export default async function ForYouPage() {
         {ordered.length === 0 && <li className="text-ink-500">Nothing to show yet.</li>}
         {ordered.map((p) => (
           <li key={p.id}>
-            <PostCard post={p} />
+            <PostCard post={p} liked={likedSet.has(p.id)} />
           </li>
         ))}
       </ul>
