@@ -213,8 +213,15 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] WorkDrive's large-file stream API (>250 MB).
 - [ ] Two-way sync that mirrors WorkDrive changes back into the drive.
 
-## Parking - Drive sharing (started, not wired)
-- [x] `DriveShare` model and an access resolver (`lib/drive-share.ts`), with
-      the resolver unit-tested.
-- [ ] The routes and UI that use them. Kept in the tree so the work is not
-      lost; nothing calls it yet.
+## Phase 16 - Drive sharing
+- [x] Share an item with a person (view or edit) or mint a link anyone holding
+      it can open, with an optional expiry.
+- [x] A share on a folder covers everything inside it: the access check walks
+      up the parent chain and takes the strongest share it finds.
+- [x] Editors may change content; only the owner may rename, move, star,
+      delete or manage sharing.
+- [x] `Shared with me` list, a read-only `/share/<token>` page for link
+      shares, and revoke from the share dialog.
+- [x] Web and Android.
+- [ ] Notifications when something is shared with you.
+- [ ] Per-link passwords and download limits.

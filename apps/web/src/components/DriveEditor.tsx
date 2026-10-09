@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { mediaUrl } from "@/lib/s3";
+import ShareDialog from "./ShareDialog";
 
 type Item = {
   id: string;
@@ -39,7 +40,15 @@ function renderMarkdown(md: string): string {
     .replace(/`(.+?)`/g, "<code>$1</code>");
 }
 
-export default function DriveEditor({ item }: { item: Item }) {
+export default function DriveEditor({
+  item,
+  canManage = false,
+  access = "OWNER"
+}: {
+  item: Item;
+  canManage?: boolean;
+  access?: string;
+}) {
   const router = useRouter();
   const [name, setName] = useState(item.name);
   const [content, setContent] = useState(item.content);
@@ -124,10 +133,15 @@ export default function DriveEditor({ item }: { item: Item }) {
           onBlur={() => save({ name })}
         />
         <span className="rounded bg-slate-100 px-2 py-0.5 text-xs uppercase tracking-wide text-ink-500">{item.kind}</span>
+        {access !== "OWNER" ? (
+          <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
+            shared with you ({access === "EDIT" ? "can edit" : "can view"})
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {isText || item.kind === "SHEET" || item.kind === "SLIDES" ? (
+        {access !== "VIEW" && (isText || item.kind === "SHEET" || item.kind === "SLIDES") ? (
           <button onClick={() => save()} disabled={busy} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
             {busy ? "Saving..." : "Save"}
           </button>
@@ -142,9 +156,12 @@ export default function DriveEditor({ item }: { item: Item }) {
             Download
           </a>
         ) : null}
-        <button onClick={trash} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-red-600">
-          Move to trash
-        </button>
+        <ShareDialog itemId={item.id} canManage={canManage} />
+        {canManage ? (
+          <button onClick={trash} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-red-600">
+            Move to trash
+          </button>
+        ) : null}
         {status ? <span className="text-sm text-ink-500">{status}</span> : null}
       </div>
 

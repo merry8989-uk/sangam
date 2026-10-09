@@ -342,3 +342,34 @@ export async function uploadToWorkDrive(file: { uri: string; name: string; mimeT
 export function zohoConnectUrl() {
   return BASE_URL + "/api/zoho/connect";
 }
+
+// ---- drive sharing ----
+export type DriveShare = {
+  id: string;
+  role: string;
+  link: string | null;
+  expiresAt: string | null;
+  user: { id: string; username: string; displayName: string | null } | null;
+};
+
+export function listShares(itemId: string) {
+  return api<{ shares: DriveShare[] }>("/api/drive/" + itemId + "/share");
+}
+
+export function createShare(
+  itemId: string,
+  input: { username?: string; role?: "VIEWER" | "EDITOR"; public?: boolean; expiresInDays?: number }
+) {
+  return api<{ share: DriveShare }>("/api/drive/" + itemId + "/share", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function revokeShare(shareId: string) {
+  return api<{ ok: boolean }>("/api/drive/shares/" + shareId, { method: "DELETE" });
+}
+
+export function sharedWithMe() {
+  return api<{ items: { shareId: string; role: string; item: DriveItem }[] }>("/api/drive/shared");
+}

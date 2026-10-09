@@ -60,3 +60,18 @@ export function expiresAtFromDays(days: number | null | undefined, now = new Dat
   const capped = Math.min(days, 3650);
   return new Date(now.getTime() + capped * 24 * 60 * 60 * 1000);
 }
+
+// Given every share that applies to a viewer (the item plus its ancestors),
+// pick the strongest one. An editor share beats a viewer share; expired shares
+// are ignored entirely.
+export function bestShareLevel<
+  T extends { id: string; role: string; itemId: string; expiresAt?: Date | string | null }
+>(shares: T[], now = new Date()): { level: AccessLevel; share: T } | null {
+  const rank = (role: string) => (role === "EDITOR" ? 2 : role === "VIEWER" ? 1 : 0);
+  const valid = shares
+    .map((s) => ({ s, level: resolveAccess({ isOwner: false, share: s, now }) }))
+    .filter((x) => x.level !== "NONE")
+    .sort((a, b) => rank(b.s.role) - rank(a.s.role));
+  if (valid.length === 0) return null;
+  return { level: valid[0].level, share: valid[0].s };
+}

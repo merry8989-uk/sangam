@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import DriveBrowser from "@/components/DriveBrowser";
 import DriveEditor from "@/components/DriveEditor";
+import { loadItemWithAccess } from "@/lib/driveAccess";
+import { canRead, canManage } from "@/lib/drive-share";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +29,9 @@ export default async function DriveItemPage({ params }: { params: { id: string }
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) redirect("/settings");
 
-  const item = await prisma.driveItem.findFirst({ where: { id: params.id, ownerId: userId } });
-  if (!item) notFound();
+  const access = await loadItemWithAccess(userId, params.id);
+  if (!access || !canRead(access.level)) notFound();
+  const item = access.item;
 
   if (item.kind === "FOLDER") {
     const [children, crumbs] = await Promise.all([
@@ -62,6 +65,8 @@ export default async function DriveItemPage({ params }: { params: { id: string }
           content: item.content,
           sourceUrl: item.sourceUrl
         }}
+        canManage={canManage(access.level)}
+        access={access.level}
       />
     </main>
   );

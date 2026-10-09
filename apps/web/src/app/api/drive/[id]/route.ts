@@ -3,18 +3,20 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { sanitizeName, canMoveTo } from "@/lib/drive";
-
-async function ownedItem(id: string, userId: string) {
-  return prisma.driveItem.findFirst({ where: { id, ownerId: userId } });
-}
+import { loadItemWithAccess } from "@/lib/driveAccess";
+import { canRead, canWrite, canManage } from "@/lib/drive-share";
 
 // Read one item, including its content.
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const item = await ownedItem(params.id, userId);
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ item });
+  const access = await loadItemWithAccess(userId, params.id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canRead(access.level)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (access.item.trashedAt && access.level !== "OWNER") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json({ item: access.item, access: access.level, via: access.via });
 }
 
 const PatchBody = z.object({
@@ -32,8 +34,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const parsed = PatchBody.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const item = await ownedItem(params.id, userId);
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const access = await loadItemWithAccess(userId, params.id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canWrite(access.level)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const item = access.item;
+  // An editor may change the content; only the owner may rename, move or star.
+  if (!canManage(access.level) && (parsed.data.name !== undefined || parsed.data.parentId !== undefined || parsed.data.starred !== undefined)) {
+    return NextResponse.json({ error: "Only the owner can rename, move or star this" }, { status: 403 });
+  }
 
   const data: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) data.name = sanitizeName(parsed.data.name);
@@ -71,9 +80,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const item = await ownedItem(params.id, userId);
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const access = await loadItemWithAccess(userId, params.id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManage(access.level)) return NextResponse.json({ error: "Only the owner can delete this" }, { status: 403 });
 
+  const item = access.item;
   const hard = new URL(req.url).searchParams.get("hard") === "1";
   if (hard) {
     await prisma.driveItem.delete({ where: { id: item.id } });
