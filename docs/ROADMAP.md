@@ -50,8 +50,9 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] One agent per user (unique index), configurable: system prompt, model, skills,
       knowledge base, scheduled tasks, connectors.
 - [x] Agent API: call your agent from anywhere with a Bearer key.
-- [x] AI launcher button - tap to reveal options (new chat, recent chat, skills,
-      knowledge base, scheduled task, connector); shows a dot when collapsed.
+- [x] AI side bar - docked (not floating); tap to reveal options (new chat, recent
+      chat, skills, knowledge base, scheduled task, connector); collapses on navigation;
+      dot shown while collapsed.
 - [ ] Streaming responses (SSE) instead of waiting for the full reply.
 - [ ] A scheduler worker to actually run the agent's scheduled tasks.
 - [ ] Embeddings-based knowledge base retrieval (today the KB is injected as text).

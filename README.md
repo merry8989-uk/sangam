@@ -35,7 +35,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Creator studio: analytics + agent assist | ✅ |
 | AI chat (Sarvam Indus / sarvam-105b), no login required | ✅ |
 | One agent per user + public Agent API (Bearer key) | ✅ |
-| AI launcher: skills, knowledge base, scheduled task, connector | ✅ |
+| AI side bar (docked; collapses on navigation) | ✅ |
 | Image pipeline: upload -> thumbnails (WebP) -> feed | ✅ |
 | Docker Compose dev stack (Postgres, Redis, MinIO) | ✅ |
 | CI (lint, build, import checks) | ✅ |
