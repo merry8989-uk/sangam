@@ -50,6 +50,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Hover preview clips + processing status polling | ✅ |
 | Notifications (like/comment/follow) + nav bell | ✅ |
 | Profile settings (name, bio, avatar, cover) + delete own post | ✅ |
+| Direct messaging (1:1 conversations) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

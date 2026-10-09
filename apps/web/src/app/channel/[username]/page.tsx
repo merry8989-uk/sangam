@@ -8,6 +8,7 @@ import { formatCount, formatDuration, timeAgo } from "@/lib/format";
 import FollowButton from "@/components/FollowButton";
 import PreviewThumb from "@/components/PreviewThumb";
 import Avatar from "@/components/Avatar";
+import MessageButton from "@/components/MessageButton";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,10 @@ export default async function ChannelPage({ params }: { params: { username: stri
           </p>
         </div>
         {viewerId && viewerId !== user.id && (
-          <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+          <div className="flex gap-2">
+            <MessageButton userId={user.id} />
+            <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+          </div>
         )}
       </header>
 

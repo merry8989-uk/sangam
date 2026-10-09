@@ -8,12 +8,13 @@ import MarkAllRead from "@/components/MarkAllRead";
 
 export const dynamic = "force-dynamic";
 
-type Payload = { actorId?: string; actorUsername?: string; postId?: string; preview?: string };
+type Payload = { actorId?: string; actorUsername?: string; postId?: string; conversationId?: string; preview?: string };
 
 function describe(type: string, p: Payload): string {
   if (type === "like") return "liked your post";
   if (type === "comment") return p.preview ? `commented: ${p.preview}` : "commented on your post";
   if (type === "follow") return "started following you";
+  if (type === "message") return p.preview ? `messaged you: ${p.preview}` : "sent you a message";
   return "interacted with you";
 }
 
@@ -51,6 +52,10 @@ export default async function NotificationsPage() {
               <Avatar name={p.actorUsername ?? "?"} size={36} />
               {p.postId ? (
                 <Link href={`/post/${p.postId}`} className="hover:underline">
+                  {body}
+                </Link>
+              ) : p.conversationId ? (
+                <Link href={`/messages/${p.conversationId}`} className="hover:underline">
                   {body}
                 </Link>
               ) : (

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import FollowButton from "@/components/FollowButton";
 import Avatar from "@/components/Avatar";
+import MessageButton from "@/components/MessageButton";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,10 @@ export default async function ProfilePage({ params }: { params: { username: stri
           </p>
         </div>
         {viewerId && viewerId !== user.id && (
-          <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+          <div className="flex gap-2">
+            <MessageButton userId={user.id} />
+            <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+          </div>
         )}
       </header>
       {user.bio && <p className="mt-4">{user.bio}</p>}

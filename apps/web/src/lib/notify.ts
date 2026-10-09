@@ -1,11 +1,12 @@
 import { prisma } from "./prisma";
 
-export type NotifyType = "like" | "comment" | "follow";
+export type NotifyType = "like" | "comment" | "follow" | "message";
 
 type NotifyPayload = {
   actorId: string;
   actorUsername: string;
   postId?: string;
+  conversationId?: string;
   preview?: string;
 };
 

@@ -11,6 +11,7 @@ const links = [
   { href: "/following", label: "Following" },
   { href: "/studio", label: "Studio" },
   { href: "/moderation", label: "Moderation" },
+  { href: "/messages", label: "Messages" },
   { href: "/settings", label: "Settings" }
 ];
 

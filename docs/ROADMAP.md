@@ -70,7 +70,9 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Profile settings: edit display name, bio, avatar and cover.
 - [x] Delete your own post (author-only), cascading media/likes/comments/hashtags.
 - [x] Avatars shown across feed, profile and channel pages.
-- [ ] Direct messaging (1:1 conversations).
+- [x] Direct messaging: 1:1 conversations, messages list, thread view with polling,
+      unread counts, and a Message button on profiles/channels.
+- [ ] Real-time delivery (WebSocket/SSE) instead of 4s polling.
 - [ ] Groups / communities.
 - [ ] Block and mute, and reporting content.
 - [ ] Bookmarks / saved posts.
