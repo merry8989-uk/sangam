@@ -73,9 +73,10 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Direct messaging: 1:1 conversations, messages list, thread view with polling,
       unread counts, and a Message button on profiles/channels.
 - [ ] Real-time delivery (WebSocket/SSE) instead of 4s polling.
-- [ ] Groups / communities.
-- [ ] Block and mute, and reporting content.
-- [ ] Bookmarks / saved posts.
+- [x] Groups / communities: create, join/leave, public + private, group-scoped posts.
+- [x] Block, mute and report: feeds filter blocked/muted users; blocks stop follow + DM;
+      reports land in the moderation queue.
+- [x] Bookmarks / saved posts, with a /saved page.
 
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.

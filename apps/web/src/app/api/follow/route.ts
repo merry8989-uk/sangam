@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { isBlockedEitherWay } from "@/lib/filters";
 
 const Body = z.object({ targetId: z.string(), action: z.enum(["follow", "unfollow"]) });
 
@@ -16,6 +17,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { targetId, action } = parsed.data;
   if (targetId === userId) return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
+  if (await isBlockedEitherWay(userId, targetId)) {
+    return NextResponse.json({ error: "Cannot follow this user" }, { status: 403 });
+  }
 
   if (action === "follow") {
     await prisma.follow.upsert({

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hiddenUserIds } from "@/lib/filters";
 import Composer from "@/components/Composer";
 import PostCard from "@/components/PostCard";
 import StoriesBar from "@/components/StoriesBar";
@@ -13,8 +14,15 @@ export default async function FeedPage() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
+  const hidden = userId ? await hiddenUserIds(userId) : [];
+
   const posts = await prisma.post.findMany({
-    where: { visibility: "PUBLIC", status: "READY" },
+    where: {
+      visibility: "PUBLIC",
+      status: "READY",
+      OR: [{ groupId: null }, { group: { visibility: "PUBLIC" } }],
+      ...(hidden.length ? { authorId: { notIn: hidden } } : {})
+    },
     orderBy: { createdAt: "desc" },
     take: 30,
     include: { author: true, media: true }

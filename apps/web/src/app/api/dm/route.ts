@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isBlockedEitherWay } from "@/lib/filters";
 
 // GET /api/dm - my conversations, most recent first, with the other person,
 // the last message and an unread count.
@@ -62,6 +63,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const target = parsed.data.userId;
   if (target === me) return NextResponse.json({ error: "Cannot message yourself" }, { status: 400 });
+  if (await isBlockedEitherWay(me, target)) {
+    return NextResponse.json({ error: "Cannot message this user" }, { status: 403 });
+  }
 
   const candidates = await prisma.conversation.findMany({
     where: {

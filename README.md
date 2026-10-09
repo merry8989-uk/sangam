@@ -51,6 +51,9 @@ channel follows) into **one** product, built on our **own stack**.
 | Notifications (like/comment/follow) + nav bell | ✅ |
 | Profile settings (name, bio, avatar, cover) + delete own post | ✅ |
 | Direct messaging (1:1 conversations) | ✅ |
+| Bookmarks / saved posts | ✅ |
+| Block, mute and report | ✅ |
+| Groups / communities (public + private) | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

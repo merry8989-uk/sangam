@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import PostCard from "@/components/PostCard";
 import Comments from "@/components/Comments";
 import DeletePostButton from "@/components/DeletePostButton";
+import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,9 @@ export default async function PostPage({ params }: { params: { id: string } }) {
         </div>
       )}
       <PostCard post={post} liked={liked} />
+      <div className="mt-3 flex justify-end">
+        <ReportButton entityType="post" entityId={post.id} />
+      </div>
       <Comments postId={post.id} />
     </main>
   );

@@ -6,6 +6,8 @@ import { mediaUrl } from "@/lib/s3";
 import FollowButton from "@/components/FollowButton";
 import Avatar from "@/components/Avatar";
 import MessageButton from "@/components/MessageButton";
+import BlockMuteButtons from "@/components/BlockMuteButtons";
+import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +56,11 @@ export default async function ProfilePage({ params }: { params: { username: stri
           </p>
         </div>
         {viewerId && viewerId !== user.id && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <MessageButton userId={user.id} />
             <FollowButton targetId={user.id} initialFollowing={isFollowing} />
+            <BlockMuteButtons targetId={user.id} />
+            <ReportButton entityType="user" entityId={user.id} />
           </div>
         )}
       </header>

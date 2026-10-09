@@ -4,6 +4,7 @@ import { mediaUrl } from "@/lib/s3";
 import VideoPlayer from "./VideoPlayer";
 import LikeButton from "./LikeButton";
 import Avatar from "./Avatar";
+import BookmarkButton from "./BookmarkButton";
 
 type PostWith = Post & { author: User; media: Media[] };
 
@@ -58,6 +59,7 @@ export default function PostCard({
           Comments · {post.commentCount}
         </Link>
         <span className="ml-auto">{post.viewCount} views</span>
+        {interactive && <BookmarkButton postId={post.id} />}
       </footer>
     </article>
   );

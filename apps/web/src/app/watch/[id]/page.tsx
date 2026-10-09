@@ -12,6 +12,7 @@ import FollowButton from "@/components/FollowButton";
 import LikeButton from "@/components/LikeButton";
 import PreviewThumb from "@/components/PreviewThumb";
 import DeletePostButton from "@/components/DeletePostButton";
+import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -99,11 +100,10 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
             {video?.durationMs ? ` · ${formatDuration(video.durationMs)}` : ""}
           </div>
 
-          {viewerId === post.authorId && (
-            <div className="mt-3">
-              <DeletePostButton postId={post.id} />
-            </div>
-          )}
+          <div className="mt-3 flex gap-2">
+            {viewerId === post.authorId && <DeletePostButton postId={post.id} />}
+            <ReportButton entityType="post" entityId={post.id} />
+          </div>
 
           {post.hashtags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">

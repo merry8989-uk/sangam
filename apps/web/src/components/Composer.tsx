@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-export default function Composer() {
+export default function Composer({ groupId }: { groupId?: string } = {}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [caption, setCaption] = useState("");
@@ -77,7 +77,8 @@ export default function Composer() {
           caption,
           type: file ? kindOf(file) : "TEXT",
           visibility: "PUBLIC",
-          media
+          media,
+          ...(groupId ? { groupId } : {})
         })
       });
       const data = await res.json();

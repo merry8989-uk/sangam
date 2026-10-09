@@ -18,7 +18,8 @@ const CreateBody = z.object({
   caption: z.string().max(2200).optional(),
   type: z.enum(["IMAGE", "VIDEO", "SHORT", "TEXT"]).default("TEXT"),
   visibility: z.enum(["PUBLIC", "FOLLOWERS", "PRIVATE"]).default("PUBLIC"),
-  media: z.array(MediaIn).max(10).default([])
+  media: z.array(MediaIn).max(10).default([]),
+  groupId: z.string().optional()
 });
 
 const POST_INCLUDE = { author: true, media: true } as const;
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
 
   const parsed = CreateBody.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  const { caption, type, visibility, media } = parsed.data;
+  const { caption, type, visibility, media, groupId } = parsed.data;
 
   let post = await prisma.post.create({
     data: {
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
       caption,
       type,
       visibility,
+      groupId,
       status: media.length ? "PROCESSING" : "READY",
       media: {
         create: media.map((m) => ({

@@ -12,6 +12,8 @@ const links = [
   { href: "/studio", label: "Studio" },
   { href: "/moderation", label: "Moderation" },
   { href: "/messages", label: "Messages" },
+  { href: "/saved", label: "Saved" },
+  { href: "/groups", label: "Groups" },
   { href: "/settings", label: "Settings" }
 ];
 

@@ -39,6 +39,14 @@ model User {
   chatSessions  ChatSession[]
   conversations ConversationParticipant[]
   directMessages DirectMessage[]
+  bookmarks     Bookmark[]
+  blocking      Block[]    @relation("blocker")
+  blockedBy     Block[]    @relation("blocked")
+  muting        Mute[]     @relation("muter")
+  mutedBy       Mute[]     @relation("muted")
+  reports       Report[]
+  groupsOwned   Group[]
+  groupMembers  GroupMember[]
 
   @@index([username])
 }
@@ -111,6 +119,7 @@ model Post {
   visibility Visibility @default(PUBLIC)
   type       PostType   @default(IMAGE)
   status     PostStatus @default(PROCESSING)
+  groupId    String?
   // denormalised counters (kept in sync by the app / background workers)
   likeCount  Int        @default(0)
   commentCount Int      @default(0)
@@ -123,9 +132,12 @@ model Post {
   comments   Comment[]
   likes      Like[]
   hashtags   PostHashtag[]
+  group      Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  bookmarks  Bookmark[]
 
   @@index([authorId, createdAt])
   @@index([createdAt])
+  @@index([groupId, createdAt])
 }
 
 enum Visibility {
@@ -336,4 +348,100 @@ model DirectMessage {
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+// ---------- Bookmarks, blocking, reports, groups ----------
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+}
+
+model Mute {
+  id        String   @id @default(cuid())
+  muterId   String
+  mutedId   String
+  createdAt DateTime @default(now())
+
+  muter User @relation("muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@unique([muterId, mutedId])
+  @@index([muterId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  entityType String
+  entityId   String
+  reason     String
+  note       String?
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+}
+
+model Group {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  name        String
+  description String?
+  ownerId     String
+  visibility  GroupVisibility @default(PUBLIC)
+  createdAt   DateTime        @default(now())
+
+  owner   User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+  posts   Post[]
+
+  @@index([createdAt])
+}
+
+enum GroupVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+model GroupMember {
+  id       String    @id @default(cuid())
+  groupId  String
+  userId   String
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+enum GroupRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
