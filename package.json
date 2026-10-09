@@ -1,0 +1,19 @@
+{
+  "name": "sangam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sangam - an India-hosted, self-contained social + video media platform (Facebook + Instagram + YouTube style features).",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/web run lint",
+    "db:push": "npm --workspace apps/web run db:push",
+    "db:migrate": "npm --workspace apps/web run db:migrate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
