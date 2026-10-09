@@ -86,6 +86,25 @@ Narrow, sequential phases. Each phase ships something usable.
       reports land in the moderation queue.
 - [x] Bookmarks / saved posts, with a /saved page.
 
+## Phase 7 - Settings & customisation
+- [x] Per-user settings model + API, and a full Settings page.
+- [x] Appearance: theme, accent, background mode, daily background, DIY custom
+      background, DM wallpaper.
+- [x] Quality & playback: video/audio/upload quality, autoplay, speed, captions,
+      PiP, background play, skip points.
+- [x] Posts & media: default post visibility (enforced in the composer),
+      allow downloads.
+- [x] Recommended content: on/off, interests, not-interested.
+- [x] Comments: Reddit-style branch view (toggleable) + sort; replies nest.
+- [x] Sharing & visibility: who can comment / share / reshare / view posts,
+      show-my-profile (enforced on the profile page).
+- [x] Bookmarks & saving; History: record, manage, clear, auto-delete job.
+- [x] Moderation: hide sensitive, blocked words (enforced on the feed).
+- [ ] Theme (light/dark) and rotating/DIY backgrounds are stored but not applied
+      to the UI yet - needs a theme pass across components.
+- [ ] Playback settings are stored; the video player does not read them yet.
+- [ ] whoCanComment / whoCanShare / whoCanReshare are stored but not enforced.
+
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.

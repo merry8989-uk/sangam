@@ -13,6 +13,7 @@ const links = [
   { href: "/moderation", label: "Moderation" },
   { href: "/messages", label: "Messages" },
   { href: "/saved", label: "Saved" },
+  { href: "/history", label: "History" },
   { href: "/groups", label: "Groups" },
   { href: "/ops", label: "Ops" },
   { href: "/settings", label: "Settings" }

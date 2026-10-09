@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import DirectMessageThread from "@/components/DirectMessageThread";
+import { getSettingsOptional } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,8 @@ export default async function ConversationPage({ params }: { params: { id: strin
     data: { lastReadAt: new Date() }
   });
 
+  const settings = await getSettingsOptional(userId);
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <DirectMessageThread
@@ -42,6 +45,7 @@ export default async function ConversationPage({ params }: { params: { id: strin
         meId={userId}
         other={other}
         initial={conversation.messages}
+        background={settings?.chatBackground || undefined}
       />
     </main>
   );

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import PostCard from "@/components/PostCard";
 import Comments from "@/components/Comments";
 import DeletePostButton from "@/components/DeletePostButton";
+import { getSettingsOptional } from "@/lib/settings";
 import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,8 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     include: { author: true, media: true }
   });
   if (!post || post.status === "REMOVED") notFound();
+
+  const settings = await getSettingsOptional(userId);
 
   const liked = userId
     ? Boolean(await prisma.like.findUnique({ where: { postId_userId: { postId: post.id, userId } } }))
@@ -34,7 +37,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
       <div className="mt-3 flex justify-end">
         <ReportButton entityType="post" entityId={post.id} />
       </div>
-      <Comments postId={post.id} />
+      <Comments postId={post.id} threaded={settings?.threadedComments ?? true} sort={settings?.commentSort ?? "top"} />
     </main>
   );
 }

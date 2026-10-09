@@ -57,6 +57,16 @@ Alerts are stored (see /ops) and posted to `ALERT_WEBHOOK_URL` if set.
   -H "x-internal-secret: $INTERNAL_SECRET"
 ```
 
+## 7. Prune view history (daily)
+
+Deletes view-history rows older than each user's auto-delete window
+(Settings -> History).
+
+```bash
+0 3 * * * curl -fsS -X POST http://localhost:3000/api/internal/prune-history \
+  -H "x-internal-secret: $INTERNAL_SECRET"
+```
+
 ## Notes
 
 - Both endpoints are idempotent per run window: the counter flush takes a Redis

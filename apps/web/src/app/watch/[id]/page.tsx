@@ -12,6 +12,7 @@ import FollowButton from "@/components/FollowButton";
 import LikeButton from "@/components/LikeButton";
 import PreviewThumb from "@/components/PreviewThumb";
 import DeletePostButton from "@/components/DeletePostButton";
+import { getSettingsOptional } from "@/lib/settings";
 import ReportButton from "@/components/ReportButton";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,19 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
   if (!post || post.status !== "READY") notFound();
 
   const video = post.media.find((m) => m.kind === "VIDEO" && m.hlsKey);
+
+  const settings = await getSettingsOptional(viewerId);
+
+  // Record this view in the viewer's history (unless they turned history off).
+  if (viewerId && settings?.historyEnabled !== false) {
+    await prisma.viewHistory
+      .upsert({
+        where: { userId_postId: { userId: viewerId, postId: post.id } },
+        update: { viewedAt: new Date() },
+        create: { userId: viewerId, postId: post.id }
+      })
+      .catch(() => {});
+  }
 
   // View counting is buffered in Redis and flushed to the database in batches.
   await bumpView(post.id);
@@ -116,7 +130,7 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
             </div>
           )}
 
-          <Comments postId={post.id} />
+          <Comments postId={post.id} threaded={settings?.threadedComments ?? true} sort={settings?.commentSort ?? "top"} />
         </div>
 
         <aside>

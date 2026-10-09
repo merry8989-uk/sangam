@@ -5,7 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 
-const Body = z.object({ postId: z.string().min(1), body: z.string().min(1).max(1000) });
+const Body = z.object({
+  postId: z.string().min(1),
+  body: z.string().min(1).max(1000),
+  parentId: z.string().optional()
+});
 
 export async function GET(req: Request) {
   const postId = new URL(req.url).searchParams.get("postId");
@@ -27,10 +31,10 @@ export async function POST(req: Request) {
 
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  const { postId, body } = parsed.data;
+  const { postId, body, parentId } = parsed.data;
 
   const comment = await prisma.comment.create({
-    data: { postId, authorId: userId, body },
+    data: { postId, authorId: userId, body, parentId: parentId ?? null },
     include: { author: { select: { username: true, displayName: true } } }
   });
   await prisma.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });

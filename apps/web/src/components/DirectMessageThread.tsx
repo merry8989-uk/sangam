@@ -9,12 +9,14 @@ export default function DirectMessageThread({
   conversationId,
   meId,
   other,
-  initial
+  initial,
+  background
 }: {
   conversationId: string;
   meId: string;
   other: Other;
   initial: Msg[];
+  background?: string;
 }) {
   const [messages, setMessages] = useState<Msg[]>(initial);
   const [body, setBody] = useState("");
@@ -87,7 +89,7 @@ export default function DirectMessageThread({
         />
         @{other?.username ?? "unknown"}
       </div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-4">
+      <div className="flex-1 space-y-2 overflow-y-auto p-4" style={background ? { background } : undefined}>
         {messages.length === 0 && <p className="text-sm text-ink-500">No messages yet. Say hello.</p>}
         {messages.map((m) => (
           <div

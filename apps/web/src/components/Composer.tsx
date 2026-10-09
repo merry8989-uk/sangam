@@ -2,7 +2,13 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-export default function Composer({ groupId }: { groupId?: string } = {}) {
+export default function Composer({
+  groupId,
+  defaultVisibility = "PUBLIC"
+}: {
+  groupId?: string;
+  defaultVisibility?: string;
+} = {}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [caption, setCaption] = useState("");
@@ -76,7 +82,7 @@ export default function Composer({ groupId }: { groupId?: string } = {}) {
         body: JSON.stringify({
           caption,
           type: file ? kindOf(file) : "TEXT",
-          visibility: "PUBLIC",
+          visibility: defaultVisibility,
           media,
           ...(groupId ? { groupId } : {})
         })

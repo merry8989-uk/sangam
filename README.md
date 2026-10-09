@@ -61,6 +61,9 @@ channel follows) into **one** product, built on our **own stack**.
 | Stories expiry sweeper (rows + storage objects) | ✅ |
 | Meilisearch search (optional, Postgres fallback) | ✅ |
 | Error budgets (SLOs) + alerting, with an /ops page | ✅ |
+| Full Settings: appearance, quality, posts, comments, sharing, history, moderation | ✅ |
+| Reddit-style branch comments (toggleable) | ✅ |
+| DM custom wallpaper + watch history with reset | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 

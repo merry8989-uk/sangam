@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hiddenUserIds } from "@/lib/filters";
+import { getSettingsOptional } from "@/lib/settings";
 import Composer from "@/components/Composer";
 import PostCard from "@/components/PostCard";
 import StoriesBar from "@/components/StoriesBar";
@@ -15,13 +16,18 @@ export default async function FeedPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   const hidden = userId ? await hiddenUserIds(userId) : [];
+  const settings = await getSettingsOptional(userId);
+  const blockedWords = (settings?.blockedWords as string[] | undefined) ?? [];
 
   const posts = await prisma.post.findMany({
     where: {
       visibility: "PUBLIC",
       status: "READY",
       OR: [{ groupId: null }, { group: { visibility: "PUBLIC" } }],
-      ...(hidden.length ? { authorId: { notIn: hidden } } : {})
+      ...(hidden.length ? { authorId: { notIn: hidden } } : {}),
+      ...(blockedWords.length
+        ? { NOT: blockedWords.map((w) => ({ caption: { contains: w, mode: "insensitive" as const } })) }
+        : {})
     },
     orderBy: { createdAt: "desc" },
     take: 30,
@@ -38,7 +44,7 @@ export default async function FeedPage() {
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">Feed</h1>
       {userId && <StoriesBar />}
-      <Composer />
+      <Composer defaultVisibility={settings?.defaultVisibility ?? "PUBLIC"} />
       <ul className="mt-6 space-y-4">
         {posts.length === 0 && <li className="text-ink-500">No posts yet. Be the first.</li>}
         {posts.map((p) => (

@@ -29,6 +29,9 @@ export default async function ProfilePage({ params }: { params: { username: stri
   });
   if (!user) notFound();
 
+  const targetSettings = await prisma.userSettings.findUnique({ where: { userId: user.id } });
+  const hiddenProfile = targetSettings ? !targetSettings.profileVisible : false;
+
   const isFollowing =
     viewerId && viewerId !== user.id
       ? Boolean(
@@ -65,6 +68,12 @@ export default async function ProfilePage({ params }: { params: { username: stri
         )}
       </header>
       {user.bio && <p className="mt-4">{user.bio}</p>}
+
+      {hiddenProfile && viewerId !== user.id && !isFollowing ? (
+        <p className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-center text-ink-500">
+          This profile is private.
+        </p>
+      ) : (
       <div className="mt-6 grid grid-cols-3 gap-2">
         {user.posts.map((p) => {
           const first = p.media[0];
@@ -82,6 +91,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
           );
         })}
       </div>
+      )}
     </main>
   );
 }

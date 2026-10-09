@@ -47,6 +47,8 @@ model User {
   reports       Report[]
   groupsOwned   Group[]
   groupMembers  GroupMember[]
+  settings      UserSettings?
+  viewHistory   ViewHistory[]
 
   @@index([username])
 }
@@ -473,4 +475,76 @@ model Alert {
   createdAt    DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ---------- Per-user settings ----------
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Appearance
+  theme            String  @default("system")  // system | light | dark
+  accent           String  @default("orange")
+  dailyBackground  Boolean @default(false)     // rotate the background daily
+  backgroundMode   String  @default("static")  // static | weekly | daily | custom
+  customBackground String  @default("")        // DIY colour / gradient / image key
+  chatBackground   String  @default("")        // DM wallpaper
+
+  // Playback & quality
+  videoQuality    String  @default("auto")     // auto | 1080 | 720 | 480 | 360
+  audioQuality    String  @default("auto")     // auto | high | medium | low
+  uploadQuality   String  @default("original")
+  autoplay        Boolean @default(true)
+  playbackSpeed   Float   @default(1)
+  captionsDefault Boolean @default(false)
+  pipEnabled      Boolean @default(true)       // picture-in-picture
+  backgroundPlay  Boolean @default(false)      // audio only, video hidden
+  sponsorSkip     Boolean @default(false)      // skip points
+
+  // Posts & media
+  defaultVisibility String  @default("PUBLIC") // PUBLIC | FOLLOWERS | PRIVATE
+  allowDownloads    Boolean @default(true)
+
+  // Recommended content
+  recommendedContent Boolean    @default(true)
+  interests          Json       @default("[]")
+  nonInterests       Json       @default("[]")
+  feedResetAt        DateTime?
+
+  // Comments
+  threadedComments Boolean @default(true)      // Reddit-style branches
+  commentSort      String  @default("top")     // top | new | old
+
+  // Sharing & visibility
+  whoCanComment   String  @default("EVERYONE") // EVERYONE | FOLLOWERS | NOBODY
+  whoCanShare     String  @default("EVERYONE")
+  whoCanReshare   String  @default("EVERYONE")
+  profileVisible  Boolean @default(true)
+  whoCanViewPosts String  @default("PUBLIC")   // PUBLIC | FOLLOWERS | PRIVATE
+
+  // Bookmarks & saving
+  autoSaveDrafts Boolean @default(true)
+
+  // History
+  historyEnabled Boolean @default(true)
+  autoDeleteDays Int     @default(0)           // 0 = never
+
+  // Moderation
+  hideSensitive Boolean @default(false)
+  blockedWords  Json    @default("[]")
+
+  updatedAt DateTime @updatedAt
+}
+
+model ViewHistory {
+  id       String   @id @default(cuid())
+  userId   String
+  postId   String
+  viewedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, viewedAt])
 }
