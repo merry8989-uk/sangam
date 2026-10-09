@@ -1,6 +1,5 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hiddenUserIds } from "@/lib/filters";
 import { searchEnabled, searchPosts as meiliPosts, searchUsers as meiliUsers } from "@/lib/search";
@@ -21,8 +20,7 @@ async function handleSearch(req: Request): Promise<Response> {
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json(EMPTY);
 
-  const session = await getServerSession(authOptions);
-  const viewerId = (session?.user as { id?: string } | undefined)?.id;
+  const viewerId = await getViewerId(req);
   const hidden = viewerId ? await hiddenUserIds(viewerId) : [];
   const hideFilter = hidden.length ? { id: { notIn: hidden } } : {};
 

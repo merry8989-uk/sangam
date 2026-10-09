@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Sangam",
+    "slug": "sangam",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "sangam",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "android": {
+      "package": "uk.merry8989.sangam",
+      "versionCode": 1,
+      "adaptiveIcon": { "backgroundColor": "#ea580c" },
+      "permissions": ["INTERNET", "READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO"],
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "apiUrl": "http://10.0.2.2:3000"
+    }
+  }
+}

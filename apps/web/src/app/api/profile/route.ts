@@ -1,7 +1,6 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { indexUsers } from "@/lib/search";
 
@@ -12,9 +11,8 @@ const Body = z.object({
   coverUrl: z.string().max(500).optional()
 });
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+export async function GET(req: Request) {
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
@@ -26,8 +24,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = Body.safeParse(await req.json());

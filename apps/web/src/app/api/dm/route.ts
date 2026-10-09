@@ -1,15 +1,13 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isBlockedEitherWay } from "@/lib/filters";
 
 // GET /api/dm - my conversations, most recent first, with the other person,
 // the last message and an unread count.
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+export async function GET(req: Request) {
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ items: [] });
 
   const parts = await prisma.conversationParticipant.findMany({
@@ -55,8 +53,7 @@ const StartBody = z.object({ userId: z.string().min(1) });
 
 // POST /api/dm - find or create the 1:1 conversation with another user.
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as { id?: string } | undefined)?.id;
+  const me = await getViewerId(req);
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = StartBody.safeParse(await req.json());

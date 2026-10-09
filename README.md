@@ -65,6 +65,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Reddit-style branch comments (toggleable) | ✅ |
 | DM custom wallpaper + watch history with reset | ✅ |
 | Theme engine: 480 themes, day/week/month/year rotation, mood-driven | ✅ |
+| Android app (Expo / React Native) with Bearer-token auth | ✅ |
 | Stories, Reels, DMs, Live, Groups, Search | ⏳ roadmap |
 | Recommendation ML, analytics | ⏳ roadmap |
 
@@ -110,6 +111,8 @@ Notes:
   https://dashboard.sarvam.ai/). Everything else works without it.
 - To use the durable media queue and the GPU/ML inference worker, see
   [docs/JOBS.md](docs/JOBS.md) and set `MEDIA_QUEUE_ENABLED=true`.
+
+The Android client lives in `apps/mobile` - see [apps/mobile/README.md](apps/mobile/README.md).
 
 Running the web app outside Docker instead? Apply the schema yourself:
 

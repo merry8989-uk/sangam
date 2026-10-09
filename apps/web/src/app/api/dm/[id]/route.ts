@@ -1,7 +1,6 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 import { dmChannel, redis } from "@/lib/redis";
@@ -13,9 +12,8 @@ async function membership(conversationId: string, userId: string) {
 }
 
 // GET /api/dm/[id] - the thread. Marks it read for the caller.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const me = await membership(params.id, userId);
@@ -45,8 +43,7 @@ const SendBody = z.object({ body: z.string().min(1).max(4000) });
 
 // POST /api/dm/[id] - send a message.
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const me = await membership(params.id, userId);

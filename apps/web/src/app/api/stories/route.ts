@@ -1,7 +1,6 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { processImage } from "@/lib/ai";
@@ -17,9 +16,8 @@ const Body = z.object({
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Active stories from the people you follow, plus your own. Grouped by author.
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+export async function GET(req: Request) {
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ groups: [] });
 
   const following = await prisma.follow.findMany({
@@ -55,8 +53,7 @@ export async function GET() {
 
 // Create a story that expires in 24 hours.
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = Body.safeParse(await req.json());

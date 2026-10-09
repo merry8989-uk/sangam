@@ -1,14 +1,12 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/bookmarks?postId=X - is this post saved by me?
 // GET /api/bookmarks             - my saved posts, newest first.
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ saved: false, items: [] });
 
   const postId = new URL(req.url).searchParams.get("postId");
@@ -33,8 +31,7 @@ const Body = z.object({ postId: z.string().min(1) });
 
 // POST /api/bookmarks - toggle a save.
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = Body.safeParse(await req.json());

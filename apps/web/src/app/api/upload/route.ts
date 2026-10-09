@@ -1,8 +1,7 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { presignUpload } from "@/lib/s3";
 
 const Body = z.object({
@@ -14,8 +13,7 @@ const Body = z.object({
 // Returns a pre-signed PUT URL so the browser uploads bytes directly to
 // India-region object storage - the app tier never proxies large media.
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = Body.safeParse(await req.json());

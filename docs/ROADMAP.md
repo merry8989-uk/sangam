@@ -110,6 +110,16 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] Playback settings are stored; the video player does not read them yet.
 - [ ] whoCanComment / whoCanShare / whoCanReshare are stored but not enforced.
 
+## Phase 8 - Android app
+- [x] Expo / React Native client in apps/mobile: feed, shorts, explore, post
+      detail, messages, AI chat, settings, sign-in.
+- [x] Same 480-theme engine as the web, verified to produce identical themes.
+- [x] Bearer-token auth so one backend serves both clients
+      (`POST /api/mobile/login`).
+- [ ] Inline video playback (expo-video is installed but not wired in).
+- [ ] Live DM updates on mobile (SSE/WebSocket client).
+- [ ] Push notifications.
+
 ## Cross-cutting, ongoing
 - Security hardening and DPDP compliance reviews each phase.
 - Load testing before every phase that adds traffic.

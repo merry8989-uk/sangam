@@ -1,7 +1,6 @@
+import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { moderateText } from "@/lib/ai";
 import { extractTags } from "@/lib/hashtags";
@@ -63,8 +62,7 @@ export async function POST(req: Request) {
 }
 
 async function handleCreatePost(req: Request): Promise<Response> {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = CreateBody.safeParse(await req.json());
