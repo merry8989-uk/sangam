@@ -37,6 +37,15 @@ class TranscodeError(Exception):
     """Raised when FFmpeg fails or the source is not a usable video."""
 
 
+def _read(key: str) -> bytes:
+    """Fetch the source. Any storage failure becomes a TranscodeError, so the
+    API answers with a clean 4xx instead of a 500 and a stack trace."""
+    try:
+        return s3.get_bytes(key)
+    except Exception as exc:
+        raise TranscodeError(f"could not read {key}") from exc
+
+
 def _ffmpeg() -> str:
     return settings.ffmpeg_bin or shutil.which("ffmpeg") or "ffmpeg"
 
@@ -141,7 +150,7 @@ def transcode_video(key: str, max_height: int | None = None, audio_bitrate: str 
     with tempfile.TemporaryDirectory() as td:
         tdp = Path(td)
         src = tdp / "src"
-        src.write_bytes(s3.get_bytes(key))
+        src.write_bytes(_read(key))
 
         meta = probe(src)
         # An upload quality can cap the ladder so a "low" upload never stores 1080p.
@@ -235,7 +244,7 @@ def sample_frames(key: str, count: int = 8) -> dict:
     with tempfile.TemporaryDirectory() as td:
         tdp = Path(td)
         src = tdp / "src"
-        src.write_bytes(s3.get_bytes(key))
+        src.write_bytes(_read(key))
         meta = probe(src)
         duration = float(meta["duration"] or 0)
         prefix = f"{key.rsplit('.', 1)[0]}_hls"
@@ -260,7 +269,7 @@ def extract_poster(key: str, at_sec: float) -> dict:
     with tempfile.TemporaryDirectory() as td:
         tdp = Path(td)
         src = tdp / "src"
-        src.write_bytes(s3.get_bytes(key))
+        src.write_bytes(_read(key))
         meta = probe(src)
         duration = float(meta["duration"] or 0)
         at = max(0.0, min(float(at_sec), max(0.0, duration - 0.05)))

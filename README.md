@@ -127,6 +127,10 @@ Notes:
 - To use the durable media queue and the GPU/ML inference worker, see
   [docs/JOBS.md](docs/JOBS.md) and set `MEDIA_QUEUE_ENABLED=true`.
 
+The media pipeline has an end-to-end test: `python apps/ai/tests/e2e_pipeline.py`
+builds a real clip and runs the whole transcode + thumbnail path through the
+service. See `apps/ai/tests/e2e_pipeline.py`.
+
 The Android client lives in `apps/mobile` - see [apps/mobile/README.md](apps/mobile/README.md).
 
 Running the web app outside Docker instead? Apply the schema yourself:

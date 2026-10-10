@@ -272,3 +272,17 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] HEVC/AV1 for 1440p and above, if the ceiling is ever raised again.
 - [ ] Per-upload rung selection, so a creator can choose which renditions to
       pay to encode.
+
+## Phase 19 - The media pipeline actually run
+- [x] `apps/ai/tests/e2e_pipeline.py` builds a real 1440p clip with FFmpeg,
+      swaps object storage for a dict, and drives the real FastAPI app through
+      TestClient. It is runnable, not a sketch: 22 checks, all passing.
+- [x] Verified by decoding the output: every rendition came out at the right
+      resolution and H.264 profile/level (Main/4.1 up to 1080p, High/5.2 at
+      1440p), and the whole HLS master plays end to end.
+- [x] Fixed a real gap the run exposed: a source missing from object storage
+      raised straight through to a 500 with a stack trace. Storage reads now
+      go through one helper that turns any failure into a clean 4xx.
+- [x] Noted in the test why the transport stream is checked structurally: some
+      static FFmpeg builds crash on the MPEG-TS demuxer, which is the tool and
+      not our output.
