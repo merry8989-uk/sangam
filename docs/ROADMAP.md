@@ -286,3 +286,30 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Noted in the test why the transport stream is checked structurally: some
       static FFmpeg builds crash on the MPEG-TS demuxer, which is the tool and
       not our output.
+
+## Phase 20 - Post display settings, from the three-dot menu
+- [x] Every post now carries a three-dot menu that opens the display settings.
+      It is always drawn, on purpose: it is the only way back to the settings,
+      so a switch that could hide it would strand the user with no undo.
+- [x] The primary interaction is a choice of three, not a fixed Follow button:
+      Connect, Follow or Subscribe. Connect is the default.
+- [x] Connect is a request, not a follow. It reuses the Follow row at its
+      existing PENDING status, so the follow graph, the block checks and the
+      notification path all keep working. Accepting connects both directions.
+- [x] Subscribe is marked by a `kind` on the same row, so a channel
+      subscription and a plain follow can be told apart.
+- [x] Granular metadata switches: captions, like counts, comment counts, view
+      counts, share counts and saved counts. Each hides only its own element.
+- [x] Interface element switches: author photo, author name, timestamp, media
+      badges, the primary button, and the love / comment / share / save buttons
+      individually, plus button words and a compact layout.
+- [x] Focus mode hides every count at once without disturbing the individual
+      switches, so turning it off restores exactly what was set before.
+- [x] The same settings appear in the mobile app: a bottom sheet on the post and
+      a card in Settings. The web and mobile resolve rules are checked against
+      each other, not just written twice.
+- [x] Post gains shareCount and saveCount, which the share and save toggles need.
+- [ ] Per-post overrides. These preferences are account-wide today; a post could
+      carry its own exceptions.
+- [ ] Share notifications, and a connect request surfacing in the notifications
+      list with accept/decline inline.

@@ -16,6 +16,7 @@ import {
 } from "../src/api";
 import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
 import { pickTheme, THEME_COUNT } from "../src/theme";
+import { DISPLAY_TOGGLES, PRIMARY_ACTIONS } from "../src/postDisplay";
 
 export default function Settings() {
   const c = useColors();
@@ -147,6 +148,28 @@ export default function Settings() {
               />
             ))}
           </View>
+        </Card>
+
+        <Card>
+          <Heading>How your posts look</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            The same switches as the {"\u22ef"} menu on a post. They apply everywhere.
+          </Text>
+
+          <Picker label="Main button" field="primaryAction" options={PRIMARY_ACTIONS as unknown as string[]} />
+
+          <Text style={{ color: c.ink500, fontSize: 12, marginTop: 12 }}>Focus mode</Text>
+          <Toggle label="Hide every count at once" field="focusMode" />
+
+          <Text style={{ color: c.ink500, fontSize: 12, marginTop: 12 }}>What to show</Text>
+          {DISPLAY_TOGGLES.filter((t) => t.group === "metadata").map((t) => (
+            <Toggle key={t.key} label={t.label} field={t.settingKey} />
+          ))}
+
+          <Text style={{ color: c.ink500, fontSize: 12, marginTop: 12 }}>Interface elements</Text>
+          {DISPLAY_TOGGLES.filter((t) => t.group === "elements").map((t) => (
+            <Toggle key={t.key} label={t.label} field={t.settingKey} />
+          ))}
         </Card>
 
         <Card>

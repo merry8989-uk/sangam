@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rankFeed, type RankCandidate } from "@/lib/ai";
 import PostCard from "@/components/PostCard";
+import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,9 @@ export default async function ForYouPage() {
     : [];
   const likedSet = new Set(liked.map((l) => l.postId));
 
+  const display = await loadDisplay(userId);
+  const primaryStates = await primaryStatesFor(userId, ordered.map((p) => p.authorId));
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">For you</h1>
@@ -76,7 +80,13 @@ export default async function ForYouPage() {
         {ordered.length === 0 && <li className="text-ink-500">Nothing to show yet.</li>}
         {ordered.map((p) => (
           <li key={p.id}>
-            <PostCard post={p} liked={likedSet.has(p.id)} />
+            <PostCard
+              post={p}
+              liked={likedSet.has(p.id)}
+              display={display}
+              primaryState={primaryStates.get(p.authorId) ?? "NONE"}
+              isOwn={p.authorId === userId}
+            />
           </li>
         ))}
       </ul>

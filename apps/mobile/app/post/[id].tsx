@@ -19,6 +19,8 @@ import {
 } from "../../src/api";
 import { Avatar, Button, Card, Empty, Heading, Loading, Pill, Screen, useColors } from "../../src/ui";
 import VideoPlayer from "../../src/VideoPlayer";
+import PostDisplaySheet from "../../src/PostDisplaySheet";
+import { DEFAULT_DISPLAY, resolveDisplay, type PostDisplay } from "../../src/postDisplay";
 
 const mmss = (s: number) => {
   const m = Math.floor(s / 60);
@@ -50,6 +52,9 @@ export default function PostDetail() {
   const [visibility, setVisibility] = useState<"SELF" | "EVERYONE">("SELF");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // Post display preferences, the same ones the web three-dot menu writes.
+  const [display, setDisplay] = useState<PostDisplay>(DEFAULT_DISPLAY);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const video = post?.media.find((m) => m.kind === "VIDEO" && m.hlsKey) ?? null;
 
@@ -60,6 +65,17 @@ export default function PostDetail() {
     } catch {
       // offline
     }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await api<{ settings: Record<string, unknown> }>("/api/settings");
+        setDisplay(resolveDisplay(d.settings));
+      } catch {
+        // signed out - keep the defaults
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -147,10 +163,16 @@ export default function PostDetail() {
       <ScrollView contentContainerStyle={{ padding: 12, gap: 12 }}>
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Avatar name={post.author.username} />
-            <Text style={{ color: c.ink900, fontWeight: "500" }}>@{post.author.username}</Text>
+            {display.authorAvatar && <Avatar name={post.author.username} />}
+            {display.authorHandle && (
+              <Text style={{ color: c.ink900, fontWeight: "500" }}>@{post.author.username}</Text>
+            )}
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={() => setSheetOpen(true)} accessibilityLabel="Post display settings">
+              <Text style={{ color: c.ink500, fontSize: 20 }}>{"\u22ef"}</Text>
+            </Pressable>
           </View>
-          {!!post.caption && (
+          {display.caption && !!post.caption && (
             <Text style={{ color: c.ink900, marginTop: 10, fontSize: 16 }}>{post.caption}</Text>
           )}
 
@@ -180,7 +202,7 @@ export default function PostDetail() {
           ))}
 
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-            <Pill label={`${post.viewCount} views`} active />
+            {display.viewCount && <Pill label={`${post.viewCount} views`} active />}
             <Pill label={post.type} />
           </View>
         </Card>
@@ -328,6 +350,12 @@ export default function PostDetail() {
           </Card>
         ) : null}
       </ScrollView>
+      <PostDisplaySheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        initial={display}
+        onSaved={setDisplay}
+      />
     </Screen>
   );
 }

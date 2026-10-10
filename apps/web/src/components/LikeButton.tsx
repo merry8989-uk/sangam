@@ -4,11 +4,17 @@ import { useState } from "react";
 export default function LikeButton({
   postId,
   initialCount,
-  initialLiked
+  initialLiked,
+  showCount = true,
+  showLabel = true
 }: {
   postId: string;
   initialCount: number;
   initialLiked: boolean;
+  /** The post display menu can hide the count but keep the button. */
+  showCount?: boolean;
+  /** Or drop the words and leave the icon. */
+  showLabel?: boolean;
 }) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -49,7 +55,8 @@ export default function LikeButton({
         liked ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-ink-700 hover:bg-slate-200"
       }`}
     >
-      {liked ? "Liked" : "Like"} · {count}
+      {showLabel ? (liked ? "Liked" : "Like") : liked ? "♥" : "♡"}
+      {showCount ? ` · ${count}` : ""}
     </button>
   );
 }

@@ -1,7 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function BookmarkButton({ postId }: { postId: string }) {
+export default function BookmarkButton({
+  postId,
+  initialCount = 0,
+  showCount = true,
+  showLabel = true
+}: {
+  postId: string;
+  initialCount?: number;
+  /** The post display menu can hide the count but keep the button. */
+  showCount?: boolean;
+  showLabel?: boolean;
+}) {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -40,7 +51,8 @@ export default function BookmarkButton({ postId }: { postId: string }) {
         saved ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-ink-700 hover:bg-slate-200"
       }`}
     >
-      {saved ? "Saved" : "Save"}
+      {showLabel ? (saved ? "Saved" : "Save") : saved ? "🔖" : "☆"}
+      {showCount ? ` · ${initialCount}` : ""}
     </button>
   );
 }

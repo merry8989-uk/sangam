@@ -95,6 +95,27 @@ const Body = z.object({
   // Write-only: we seal it and never send it back.
   backupPassphrase: z.string().min(8).max(200).optional(),
 
+  // Post display - written by the three-dot menu on a post
+  primaryAction: z.enum(["CONNECT", "FOLLOW", "SUBSCRIBE"]).optional(),
+  showCaption: z.boolean().optional(),
+  showLikeCount: z.boolean().optional(),
+  showCommentCount: z.boolean().optional(),
+  showViewCount: z.boolean().optional(),
+  showShareCount: z.boolean().optional(),
+  showSaveCount: z.boolean().optional(),
+  showAuthorAvatar: z.boolean().optional(),
+  showAuthorHandle: z.boolean().optional(),
+  showTimestamp: z.boolean().optional(),
+  showMediaBadges: z.boolean().optional(),
+  showPrimaryAction: z.boolean().optional(),
+  showLikeButton: z.boolean().optional(),
+  showCommentButton: z.boolean().optional(),
+  showShareButton: z.boolean().optional(),
+  showSaveButton: z.boolean().optional(),
+  showActionLabels: z.boolean().optional(),
+  compactFeed: z.boolean().optional(),
+  focusMode: z.boolean().optional(),
+
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });

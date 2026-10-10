@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import PostCard from "@/components/PostCard";
 import Composer from "@/components/Composer";
 import JoinGroupButton from "@/components/JoinGroupButton";
+import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,9 @@ export default async function GroupPage({ params }: { params: { slug: string } }
         include: { author: true, media: true }
       })
     : [];
+
+  const display = await loadDisplay(userId);
+  const primaryStates = await primaryStatesFor(userId, posts.map((p) => p.authorId));
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -63,7 +67,12 @@ export default async function GroupPage({ params }: { params: { slug: string } }
           {posts.length === 0 && <li className="text-ink-500">No posts in this group yet.</li>}
           {posts.map((p) => (
             <li key={p.id}>
-              <PostCard post={p} />
+              <PostCard
+                post={p}
+                display={display}
+                primaryState={primaryStates.get(p.authorId) ?? "NONE"}
+                isOwn={p.authorId === userId}
+              />
             </li>
           ))}
         </ul>

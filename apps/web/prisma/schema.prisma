@@ -110,6 +110,10 @@ model Follow {
   followerId  String
   followeeId  String
   status      FollowStatus @default(ACCEPTED)
+  // FOLLOW is a plain follow, SUBSCRIBE is a channel subscription, CONNECT is a
+  // request that the other person accepts. A CONNECT row sits at PENDING until
+  // it is accepted, so the existing status field already carries that meaning.
+  kind        String   @default("FOLLOW")
   createdAt   DateTime @default(now())
   follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
   followee    User     @relation("followee", fields: [followeeId], references: [id], onDelete: Cascade)
@@ -136,6 +140,8 @@ model Post {
   likeCount  Int        @default(0)
   commentCount Int      @default(0)
   viewCount  Int        @default(0)
+  shareCount Int        @default(0)
+  saveCount  Int        @default(0)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -600,6 +606,34 @@ model UserSettings {
   lastBackupAt        DateTime?
 
   // Moderation
+  // ---- Post display (set from the three-dot menu on any post) ----
+  // Which action the primary button offers.
+  primaryAction       String  @default("CONNECT")  // CONNECT | FOLLOW | SUBSCRIBE
+
+  // Metadata you can switch off to cut visual noise.
+  showCaption         Boolean @default(true)
+  showLikeCount       Boolean @default(true)
+  showCommentCount    Boolean @default(true)
+  showViewCount       Boolean @default(true)
+  showShareCount      Boolean @default(true)
+  showSaveCount       Boolean @default(true)
+
+  // Individual interface elements.
+  showAuthorAvatar    Boolean @default(true)
+  showAuthorHandle    Boolean @default(true)
+  showTimestamp       Boolean @default(true)
+  showMediaBadges     Boolean @default(true)
+  showPrimaryAction   Boolean @default(true)
+  showLikeButton      Boolean @default(true)
+  showCommentButton   Boolean @default(true)
+  showShareButton     Boolean @default(true)
+  showSaveButton      Boolean @default(true)
+  showActionLabels    Boolean @default(true)   // words next to the icons
+  compactFeed         Boolean @default(false)
+
+  // One switch that hides every count at once.
+  focusMode           Boolean @default(false)
+
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")
 

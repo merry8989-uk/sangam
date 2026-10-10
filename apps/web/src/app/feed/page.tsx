@@ -6,6 +6,7 @@ import { getSettingsOptional } from "@/lib/settings";
 import Composer from "@/components/Composer";
 import PostCard from "@/components/PostCard";
 import StoriesBar from "@/components/StoriesBar";
+import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,11 @@ export default async function FeedPage() {
     : [];
   const likedSet = new Set(liked.map((l) => l.postId));
 
+  // The post display preferences the three-dot menu writes, plus where the
+  // viewer stands with each author for the primary button.
+  const display = await loadDisplay(userId);
+  const primaryStates = await primaryStatesFor(userId, posts.map((p) => p.authorId));
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">Feed</h1>
@@ -49,7 +55,13 @@ export default async function FeedPage() {
         {posts.length === 0 && <li className="text-ink-500">No posts yet. Be the first.</li>}
         {posts.map((p) => (
           <li key={p.id}>
-            <PostCard post={p} liked={likedSet.has(p.id)} />
+            <PostCard
+              post={p}
+              liked={likedSet.has(p.id)}
+              display={display}
+              primaryState={primaryStates.get(p.authorId) ?? "NONE"}
+              isOwn={p.authorId === userId}
+            />
           </li>
         ))}
       </ul>
