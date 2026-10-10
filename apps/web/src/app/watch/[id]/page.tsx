@@ -8,6 +8,7 @@ import { formatCount, formatDuration, timeAgo } from "@/lib/format";
 import { bumpView, pendingViews } from "@/lib/counters";
 import VideoPlayer from "@/components/VideoPlayer";
 import Comments from "@/components/Comments";
+import { resolveHistoryPolicy, shouldRecord } from "@/lib/history";
 import FollowButton from "@/components/FollowButton";
 import LikeButton from "@/components/LikeButton";
 import PreviewThumb from "@/components/PreviewThumb";
@@ -47,13 +48,16 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
     .map((r) => ({ startSec: r.startSec, endSec: r.endSec }));
 
   const settings = await getSettingsOptional(viewerId);
+  const watchPolicy = resolveHistoryPolicy(settings).watch;
 
-  // Record this view in the viewer's history (unless they turned history off).
-  if (viewerId && settings?.historyEnabled !== false) {
+  // Record this view in the viewer's history, unless they turned it off.
+  // Watching something again also brings it back out of the archive, because it
+  // is plainly active again.
+  if (viewerId && shouldRecord(watchPolicy)) {
     await prisma.viewHistory
       .upsert({
         where: { userId_postId: { userId: viewerId, postId: post.id } },
-        update: { viewedAt: new Date() },
+        update: { viewedAt: new Date(), archivedAt: null },
         create: { userId: viewerId, postId: post.id }
       })
       .catch(() => {});

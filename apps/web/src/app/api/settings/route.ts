@@ -47,6 +47,11 @@ const Body = z.object({
 
   historyEnabled: z.boolean().optional(),
   autoDeleteDays: z.number().int().min(0).max(3650).optional(),
+  // History policy, per type. keep | auto | archive | off
+  watchHistoryMode: z.enum(["keep", "auto", "archive", "off"]).optional(),
+  watchHistoryDays: z.number().int().min(1).max(3650).optional(),
+  searchHistoryMode: z.enum(["keep", "auto", "archive", "off"]).optional(),
+  searchHistoryDays: z.number().int().min(1).max(3650).optional(),
 
   // Calls
   callRingtone: z.enum(["classic", "chime", "pulse", "silent"]).optional(),

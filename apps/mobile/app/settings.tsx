@@ -17,6 +17,7 @@ import {
 import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/ui";
 import { pickTheme, THEME_COUNT } from "../src/theme";
 import { DISPLAY_TOGGLES, PRIMARY_ACTIONS } from "../src/postDisplay";
+import { HISTORY_MODES, clampDays, modeHint, modeLabel, usesPeriod, type HistoryMode } from "../src/history";
 
 export default function Settings() {
   const c = useColors();
@@ -170,6 +171,74 @@ export default function Settings() {
           {DISPLAY_TOGGLES.filter((t) => t.group === "elements").map((t) => (
             <Toggle key={t.key} label={t.label} field={t.settingKey} />
           ))}
+        </Card>
+
+        <Card>
+          <Heading>History</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            Watch history and search history, set separately. It is stored in the database, so
+            restarting your phone does not lose it.
+          </Text>
+          {(["watch", "search"] as const).map((type) => {
+            const modeField = type === "watch" ? "watchHistoryMode" : "searchHistoryMode";
+            const daysField = type === "watch" ? "watchHistoryDays" : "searchHistoryDays";
+            const mode = (settings?.[modeField] as string) ?? "keep";
+            const days = clampDays(settings?.[daysField]);
+            return (
+              <View key={type} style={{ marginTop: 12 }}>
+                <Text style={{ color: c.ink500, fontSize: 12, marginBottom: 6 }}>
+                  {type === "watch" ? "Watch history" : "Search history"}
+                </Text>
+                {HISTORY_MODES.map((m) => (
+                  <Pressable
+                    key={m}
+                    onPress={() => save({ [modeField]: m })}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 }}
+                  >
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        borderWidth: 2,
+                        borderColor: mode === m ? c.brand600 : c.line,
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      {mode === m && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.brand600 }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: c.ink900, fontSize: 13 }}>{modeLabel(m)}</Text>
+                      <Text style={{ color: c.ink500, fontSize: 11 }}>{modeHint(m, type)}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+                {usesPeriod(mode as HistoryMode) && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, paddingLeft: 2 }}>
+                    <Text style={{ color: c.ink700, fontSize: 12 }}>After</Text>
+                    <TextInput
+                      keyboardType="number-pad"
+                      defaultValue={String(days)}
+                      onEndEditing={(e) => save({ [daysField]: clampDays(Number(e.nativeEvent.text)) })}
+                      style={{
+                        width: 64,
+                        borderWidth: 1,
+                        borderColor: c.line,
+                        borderRadius: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        color: c.ink900
+                      }}
+                    />
+                    <Text style={{ color: c.ink700, fontSize: 12 }}>days</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </Card>
 
         <Card>

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { hiddenUserIds } from "@/lib/filters";
 import { searchEnabled, searchPosts as meiliPosts, searchUsers as meiliUsers } from "@/lib/search";
 import { recordRoute } from "@/lib/metrics";
+import { getSettingsOptional } from "@/lib/settings";
+import { resolveHistoryPolicy, shouldRecord } from "@/lib/history";
 
 const EMPTY = { users: [], tags: [], posts: [] };
 
@@ -15,11 +17,17 @@ export async function GET(req: Request) {
   await recordRoute("search", res.status);
 
   // Remember the query, so it can be shown, cleared, or included in a backup.
+  // Recording is skipped entirely when the user turned search history off.
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
   if (q.length >= 2) {
     const viewerId = await getViewerId(req);
     if (viewerId) {
-      await prisma.searchHistory.create({ data: { userId: viewerId, query: q.slice(0, 200) } }).catch(() => {});
+      const settings = await getSettingsOptional(viewerId);
+      if (shouldRecord(resolveHistoryPolicy(settings).search)) {
+        await prisma.searchHistory
+          .create({ data: { userId: viewerId, query: q.slice(0, 200) } })
+          .catch(() => {});
+      }
     }
   }
   return res;

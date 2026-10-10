@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FAMILIES, THEMES } from "@/lib/themes";
 import { QUALITY_OPTIONS, UPLOAD_QUALITY_OPTIONS, qualityLabel } from "@/lib/quality";
 import BackupPanel from "./BackupPanel";
+import HistoryPolicyPanel from "./HistoryPolicyPanel";
 
 type S = {
   theme: string; accent: string; dailyBackground: boolean; backgroundMode: string;
@@ -15,7 +16,7 @@ type S = {
   threadedComments: boolean; commentSort: string;
   whoCanComment: string; whoCanShare: string; whoCanReshare: string;
   profileVisible: boolean; whoCanViewPosts: string;
-  autoSaveDrafts: boolean; historyEnabled: boolean; autoDeleteDays: number;
+  autoSaveDrafts: boolean;
   hideSensitive: boolean; blockedWords: string[];
   callRingtone: string; callVibrate: boolean; whoCanCallMe: string; callAutoAnswer: boolean;
   dndEnabled: boolean; dndFrom: string; dndTo: string;
@@ -80,6 +81,10 @@ export default function SettingsPanel({
   async function save() {
     setBusy(true);
     setStatus(null);
+    // historyEnabled and autoDeleteDays are deliberately NOT part of this
+    // panel's state: HistoryPolicyPanel owns them and writes them next to the
+    // mode. Sending a stale copy from here could contradict the mode the user
+    // just picked.
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -226,12 +231,15 @@ export default function SettingsPanel({
         <p className="text-xs text-ink-500">Saved posts live on the Saved page.</p>
       </Section>
 
-      <Section title="History" hint="What we keep, and for how long.">
-        <Toggle label="Save watch history" value={s.historyEnabled} onChange={(v) => set("historyEnabled", v)} />
-        <Row label="Auto-delete history after (days, 0 = never)">
-          <input type="number" min="0" className={INP} value={s.autoDeleteDays} onChange={(e) => set("autoDeleteDays", Number(e.target.value))} />
-        </Row>
-        <button onClick={clearHistory} className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50">
+      <Section
+        title="History"
+        hint="Watch history and search history are set separately. Whatever you choose, it is stored so a restart does not lose it."
+      >
+        <HistoryPolicyPanel />
+        <button
+          onClick={clearHistory}
+          className="mt-3 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
           Clear history now
         </button>
       </Section>

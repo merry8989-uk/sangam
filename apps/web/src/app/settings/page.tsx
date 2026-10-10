@@ -76,8 +76,6 @@ export default async function SettingsPage() {
             profileVisible: settings.profileVisible,
             whoCanViewPosts: settings.whoCanViewPosts,
             autoSaveDrafts: settings.autoSaveDrafts,
-            historyEnabled: settings.historyEnabled,
-            autoDeleteDays: settings.autoDeleteDays,
             hideSensitive: settings.hideSensitive,
             blockedWords: (settings.blockedWords as string[]) ?? []
           }}

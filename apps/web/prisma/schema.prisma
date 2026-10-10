@@ -550,8 +550,17 @@ model UserSettings {
   autoSaveDrafts Boolean @default(true)
 
   // History
+  // Kept for older rows. resolveHistoryPolicy folds these into the two
+  // per-type policies below, so a setting saved before they existed still works.
   historyEnabled Boolean @default(true)
   autoDeleteDays Int     @default(0)           // 0 = never
+
+  // What happens to watch history: keep | auto | archive | off
+  watchHistoryMode  String @default("keep")
+  watchHistoryDays  Int    @default(30)        // used by auto and archive
+  // What happens to search history: keep | auto | archive | off
+  searchHistoryMode String @default("keep")
+  searchHistoryDays Int    @default(30)        // used by auto and archive
 
   skipCategories Json    @default("[]") // empty = all categories
 
@@ -645,11 +654,15 @@ model ViewHistory {
   userId   String
   postId   String
   viewedAt DateTime @default(now())
+  // Set when the row has been moved to the archive. Null means it is still in
+  // the active list. Archived rows are hidden, not deleted, and can be restored.
+  archivedAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([userId, viewedAt])
+  @@index([userId, archivedAt])
 }
 
 // Community and personal skip points for a video (SponsorBlock-style).
@@ -820,10 +833,13 @@ model SearchHistory {
   userId    String
   query     String
   createdAt DateTime @default(now())
+  // Same meaning as on ViewHistory: null is active, set is archived.
+  archivedAt DateTime?
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, archivedAt])
 }
 
 // One run of a user's backup, so the settings screen can show what happened.

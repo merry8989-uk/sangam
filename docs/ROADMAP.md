@@ -313,3 +313,28 @@ Narrow, sequential phases. Each phase ships something usable.
       carry its own exceptions.
 - [ ] Share notifications, and a connect request surfacing in the notifications
       list with accept/decline inline.
+
+## Phase 21 - History the user actually controls
+- [x] Watch and search history are set separately. Wanting one and not the other
+      is normal, so they are two policies, not one switch.
+- [x] Four modes per type: keep, delete after a period, move to the archive
+      after a period, or do not record at all.
+- [x] Archived rows are kept, hidden from the main list, and restorable one at a
+      time. The archive is a state on the row, not a second table, so nothing is
+      copied or duplicated.
+- [x] History stays in Postgres, so a restart of the process, the container, or
+      the whole machine does not lose it. Cache sits in front of it for the read
+      path; it is not the store of record.
+- [x] Fixed a real gap: search history had no off switch at all. It was recorded
+      unconditionally, and nothing ever pruned it. Both now follow the policy.
+- [x] Fixed a real contradiction: the settings panel kept its own copy of the
+      old `historyEnabled` and `autoDeleteDays` fields and sent them on every
+      save, which could overwrite the mode the user had just chosen. Those
+      fields are no longer in that panel's state.
+- [x] The old fields still work. A row written before this change - including
+      one with history off - resolves to the right policy, so nobody's existing
+      choice is silently reversed.
+- [x] Re-viewing a post brings it back out of the archive, because it is
+      plainly active again.
+- [ ] Let the user search their own history.
+- [ ] Per-item retention, so one entry can be kept while the rest expire.
