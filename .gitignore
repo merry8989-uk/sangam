@@ -20,3 +20,6 @@ venv/
 apps/web/prisma/migrations/dev.db*
 # uploads (local dev)
 uploads/
+
+# throwaway database used by tools/verify-schema.py
+.schema-check-pgdata/

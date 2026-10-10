@@ -127,6 +127,18 @@ Notes:
 - To use the durable media queue and the GPU/ML inference worker, see
   [docs/JOBS.md](docs/JOBS.md) and set `MEDIA_QUEUE_ENABLED=true`.
 
+Check the whole database schema without Docker:
+
+```bash
+pip install pgserver
+python tools/verify-schema.py     # starts its own PostgreSQL, applies every model
+```
+
+It applies all 39 models to a real PostgreSQL and fails if anything is
+unexecutable. It drives Prisma's *native* schema engine directly, because the
+Prisma CLI bundles a WebAssembly build that fails to allocate on a small
+machine - see the header of the script.
+
 The media pipeline has an end-to-end test: `python apps/ai/tests/e2e_pipeline.py`
 builds a real clip and runs the whole transcode + thumbnail path through the
 service. See `apps/ai/tests/e2e_pipeline.py`.

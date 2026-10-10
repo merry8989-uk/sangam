@@ -35,3 +35,28 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -c "import app.main"
+
+  # Applies the whole Prisma schema to a real PostgreSQL and fails if any model
+  # does not become a table, or if the push reports a warning or something it
+  # could not execute.
+  #
+  # This exists because `prisma db push` is not usable on a small runner: the
+  # CLI instantiates a WebAssembly build of the schema engine at load time and
+  # that allocation fails under a tight memory limit. The native schema engine
+  # has no such problem, and tools/verify-schema.py drives it directly.
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # only the engine is needed, not the whole app
+      - run: npm install --no-save @prisma/engines@5
+        working-directory: apps/web
+      - run: pip install pgserver
+      - run: python tools/verify-schema.py
