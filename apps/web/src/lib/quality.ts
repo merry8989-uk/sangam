@@ -2,8 +2,6 @@
 
 export type Quality =
   | "auto"
-  | "4320"
-  | "2160"
   | "1440"
   | "1080"
   | "720"
@@ -21,8 +19,6 @@ export type Rendition = {
 
 export const QUALITY_OPTIONS: Quality[] = [
   "auto",
-  "4320",
-  "2160",
   "1440",
   "1080",
   "720",
@@ -46,7 +42,7 @@ export function uploadCapHeight(q: string | undefined | null): number | null {
     case "original":
       return null;
     case "high":
-      return 2160;
+      return 1440;
     case "medium":
       return 1080;
     case "low":
@@ -104,6 +100,8 @@ export function playbackCap(videoQuality?: string | null, audioQuality?: string 
 }
 
 // A readable name for a rendition. "4320p" means little to most people.
+// 4K and 8K are no longer in the ladder, but a setting saved while they were
+// still labels correctly, so those branches stay.
 export function qualityLabel(value: string): string {
   switch (value) {
     case "auto":
@@ -122,7 +120,7 @@ export function qualityLabel(value: string): string {
 // Upload quality, with the ceiling each one puts on the ladder.
 export const UPLOAD_QUALITY_OPTIONS: [string, string][] = [
   ["original", "Original (up to the source, 8K included)"],
-  ["high", "High (up to 4K)"],
+  ["high", "High (up to 2K)"],
   ["medium", "Medium (up to 1080p)"],
   ["low", "Low (up to 480p)"]
 ];

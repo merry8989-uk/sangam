@@ -18,8 +18,8 @@ from . import s3
 from .settings import settings
 
 # (height, target video bitrate in kbps), smallest first.
-# Runs from 144p up to 8K. A source only ever gets the rungs at or below its
-# own height, so an 8K rendition exists only when someone actually uploads 8K.
+# Runs from 144p up to 2K (1440p). A source only ever gets the rungs at or
+# below its own height, so the top rung is only produced for a 1440p+ upload.
 LADDER = [
     (144, 100),
     (240, 300),
@@ -28,8 +28,6 @@ LADDER = [
     (720, 2800),
     (1080, 5000),
     (1440, 10000),
-    (2160, 20000),
-    (4320, 50000),
 ]
 SEGMENT_SECONDS = 6
 AUDIO_BITRATE = "128k"
@@ -94,8 +92,9 @@ def _even(n: float) -> int:
 def _profile_args(height: int) -> list[str]:
     """Pick an H.264 profile and level that can actually carry this resolution.
 
-    Level 4.1 tops out at 1080p, 5.2 at 4K, and 8K needs 6.2. Encoding 8K at
-    "main" would be refused by the encoder.
+    Level 4.1 tops out at 1080p and 5.2 carries 1440p. The branch above 4K is
+    kept so the ladder can be widened again without reintroducing the bug where
+    the encoder refuses the frame size.
     """
     if height <= 1080:
         return ["-profile:v", "main", "-level:v", "4.1"]
