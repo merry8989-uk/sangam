@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Rendition } from "@/lib/quality";
+import { qualityLabel, type Rendition } from "@/lib/quality";
 
 export type SkipMark = { startSec: number; endSec: number };
 
@@ -143,7 +143,7 @@ export default function VideoPlayer({
                 level === i ? "border-brand-600 bg-brand-50 text-brand-700" : "border-ink-100"
               }`}
             >
-              {h}p
+              {qualityLabel(String(h))}
             </button>
           ))}
         </div>

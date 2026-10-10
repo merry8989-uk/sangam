@@ -1,6 +1,16 @@
 // One place for the quality vocabulary, shared by the player and the pipeline.
 
-export type Quality = "auto" | "1080" | "720" | "480" | "360";
+export type Quality =
+  | "auto"
+  | "4320"
+  | "2160"
+  | "1440"
+  | "1080"
+  | "720"
+  | "480"
+  | "360"
+  | "240"
+  | "144";
 
 export type Rendition = {
   height: number;
@@ -9,7 +19,18 @@ export type Rendition = {
   playlistKey: string;
 };
 
-export const QUALITY_OPTIONS: Quality[] = ["auto", "1080", "720", "480", "360"];
+export const QUALITY_OPTIONS: Quality[] = [
+  "auto",
+  "4320",
+  "2160",
+  "1440",
+  "1080",
+  "720",
+  "480",
+  "360",
+  "240",
+  "144"
+];
 
 // Playback cap: "auto" means let the player adapt, a number caps the ladder.
 export function capHeight(q: string | undefined | null): number | null {
@@ -18,15 +39,16 @@ export function capHeight(q: string | undefined | null): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-// Upload cap: what the transcoder is allowed to store.
+// Upload cap: what the transcoder is allowed to store. "original" lets the
+// ladder run to the source height, which can now reach 8K.
 export function uploadCapHeight(q: string | undefined | null): number | null {
   switch (q) {
     case "original":
       return null;
     case "high":
-      return 1080;
+      return 2160;
     case "medium":
-      return 720;
+      return 1080;
     case "low":
       return 480;
     default:
@@ -80,3 +102,27 @@ export function playbackCap(videoQuality?: string | null, audioQuality?: string 
   if (b === null) return a;
   return Math.min(a, b);
 }
+
+// A readable name for a rendition. "4320p" means little to most people.
+export function qualityLabel(value: string): string {
+  switch (value) {
+    case "auto":
+      return "Auto";
+    case "4320":
+      return "8K (4320p)";
+    case "2160":
+      return "4K (2160p)";
+    case "1440":
+      return "1440p";
+    default:
+      return `${value}p`;
+  }
+}
+
+// Upload quality, with the ceiling each one puts on the ladder.
+export const UPLOAD_QUALITY_OPTIONS: [string, string][] = [
+  ["original", "Original (up to the source, 8K included)"],
+  ["high", "High (up to 4K)"],
+  ["medium", "Medium (up to 1080p)"],
+  ["low", "Low (up to 480p)"]
+];

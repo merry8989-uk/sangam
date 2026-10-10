@@ -256,3 +256,20 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] A backup file is treated as untrusted input: it is validated field by
       field, with hard caps, and bad entries are dropped and reported rather
       than allowed to flood the account.
+
+## Phase 18 - Quality range widened to 144p..8K
+- [x] The transcoder ladder now has nine rungs: 144p, 240p, 360p, 480p, 720p,
+      1080p, 1440p, 2160p (4K) and 4320p (8K), with bitrates from 100 kbps to
+      50 Mbps.
+- [x] H.264 profile and level rise with the resolution (main/4.1 up to 1080p,
+      high/5.2 for 4K, high/6.2 for 8K). Encoding 8K at "main" is refused by
+      the encoder, so this is not optional.
+- [x] A source only gets rungs at or below its own height, so 8K is produced
+      only when someone actually uploads 8K.
+- [x] Playback options run the full range, with friendly names (8K, 4K).
+- [x] Upload quality caps were raised to match: high is now up to 4K, medium
+      up to 1080p, original uncapped.
+- [ ] HEVC/AV1 for 4K and above. 8K H.264 is enormous and many players cannot
+      decode it; a modern codec is the real answer at this size.
+- [ ] Per-upload rung selection, so a creator can choose which renditions to
+      pay to encode.

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useColors } from "./ui";
-import type { SkipSegment } from "./api";
+import { qualityLabel, type SkipSegment } from "./api";
 
 export type QualityOption = { height: number; url: string };
 
@@ -247,7 +247,7 @@ export default function VideoPlayer(props: VideoPlayerProps) {
             .sort((a, b) => b.height - a.height)
             .map((v) => (
               <Pressable key={v.height} onPress={() => applyQuality(v.height)} style={btn(quality === v.height)}>
-                <Text style={label(quality === v.height)}>{v.height}p</Text>
+                <Text style={label(quality === v.height)}>{qualityLabel(String(v.height))}</Text>
               </Pressable>
             ))}
         </View>

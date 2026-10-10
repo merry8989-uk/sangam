@@ -17,8 +17,20 @@ from pathlib import Path
 from . import s3
 from .settings import settings
 
-# (height, target video bitrate in kbps)
-LADDER = [(360, 800), (480, 1400), (720, 2800), (1080, 5000)]
+# (height, target video bitrate in kbps), smallest first.
+# Runs from 144p up to 8K. A source only ever gets the rungs at or below its
+# own height, so an 8K rendition exists only when someone actually uploads 8K.
+LADDER = [
+    (144, 100),
+    (240, 300),
+    (360, 800),
+    (480, 1400),
+    (720, 2800),
+    (1080, 5000),
+    (1440, 10000),
+    (2160, 20000),
+    (4320, 50000),
+]
 SEGMENT_SECONDS = 6
 AUDIO_BITRATE = "128k"
 
@@ -79,13 +91,26 @@ def _even(n: float) -> int:
     return v - (v % 2)
 
 
+def _profile_args(height: int) -> list[str]:
+    """Pick an H.264 profile and level that can actually carry this resolution.
+
+    Level 4.1 tops out at 1080p, 5.2 at 4K, and 8K needs 6.2. Encoding 8K at
+    "main" would be refused by the encoder.
+    """
+    if height <= 1080:
+        return ["-profile:v", "main", "-level:v", "4.1"]
+    if height <= 2160:
+        return ["-profile:v", "high", "-level:v", "5.2"]
+    return ["-profile:v", "high", "-level:v", "6.2"]
+
+
 def _rendition(src: Path, outdir: Path, height: int, bitrate_k: int, audio_bitrate: str = AUDIO_BITRATE) -> None:
     d = outdir / f"{height}p"
     d.mkdir(parents=True, exist_ok=True)
     _run([
         _ffmpeg(), "-y", "-i", str(src),
         "-vf", f"scale=-2:{height}",
-        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "main",
+        "-c:v", "libx264", "-preset", "veryfast", *_profile_args(height),
         "-b:v", f"{bitrate_k}k",
         "-maxrate", f"{int(bitrate_k * 1.07)}k", "-bufsize", f"{bitrate_k * 2}k",
         "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",

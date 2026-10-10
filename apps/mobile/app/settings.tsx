@@ -154,7 +154,7 @@ export default function Settings() {
           <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
             A lower setting caps the rendition the player loads, so it uses less data.
           </Text>
-          <Picker label="Video quality" field="videoQuality" options={["auto", "1080", "720", "480", "360"]} />
+          <Picker label="Video quality" field="videoQuality" options={["auto", "4320", "2160", "1440", "1080", "720", "480", "360", "240", "144"]} />
           <Picker label="Audio quality" field="audioQuality" options={["auto", "high", "medium", "low"]} />
           <Picker label="Upload quality" field="uploadQuality" options={["original", "high", "medium", "low"]} />
         </Card>

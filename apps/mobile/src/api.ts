@@ -444,3 +444,11 @@ export function restoreBackup(input: { fileId: string; passphrase?: string; dryR
     skipped?: { chats: number; search: number };
   }>("/api/backup/restore", { method: "POST", body: JSON.stringify(input) });
 }
+
+// A readable name for a rendition height.
+export function qualityLabel(value: string): string {
+  if (value === "auto") return "Auto";
+  if (value === "4320") return "8K";
+  if (value === "2160") return "4K";
+  return value + "p";
+}

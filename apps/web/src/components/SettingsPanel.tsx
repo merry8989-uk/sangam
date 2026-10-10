@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FAMILIES, THEMES } from "@/lib/themes";
+import { QUALITY_OPTIONS, UPLOAD_QUALITY_OPTIONS, qualityLabel } from "@/lib/quality";
 import BackupPanel from "./BackupPanel";
 
 type S = {
@@ -62,6 +63,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 const opts = (arr: string[]) => arr.map((o) => <option key={o} value={o}>{o}</option>);
+const labelled = (arr: [string, string][]) => arr.map(([v, l]) => <option key={v} value={v}>{l}</option>);
 
 export default function SettingsPanel({
   initial,
@@ -160,13 +162,13 @@ export default function SettingsPanel({
 
       <Section title="Quality &amp; playback" hint="Video and audio quality, playback behaviour.">
         <Row label="Video quality">
-          <select className={SEL} value={s.videoQuality} onChange={(e) => set("videoQuality", e.target.value)}>{opts(["auto", "1080", "720", "480", "360"])}</select>
+          <select className={SEL} value={s.videoQuality} onChange={(e) => set("videoQuality", e.target.value)}>{labelled(QUALITY_OPTIONS.map((q) => [q, qualityLabel(q)]))}</select>
         </Row>
         <Row label="Audio quality">
           <select className={SEL} value={s.audioQuality} onChange={(e) => set("audioQuality", e.target.value)}>{opts(["auto", "high", "medium", "low"])}</select>
         </Row>
         <Row label="Upload quality">
-          <select className={SEL} value={s.uploadQuality} onChange={(e) => set("uploadQuality", e.target.value)}>{opts(["original", "high", "medium", "low"])}</select>
+          <select className={SEL} value={s.uploadQuality} onChange={(e) => set("uploadQuality", e.target.value)}>{labelled(UPLOAD_QUALITY_OPTIONS)}</select>
         </Row>
         <Row label="Default playback speed">
           <input type="number" step="0.25" min="0.25" max="3" className={INP} value={s.playbackSpeed} onChange={(e) => set("playbackSpeed", Number(e.target.value))} />

@@ -67,7 +67,7 @@ channel follows) into **one** product, built on our **own stack**.
 | Theme engine: 480 themes, day/week/month/year rotation, mood-driven | ✅ |
 | Android app (Expo / React Native) with Bearer-token auth | ✅ |
 | Custom skip points (per-user or shared, with community voting) | ✅ |
-| Video quality control: per-rendition selection, upload caps, data saver | ✅ |
+| Video quality control: 144p to 8K, per-rendition selection, upload caps | ✅ |
 | Thumbnail control: pick the poster frame from a generated filmstrip | ✅ |
 | Live streaming: RTMP ingest, go live from phone or laptop | ✅ |
 | Calls (1:1) and meetings (group), one room model | ✅ |

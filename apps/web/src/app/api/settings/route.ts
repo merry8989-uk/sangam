@@ -16,7 +16,7 @@ const Body = z.object({
   themeId: z.string().max(80).optional(),
   moodThemeEnabled: z.boolean().optional(),
 
-  videoQuality: z.enum(["auto", "1080", "720", "480", "360"]).optional(),
+  videoQuality: z.enum(["auto", "4320", "2160", "1440", "1080", "720", "480", "360", "240", "144"]).optional(),
   audioQuality: z.enum(["auto", "high", "medium", "low"]).optional(),
   uploadQuality: z.enum(["original", "high", "medium", "low"]).optional(),
   autoplay: z.boolean().optional(),
