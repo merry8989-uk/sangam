@@ -431,3 +431,28 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] A support view over submitted reports in the UI. Today they are read
       through the guarded internal endpoint, and mirrored into Notion.
 - [ ] Attach a screenshot with the report.
+
+## Phase 25 - The compose carries the logs, and export stands alone
+- [x] Fixed a real gating bug: "Open in Gmail" only appeared when the server had
+      no mail provider, so configuring a provider removed the option entirely.
+      Someone may want the report in their own Sent mail, or may simply prefer
+      their own account. It is now offered whenever a support address is set, as
+      "Compose in Gmail", alongside the server send rather than instead of it.
+- [x] The compose body now carries the report itself, not only a summary. A
+      mailto link and a Gmail compose URL cannot attach a file, so if the logs
+      are to travel at all they have to travel in the body. The body holds as
+      much as fits, cut on a line boundary, and says so when it was cut short -
+      so the message is worth reading whether or not anything is attached.
+- [x] `fitReportInBody` is the single place that decides how much goes in, and
+      it is used by the mailto path, the Gmail compose path and the Android
+      compose path, so all three say the same thing.
+- [x] Export is now its own labelled section with its own button, rather than a
+      format picker at the top and a download button buried in the actions row.
+      It reads "Export MD / JSON / TXT / CSV" and says the file name it will use.
+- [x] Every export format now produces **byte-identical** output on web and
+      Android. Getting there surfaced three real drifts that had been there
+      since the formats were written: the Android markdown was missing the
+      Warnings and Filter rows, its plain-text log line was missing the outcome
+      column, and it was dropping the note on a failed server check.
+- [ ] Attach a screenshot with the report.
+- [ ] SMTP as a mail provider, for a Gmail app password or an internal relay.

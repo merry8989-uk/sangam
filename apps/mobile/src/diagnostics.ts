@@ -301,7 +301,8 @@ function deviceRows(report: DiagnosticReport): DiagEntry[] {
     { at: report.generatedAt, kind: "env", severity: "info", message: `schema ${report.schemaVersion}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `session ${report.sessionId}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `app ${report.appVersion} (${report.platform})` },
-    { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` }
+    { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `user code ${report.userCode}` }
   ];
   const d = report.device;
   if (d) {
@@ -320,7 +321,7 @@ function deviceRows(report: DiagnosticReport): DiagEntry[] {
         at: report.generatedAt,
         kind: "env",
         severity: (k.ok ? "info" : "warn") as DiagSeverity,
-        message: `check ${k.name}: ${k.ok ? "ok" : "FAILED"} (${k.ms}ms)`
+        message: `check ${k.name}: ${k.ok ? "ok" : "FAILED"} (${k.ms}ms)${k.note ? ` - ${k.note}` : ""}`
       })),
       ...Object.entries(s.features).map(([k, v]) => ({
         at: report.generatedAt,
@@ -359,13 +360,16 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
     out.push(`report      ${report.id}`);
     out.push(`generated   ${report.generatedAt}`);
     out.push(`app         ${report.appVersion} (${report.platform})`);
+    out.push(`signed in   ${report.signedIn}`);
     out.push(`events      ${report.entries.length}  (${report.counts.error} errors, ${report.counts.warn} warnings)`);
     out.push("", "-- environment --");
     for (const r of deviceRows(report)) out.push(`  ${r.message}`);
     out.push("", "-- events --");
     for (const e of report.entries) {
       const d = detailText(e.detail);
-      out.push(`  [${e.at}] ${e.severity.toUpperCase()} ${e.kind} ${e.message}${d ? `  ${d}` : ""}`);
+      out.push(
+        `  [${e.at}] ${e.severity.toUpperCase().padEnd(5)} ${e.kind.padEnd(9)} ${(e.outcome ?? "-").padEnd(7)} ${e.message}${d ? `  ${d}` : ""}`
+      );
     }
     if (!report.entries.length) out.push("  (nothing recorded)");
     return out.join("\n");
@@ -379,12 +383,16 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   out.push(`| User code | \`${report.userCode}\` |`);
   out.push(`| Generated | ${report.generatedAt} |`);
   out.push(`| App | ${report.appVersion} (${report.platform}) |`);
+  out.push(`| Signed in | ${report.signedIn} |`);
   out.push(`| Events | ${report.entries.length} |`);
+  if (report.filter) out.push(`| Filter | ${describeFilter(report.filter)} |`);
   out.push(`| Errors | ${report.counts.error} |`);
+  out.push(`| Warnings | ${report.counts.warn} |`);
   out.push("", "## Environment", "");
   for (const r of deviceRows(report)) out.push(`- ${r.message}`);
   out.push("", "## Events", "");
-  if (!report.entries.length) out.push("_Nothing recorded._");
+  if (!report.entries.length)
+    out.push("_Nothing recorded. That is itself useful: it means no error was captured._");
   else {
     out.push("| Time | Severity | Kind | Outcome | Message |", "|---|---|---|---|---|");
     for (const e of report.entries)
@@ -415,6 +423,25 @@ export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
   return lines;
 }
 
+/**
+ * As much of the report as will fit in an email body.
+ *
+ * A mailto link cannot carry an attachment, so when the report is not sent by
+ * the server the logs have to travel in the body itself.
+ */
+export function fitReportInBody(
+  report: DiagnosticReport,
+  format: DiagFormat,
+  limit: number
+): { text: string; truncated: boolean } {
+  const rendered = formatReport(report, format);
+  if (rendered.length <= limit) return { text: rendered, truncated: false };
+  const cut = rendered.slice(0, limit);
+  const lastBreak = cut.lastIndexOf("\n");
+  const text = (lastBreak > limit * 0.6 ? cut.slice(0, lastBreak) : cut) + "\n...(trimmed here)";
+  return { text, truncated: true };
+}
+
 export const MAILTO_BODY_LIMIT = 1600;
 
 export function buildMailto(input: {
@@ -431,12 +458,19 @@ export function buildMailto(input: {
   parts.push(`> ${(input.note ?? "").trim() || ""}`);
   parts.push("", "--- summary ---");
   parts.push(...summaryLines(report));
-  parts.push("", "--- attachment ---");
-  parts.push("The full report has been saved on your device as:");
-  parts.push(`  ${filename}`);
-  parts.push("Please attach it to this email before sending.");
+
+  const head = parts.join("\n");
+  const room = MAILTO_BODY_LIMIT - head.length - 260;
+  if (room > 200) {
+    const fitted = fitReportInBody(report, input.format, room);
+    parts.push("", `--- report (${input.format}) ---`);
+    parts.push(fitted.text);
+    if (fitted.truncated) parts.push("", "The report continues in the saved file.");
+  }
+  parts.push("", "--- file ---");
+  parts.push(`Also saved on your device as ${filename}.`);
   let body = parts.join("\n");
-  if (body.length > MAILTO_BODY_LIMIT) body = body.slice(0, MAILTO_BODY_LIMIT) + "\n...(trimmed; the attachment has the rest)";
+  if (body.length > MAILTO_BODY_LIMIT + 400) body = body.slice(0, MAILTO_BODY_LIMIT + 400) + "\n...(trimmed)";
   return `mailto:${encodeURIComponent(input.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 

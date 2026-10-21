@@ -625,6 +625,28 @@ export function buildGmailCompose(input: { to: string; subject: string; body: st
   return `https://mail.google.com/mail/?${params.toString()}`;
 }
 
+/**
+ * As much of the report as will fit in an email body.
+ *
+ * A mailto link and a Gmail compose URL cannot carry an attachment, so when the
+ * report is not being sent by the server the logs have to travel in the body
+ * itself. This puts in everything that fits rather than only a summary, so the
+ * message is useful even if the user never attaches the file.
+ */
+export function fitReportInBody(
+  report: DiagnosticReport,
+  format: DiagFormat,
+  limit: number
+): { text: string; truncated: boolean } {
+  const rendered = formatReport(report, format);
+  if (rendered.length <= limit) return { text: rendered, truncated: false };
+  // Cut on a line boundary so the tail is not half a line.
+  const cut = rendered.slice(0, limit);
+  const lastBreak = cut.lastIndexOf("\n");
+  const text = (lastBreak > limit * 0.6 ? cut.slice(0, lastBreak) : cut) + "\n...(trimmed here)";
+  return { text, truncated: true };
+}
+
 export const MAILTO_BODY_LIMIT = 1600;
 
 export type MailtoInput = {
@@ -654,17 +676,30 @@ export function buildMailto(input: MailtoInput): string {
   parts.push("");
   parts.push("--- summary ---");
   parts.push(...summaryLines(report));
+
+  // The report itself, as far as it fits. A compose URL cannot carry a file, so
+  // this is what makes the message worth reading on its own.
+  const head = parts.join("\n");
+  const room = MAILTO_BODY_LIMIT - head.length - 260;
+  if (room > 200) {
+    const fitted = fitReportInBody(report, format, room);
+    parts.push("");
+    parts.push(`--- report (${format}) ---`);
+    parts.push(fitted.text);
+    if (fitted.truncated) {
+      parts.push("");
+      parts.push("The report continues in the attached file.");
+    }
+  }
+
   parts.push("");
   parts.push("--- attachment ---");
-  parts.push(`The full report has been saved to your downloads as:`);
-  parts.push(`  ${filename}`);
-  parts.push(`Please attach it to this email before sending.`);
-  parts.push("");
-  parts.push("You do not need to add anything else.");
+  parts.push(`The full report has also been saved to your downloads as ${filename}.`);
+  parts.push("Attach it if the text above was cut short.");
 
   let body = parts.join("\n");
-  if (body.length > MAILTO_BODY_LIMIT) {
-    body = body.slice(0, MAILTO_BODY_LIMIT) + "\n...(trimmed; the attachment has the rest)";
+  if (body.length > MAILTO_BODY_LIMIT + 400) {
+    body = body.slice(0, MAILTO_BODY_LIMIT + 400) + "\n...(trimmed; the attachment has the rest)";
   }
 
   return `mailto:${encodeURIComponent(input.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

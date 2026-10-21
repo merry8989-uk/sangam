@@ -16,6 +16,7 @@ import {
   formatReport,
   mimeType,
   reportFilename,
+  fitReportInBody,
   makeSessionId,
   EMPTY_FILTER,
   filterEntries,
@@ -255,7 +256,11 @@ export default function Diagnostics() {
         </Card>
 
         <Card>
-          <Heading>Format</Heading>
+          <Heading>Export</Heading>
+          <Text style={{ color: c.ink500, fontSize: 11, marginTop: 4 }}>
+            Pick a format, then export. Every option above uses it, along with the filter you set
+            below.
+          </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
             {DIAG_FORMATS.map((f) => (
               <Pressable key={f} onPress={() => setFormat(f)}>
@@ -340,7 +345,12 @@ export default function Diagnostics() {
               onPress={submitOnly}
               disabled={busy !== null}
             />
-            <Button label="Save or share file" variant="ghost" onPress={saveFile} disabled={busy !== null} />
+            <Button
+              label={busy === "save" ? "Exporting..." : `Export ${format.toUpperCase()}`}
+              variant="ghost"
+              onPress={saveFile}
+              disabled={busy !== null}
+            />
             <Button label="Refresh" variant="ghost" onPress={refresh} disabled={busy !== null} />
             <Button label="Clear recorded events" variant="ghost" onPress={clear} disabled={busy !== null} />
           </View>

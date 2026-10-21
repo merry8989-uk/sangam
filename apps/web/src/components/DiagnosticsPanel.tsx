@@ -13,6 +13,7 @@ import {
   filterEntries,
   filterFacets,
   filterIsActive,
+  fitReportInBody,
   type DiagFilter,
   type DiagOutcome,
   type DiagSeverity,
@@ -68,6 +69,9 @@ export default function DiagnosticsPanel({
   const [userCode, setUserCode] = useState("SG-ANON");
   const [filter, setFilter] = useState<DiagFilter>(EMPTY_FILTER);
   const [codeCopied, setCodeCopied] = useState(false);
+
+  /** Gmail's compose URL tolerates more than a mailto link, but not unbounded. */
+  const GMAIL_BODY_LIMIT = 6000;
 
   const refresh = useCallback(async () => {
     setEntries(getEntries());
@@ -213,16 +217,42 @@ export default function DiagnosticsPanel({
     }
   }
 
-  /** Desktop fallback: Gmail compose, prefilled, plus the file to attach. */
+  /**
+   * Gmail compose, prefilled, with the report in the body and the file saved
+   * alongside it.
+   *
+   * A Gmail compose URL cannot carry an attachment - there is no parameter for
+   * one - so the body carries as much of the report as fits, and the file is
+   * downloaded at the same moment for the rest. That way the message is useful
+   * whether or not the user attaches anything.
+   */
   function openGmail() {
     download();
+    const head = summaryLines(report).join("\n");
+    const fitted = fitReportInBody(report, format, Math.max(400, GMAIL_BODY_LIMIT - head.length - 300));
+    const body = [
+      head,
+      "",
+      `--- report (${format}) ---`,
+      fitted.text,
+      "",
+      fitted.truncated ? "The report continues in the attached file." : "",
+      `Also saved to your downloads as ${filename}.`
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
+
     const link = buildGmailCompose({
       to: supportEmail,
       subject: `Sangam diagnostics ${report.id} - ${report.appVersion} - ${report.platform}`,
-      body: summaryLines(report).join("\n") + `\n\nAttach the file that was just downloaded:\n  ${filename}\n`
+      body
     });
     window.open(link, "_blank", "noopener");
-    setStatus(`Gmail is open. Attach the file that was just saved as ${filename}.`);
+    setStatus(
+      fitted.truncated
+        ? `Gmail is open with the report in the message. It was cut short, so attach ${filename} to send the whole thing.`
+        : `Gmail is open with the whole report already in the message. Nothing to attach.`
+    );
   }
 
   /** Save the file, submit a copy, then open the mail client already filled in. */
@@ -369,9 +399,13 @@ export default function DiagnosticsPanel({
         </div>
       </section>
 
-      {/* ---- the format ---- */}
+      {/* ---- the format, and the export that uses it ---- */}
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-ink-900">Format</h2>
+        <h2 className="mb-1 text-sm font-semibold text-ink-900">Export</h2>
+        <p className="mb-3 text-xs text-ink-500">
+          Pick a format, then export. The file is saved to your downloads. Every option above uses
+          the format you pick here, and the filter you set below.
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {DIAG_FORMATS.map((f) => (
             <label
@@ -397,6 +431,22 @@ export default function DiagnosticsPanel({
         <p className="mt-2 text-xs text-ink-500">
           The file will be named <code className="font-mono">{filename}</code>
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            onClick={download}
+            disabled={busy !== null}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            Export {format.toUpperCase()}
+          </button>
+          <button
+            onClick={copy}
+            disabled={busy !== null}
+            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
+          >
+            {copied ? "Copied" : "Copy as Markdown"}
+          </button>
+        </div>
       </section>
 
       {/* ---- the note ---- */}
@@ -435,13 +485,16 @@ export default function DiagnosticsPanel({
             {busy === "share" ? "Sharing..." : "Share to Gmail"}
           </button>
         )}
-        {supportEmail && !emailReady && (
+        {/* Always offered when there is an address, not only when the server
+            cannot send. Someone may want the report in their own Sent mail, or
+            may simply prefer their own account. */}
+        {supportEmail && (
           <button
             onClick={openGmail}
             disabled={busy !== null}
             className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
           >
-            Open in Gmail
+            Compose in Gmail
           </button>
         )}
         {supportEmail && (
@@ -459,20 +512,6 @@ export default function DiagnosticsPanel({
           className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
         >
           {busy === "submit" ? "Sending..." : "Send without email"}
-        </button>
-        <button
-          onClick={download}
-          disabled={busy !== null}
-          className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
-        >
-          Download file
-        </button>
-        <button
-          onClick={copy}
-          disabled={busy !== null}
-          className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
-        >
-          {copied ? "Copied" : "Copy as Markdown"}
         </button>
         <button
           onClick={refresh}
