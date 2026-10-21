@@ -139,6 +139,14 @@ Diagnostics: a user can send you the technical detail instead of describing it.
 - Set `DIAGNOSTICS_SUPPORT_EMAIL` to the address reports should go to. It is an
   environment value rather than a constant, so your address is not published
   with the source.
+- To have the report arrive **attached with no step from the user**, set
+  `EMAIL_PROVIDER`, `EMAIL_API_KEY` and `EMAIL_FROM`. The server then sends it.
+  Without those, the app uses the share sheet (which attaches the file on a
+  phone) or Gmail compose (which cannot attach - the URL has no field for a
+  file), and saves the report for the user to attach.
+- The recipient is always `DIAGNOSTICS_SUPPORT_EMAIL` from the environment,
+  never from the request. Accepting a recipient would make the endpoint an open
+  relay. It is also rate limited per account.
 
 Check the whole database schema without Docker:
 

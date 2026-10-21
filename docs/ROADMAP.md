@@ -366,3 +366,32 @@ Narrow, sequential phases. Each phase ships something usable.
       Doing it properly needs a server-side mail provider.
 - [ ] A support view over submitted reports in the UI. Today they are read
       through the guarded internal endpoint.
+
+## Phase 23 - The report arrives attached
+- [x] The server can email the report, with the report attached, so the user
+      presses one button and is done. This is the only path that gives a real
+      attachment: a mailto link and a Gmail compose URL both fill in the
+      recipient, subject and body, but neither has a field for a file.
+- [x] Five providers, all called with plain `fetch` so there is no mail
+      dependency to install: Resend, SendGrid, Postmark, Brevo, and a `custom`
+      endpoint for anything else. Each request shape is built by a pure
+      function, so all of them are tested without a network.
+- [x] On a phone the share sheet attaches the file itself, so Gmail opens with
+      the report already on the message. Used when the server has no provider.
+- [x] On desktop, Gmail compose fills in the message and the file is saved
+      alongside it, with one line telling the user what to attach.
+- [x] The recipient is never taken from the request - always
+      `DIAGNOSTICS_SUPPORT_EMAIL` from the environment. A client-supplied
+      recipient would make the endpoint an open relay for anyone to send mail
+      from our domain. Rate limited per account as well.
+- [x] The report is stored before the send is attempted, so a mail failure never
+      loses it.
+- [x] Adopted from the logging standard: the envelope is versioned
+      (`schemaVersion`), carries a `sessionId`, and every entry records an
+      `outcome` as well as a severity - a log full of attempts with no outcomes
+      tells you someone was trying but not whether it worked.
+- [x] Errors are kept at full rate and sampled events give way first when the
+      buffer fills, so a burst of failures cannot grow it without bound.
+- [ ] SMTP as a provider, for a Gmail app password or an internal relay. Needs a
+      mail library, so it is deliberately not here yet.
+- [ ] Attach a screenshot with the report.

@@ -16,6 +16,7 @@ import {
   formatReport,
   mimeType,
   reportFilename,
+  makeSessionId,
   type DiagFormat,
   type DiagServerInfo
 } from "../src/diagnostics";
@@ -34,6 +35,8 @@ export default function Diagnostics() {
   const [server, setServer] = useState<DiagServerInfo | null>(null);
   const [supportEmail, setSupportEmail] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [emailReady, setEmailReady] = useState(false);
+  const [sessionId] = useState(() => makeSessionId());
   const [format, setFormat] = useState<DiagFormat>("md");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,11 +45,15 @@ export default function Diagnostics() {
   const refresh = useCallback(async () => {
     setEntries(await getEntries());
     try {
-      const d = await api<{ enabled: boolean; server: DiagServerInfo | null; supportEmail: string }>(
-        "/api/diagnostics"
-      );
+      const d = await api<{
+        enabled: boolean;
+        server: DiagServerInfo | null;
+        supportEmail: string;
+        emailReady: boolean;
+      }>("/api/diagnostics");
       setServer(d.server ?? null);
       setSupportEmail(d.supportEmail ?? "");
+      setEmailReady(Boolean(d.emailReady));
       setEnabled(d.enabled !== false);
     } catch {
       setServer(null);
@@ -65,9 +72,10 @@ export default function Diagnostics() {
         signedIn: hasToken(),
         device: deviceInfo(APP_VERSION, "app/diagnostics"),
         server,
+        sessionId,
         entries
       }),
-    [server, entries]
+    [server, entries, sessionId]
   );
 
   const filename = reportFilename(report, format);
@@ -115,6 +123,38 @@ export default function Diagnostics() {
       return Boolean(res?.ok);
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * The only path that arrives with a real attachment and no user step: the
+   * server sends the mail. A mailto link cannot carry a file.
+   */
+  async function sendWithAttachment() {
+    setBusy("email");
+    setStatus(null);
+    try {
+      const d = await api<{ ok: boolean; detail?: string }>("/api/diagnostics/email", {
+        method: "POST",
+        body: JSON.stringify({
+          note,
+          platform: "android",
+          appVersion: APP_VERSION,
+          format,
+          sessionId,
+          entries,
+          client: deviceInfo(APP_VERSION, "app/diagnostics")
+        })
+      });
+      setStatus(
+        d?.ok
+          ? `Sent to support with ${filename} attached. Nothing else to do.`
+          : `Could not send (${d?.detail ?? "the mail provider refused it"}). Use Save or share file instead.`
+      );
+    } catch {
+      setStatus("Could not send. Use Save or share file instead.");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -261,8 +301,20 @@ export default function Diagnostics() {
 
         <Card>
           <View style={{ gap: 8 }}>
+            {Boolean(supportEmail) && emailReady && (
+              <Button
+                label={busy === "email" ? "Sending..." : "Email it with the report attached"}
+                onPress={sendWithAttachment}
+                disabled={busy !== null}
+              />
+            )}
             {Boolean(supportEmail) && (
-              <Button label={busy === "send" ? "Preparing..." : "Send to support"} onPress={send} disabled={busy !== null} />
+              <Button
+                label={busy === "send" ? "Preparing..." : "Send from my mail app"}
+                variant="ghost"
+                onPress={send}
+                disabled={busy !== null}
+              />
             )}
             <Button
               label={busy === "submit" ? "Sending..." : "Send without email"}
@@ -276,8 +328,15 @@ export default function Diagnostics() {
           </View>
           {!supportEmail && (
             <Text style={{ color: c.ink500, fontSize: 11, marginTop: 8 }}>
-              No support address is configured on the server, so the email button is hidden. Use Save
-              or Send without email.
+              No support address is configured on the server, so the email options are hidden. Use
+              Save or share file.
+            </Text>
+          )}
+          {Boolean(supportEmail) && !emailReady && (
+            <Text style={{ color: c.ink500, fontSize: 11, marginTop: 8 }}>
+              A mail provider is not configured on the server, so the report cannot be sent with the
+              attachment automatically. Use Save or share file - picking Gmail in the share sheet
+              attaches it for you.
             </Text>
           )}
         </Card>

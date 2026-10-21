@@ -1,6 +1,6 @@
 "use client";
 
-import type { DiagEntry, DiagSeverity } from "./diagnostics";
+import { evictForCapacity, makeSessionId, type DiagEntry, type DiagOutcome, type DiagSeverity } from "./diagnostics";
 
 /**
  * Records what goes wrong, on the device, without the user doing anything.
@@ -21,6 +21,12 @@ const STORAGE_KEY = "sangam.diagnostics.v1";
 const MAX_ENTRIES = 200;
 const MAX_MESSAGE = 500;
 const MAX_DETAIL_KEYS = 12;
+/**
+ * A successful request slower than this is recorded. Recording every success
+ * would drown the failures - which is exactly the mistake that leaves you with
+ * a log full of attempts and no outcomes. Set to 0 to record none.
+ */
+const SLOW_MS = 3000;
 
 let enabled = false;
 let installed = false;
@@ -94,17 +100,35 @@ function notify() {
   }
 }
 
-export function record(severity: DiagSeverity, kind: string, message: unknown, detail?: Record<string, unknown>): void {
+let sessionId = "";
+
+/** One id per page load, so a report can be tied to a single session. */
+export function getSessionId(): string {
+  if (sessionId) return sessionId;
+  sessionId = makeSessionId();
+  return sessionId;
+}
+
+export function record(
+  severity: DiagSeverity,
+  kind: string,
+  message: unknown,
+  detail?: Record<string, unknown>,
+  outcome?: DiagOutcome
+): void {
   if (!enabled) return;
   load();
   buffer.push({
     at: nowIso(),
     kind,
     severity,
+    outcome,
+    sessionId: getSessionId(),
     message: clip(message),
     detail: shrinkDetail(detail)
   });
-  if (buffer.length > MAX_ENTRIES) buffer = buffer.slice(-MAX_ENTRIES);
+  // Errors are kept at full rate; the sampled events give way first.
+  buffer = evictForCapacity(buffer, MAX_ENTRIES);
   persist();
   notify();
 }
@@ -144,19 +168,25 @@ export function installCapture(): void {
 
   window.addEventListener("error", (event) => {
     const err = event.error as Error | undefined;
-    record("error", "unhandled", err ? `${err.name}: ${err.message}` : event.message, {
-      file: event.filename ? event.filename.split("/").pop() : "",
-      line: event.lineno,
-      column: event.colno
-    });
+    record(
+      "error",
+      "unhandled",
+      err ? `${err.name}: ${err.message}` : event.message,
+      { file: event.filename ? event.filename.split("/").pop() : "", line: event.lineno, column: event.colno },
+      "failure"
+    );
   });
 
   window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason as unknown;
     const err = reason instanceof Error ? reason : undefined;
-    record("error", "unhandled", err ? `Promise: ${err.name}: ${err.message}` : `Promise: ${safeString(reason)}`, {
-      stack: err?.stack ? clip(err.stack.split("\n").slice(0, 3).join(" | "), 300) : undefined
-    });
+    record(
+      "error",
+      "unhandled",
+      err ? `Promise: ${err.name}: ${err.message}` : `Promise: ${safeString(reason)}`,
+      { stack: err?.stack ? clip(err.stack.split("\n").slice(0, 3).join(" | "), 300) : undefined },
+      "failure"
+    );
   });
 
   // A failed request is the most useful thing in the report, so fetch is
@@ -170,18 +200,38 @@ export function installCapture(): void {
     try {
       const res = await originalFetch(input, init);
       const ms = Date.now() - started;
-      if (!res.ok && !skipUrl(url)) {
-        record(res.status >= 500 ? "error" : "warn", "request", `${method} ${stripOrigin(url)} -> ${res.status}`, {
-          ms,
-          status: res.status
-        });
+      if (!skipUrl(url)) {
+        if (!res.ok) {
+          // Every failure, always.
+          record(
+            res.status >= 500 ? "error" : "warn",
+            "request",
+            `${method} ${stripOrigin(url)} -> ${res.status}`,
+            { ms, status: res.status },
+            "failure"
+          );
+        } else if (SLOW_MS > 0 && ms >= SLOW_MS) {
+          // A slow success is worth recording; a fast one is not, or the buffer
+          // would fill with noise. This is the sampled half.
+          record(
+            "info",
+            "request",
+            `${method} ${stripOrigin(url)} -> ${res.status} (slow)`,
+            { ms, status: res.status },
+            "success"
+          );
+        }
       }
       return res;
     } catch (err) {
       if (!skipUrl(url)) {
-        record("error", "request", `${method} ${stripOrigin(url)} failed: ${safeString(err)}`, {
-          ms: Date.now() - started
-        });
+        record(
+          "error",
+          "request",
+          `${method} ${stripOrigin(url)} failed: ${safeString(err)}`,
+          { ms: Date.now() - started },
+          "failure"
+        );
       }
       throw err;
     }
@@ -230,6 +280,44 @@ export function clientInfo(appVersion: string) {
     online: nav.onLine,
     memoryMb: typeof nav.deviceMemory === "number" ? nav.deviceMemory * 1024 : undefined,
     connection: nav.connection?.effectiveType,
-    startedAt: new Date(performance.timeOrigin || Date.now()).toISOString()
+    startedAt: new Date(performance.timeOrigin || Date.now()).toISOString(),
+    sessionId: getSessionId()
   };
+}
+
+/**
+ * Can this device hand a file to another app?
+ *
+ * On Android Chrome and iOS Safari it can, which is what lets a report reach
+ * Gmail already attached. On desktop browsers it generally cannot, so the UI
+ * falls back to the server send or to Gmail compose.
+ */
+export function canShareFiles(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { canShare?: (data: unknown) => boolean };
+  if (typeof nav.share !== "function" || typeof nav.canShare !== "function") return false;
+  try {
+    const probe = new File(["x"], "probe.txt", { type: "text/plain" });
+    return nav.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Hand the report to the system share sheet as a file. The user picks Gmail (or
+ * anything else) and the file is already attached.
+ *
+ * Returns false when the platform cannot do it, so the caller can fall back.
+ */
+export async function shareReportFile(text: string, filename: string, mime: string): Promise<boolean> {
+  if (!canShareFiles()) return false;
+  try {
+    const file = new File([text], filename, { type: mime });
+    await navigator.share({ files: [file], title: filename });
+    return true;
+  } catch {
+    // The user dismissed the sheet, or the share failed.
+    return false;
+  }
 }

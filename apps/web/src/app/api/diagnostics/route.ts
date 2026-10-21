@@ -4,6 +4,7 @@ import { redis } from "@/lib/redis";
 import { getViewerId } from "@/lib/viewer";
 import { getSettingsOptional } from "@/lib/settings";
 import { APP_VERSION } from "@/lib/appInfo";
+import { mailerConfigured } from "@/lib/mailer";
 import type { DiagCheck, DiagServerInfo } from "@/lib/diagnostics";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
   // The user's own switch. A report is only assembled if they left it on.
   const settings = await getSettingsOptional(userId);
   if (settings && settings.diagnosticsEnabled === false) {
-    return NextResponse.json({ enabled: false, server: null, supportEmail: "" });
+    return NextResponse.json({ enabled: false, server: null, supportEmail: "", emailReady: false });
   }
 
   const checks = await Promise.all([
@@ -81,7 +82,8 @@ export async function GET(req: Request) {
       "alert webhook": on(process.env.ALERT_WEBHOOK_URL),
       "backup encryption key set": on(process.env.BACKUP_KEY) || on(process.env.SECRETS_KEY),
       // Whether a support address is configured - never the address itself.
-      "support address configured": on(process.env.DIAGNOSTICS_SUPPORT_EMAIL)
+      "support address configured": on(process.env.DIAGNOSTICS_SUPPORT_EMAIL),
+      "mail provider configured": mailerConfigured()
     }
   };
 
@@ -90,6 +92,9 @@ export async function GET(req: Request) {
     server,
     // A support address is meant to be seen by users - it is what they write
     // to. It comes from the environment so it is not published with the source.
-    supportEmail: (process.env.DIAGNOSTICS_SUPPORT_EMAIL ?? "").trim()
+    supportEmail: (process.env.DIAGNOSTICS_SUPPORT_EMAIL ?? "").trim(),
+    // When this is true the server can send the report itself, which is the
+    // only path that arrives with a real attachment and no user step.
+    emailReady: mailerConfigured()
   });
 }

@@ -10,6 +10,9 @@
  * shared build step. Keep them in step when you change one.
  */
 
+/** Versioned envelope. Bumping this is a breaking change to the shape. */
+export const SCHEMA_VERSION = "1.0.0";
+
 export const DIAG_FORMATS = ["md", "json", "txt", "csv"] as const;
 export type DiagFormat = (typeof DIAG_FORMATS)[number];
 
@@ -40,10 +43,16 @@ export function isDiagFormat(v: unknown): v is DiagFormat {
 
 export type DiagSeverity = "error" | "warn" | "info";
 
+export type DiagOutcome = "success" | "failure" | "noop";
+
 export type DiagEntry = {
   at: string;
   kind: string;
   severity: DiagSeverity;
+  /** What happened, as distinct from what was attempted. */
+  outcome?: DiagOutcome;
+  /** Ties this entry to the session it happened in. */
+  sessionId?: string;
   message: string;
   detail?: Record<string, unknown>;
 };
@@ -74,7 +83,9 @@ export type DiagServerInfo = {
 
 export type DiagnosticReport = {
   id: string;
+  schemaVersion: string;
   generatedAt: string;
+  sessionId: string;
   platform: string;
   appVersion: string;
   signedIn: boolean;
@@ -129,6 +140,8 @@ export function redactEntry(entry: DiagEntry): DiagEntry {
     at: entry.at,
     kind: entry.kind,
     severity: entry.severity,
+    outcome: entry.outcome,
+    sessionId: entry.sessionId,
     message: redactText(entry.message, 1000),
     detail: entry.detail ? (redactValue(entry.detail) as Record<string, unknown>) : undefined
   };
@@ -143,24 +156,36 @@ export function buildReport(input: {
   device?: DiagDeviceInfo | null;
   server?: DiagServerInfo | null;
   entries: DiagEntry[];
+  sessionId?: string;
   now?: Date;
 }): DiagnosticReport {
   const now = input.now ?? new Date();
   const entries = input.entries.slice(-MAX_ENTRIES).map(redactEntry);
   const counts: Record<DiagSeverity, number> = { error: 0, warn: 0, info: 0 };
   for (const e of entries) counts[e.severity] = (counts[e.severity] ?? 0) + 1;
+  const sessionId = input.sessionId ?? makeSessionId(now);
+  const stamped = entries.map((e) => (e.sessionId ? e : { ...e, sessionId }));
   return {
     id: makeReportId(now),
+    schemaVersion: SCHEMA_VERSION,
     generatedAt: now.toISOString(),
+    sessionId,
     platform: "android",
     appVersion: input.appVersion,
     signedIn: input.signedIn,
     userId: input.userId ?? null,
     device: input.device ?? null,
     server: input.server ?? null,
-    entries,
+    entries: stamped,
     counts
   };
+}
+
+/** One id per app launch. */
+export function makeSessionId(now: Date = new Date(), random: number = Math.random()): string {
+  const stamp = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const suffix = Math.floor(random * 1679616).toString(36).padStart(4, "0");
+  return `sess_${stamp}_${suffix}`;
 }
 
 export function makeReportId(now: Date = new Date(), random: number = Math.random()): string {
@@ -176,6 +201,8 @@ export function reportFilename(report: DiagnosticReport, format: DiagFormat): st
 function deviceRows(report: DiagnosticReport): DiagEntry[] {
   const rows: DiagEntry[] = [
     { at: report.generatedAt, kind: "env", severity: "info", message: `report ${report.id}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `schema ${report.schemaVersion}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `session ${report.sessionId}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `app ${report.appVersion} (${report.platform})` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` }
   ];
@@ -223,9 +250,9 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
 
   if (format === "csv") {
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = ["at,severity,kind,message,detail"];
+    const lines = ["at,severity,kind,outcome,session,message,detail"];
     for (const r of [...deviceRows(report), ...report.entries]) {
-      lines.push([r.at, r.severity, r.kind, esc(r.message), esc(detailText(r.detail))].join(","));
+      lines.push([r.at, r.severity, r.kind, r.outcome ?? "", r.sessionId ?? "", esc(r.message), esc(detailText(r.detail))].join(","));
     }
     return lines.join("\n");
   }
@@ -250,6 +277,8 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   const out: string[] = ["# Sangam diagnostics report", ""];
   out.push(`| | |`, `|---|---|`);
   out.push(`| Report id | \`${report.id}\` |`);
+  out.push(`| Schema | ${report.schemaVersion} |`);
+  out.push(`| Session | \`${report.sessionId}\` |`);
   out.push(`| Generated | ${report.generatedAt} |`);
   out.push(`| App | ${report.appVersion} (${report.platform}) |`);
   out.push(`| Events | ${report.entries.length} |`);
@@ -259,8 +288,9 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   out.push("", "## Events", "");
   if (!report.entries.length) out.push("_Nothing recorded._");
   else {
-    out.push("| Time | Severity | Kind | Message |", "|---|---|---|---|");
-    for (const e of report.entries) out.push(`| ${e.at} | ${e.severity} | ${e.kind} | ${e.message.replace(/\|/g, "\\|")} |`);
+    out.push("| Time | Severity | Kind | Outcome | Message |", "|---|---|---|---|---|");
+    for (const e of report.entries)
+      out.push(`| ${e.at} | ${e.severity} | ${e.kind} | ${e.outcome ?? "-"} | ${e.message.replace(/\|/g, "\\|")} |`);
   }
   return out.join("\n");
 }
@@ -268,6 +298,8 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
 export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
   const lines: string[] = [];
   lines.push(`Report id : ${report.id}`);
+  lines.push(`Schema    : ${report.schemaVersion}`);
+  lines.push(`Session   : ${report.sessionId}`);
   lines.push(`Generated : ${report.generatedAt}`);
   lines.push(`App       : ${report.appVersion} (${report.platform})`);
   if (report.device) {

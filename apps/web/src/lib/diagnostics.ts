@@ -11,6 +11,12 @@
  * tokens, passwords or other people's addresses.
  */
 
+/**
+ * The report envelope is versioned. Bumping this is a breaking change to the
+ * shape, and any consumer that parses a report should check it first.
+ */
+export const SCHEMA_VERSION = "1.0.0";
+
 export const DIAG_FORMATS = ["md", "json", "txt", "csv"] as const;
 export type DiagFormat = (typeof DIAG_FORMATS)[number];
 
@@ -73,8 +79,18 @@ export type DiagEntry = {
   kind: string;
   severity: DiagSeverity;
   message: string;
+  /**
+   * What happened, as distinct from what was attempted. A log full of requests
+   * with no outcomes tells you someone was trying; it does not tell you whether
+   * it worked.
+   */
+  outcome?: DiagOutcome;
+  /** Ties this entry to the session it happened in. */
+  sessionId?: string;
   detail?: Record<string, unknown>;
 };
+
+export type DiagOutcome = "success" | "failure" | "noop";
 
 export type DiagClientInfo = {
   platform: string;
@@ -106,7 +122,10 @@ export type DiagServerInfo = {
 
 export type DiagnosticReport = {
   id: string;
+  schemaVersion: string;
   generatedAt: string;
+  /** One id per page load / app launch, so a report can be tied to a session. */
+  sessionId: string;
   platform: string;
   appVersion: string;
   signedIn: boolean;
@@ -186,12 +205,32 @@ export function redactEntry(entry: DiagEntry): DiagEntry {
     at: entry.at,
     kind: entry.kind,
     severity: entry.severity,
+    outcome: entry.outcome,
+    sessionId: entry.sessionId,
     message: redactText(entry.message, 1000),
     detail: entry.detail ? (redactValue(entry.detail) as Record<string, unknown>) : undefined
   };
 }
 
 /** Cap the report so an export can never grow without bound. */
+/**
+ * Make room when the buffer is full.
+ *
+ * Errors are kept at full rate; everything else is the sampled part and is
+ * dropped first. Only when there is nothing but errors left does the oldest
+ * error go, so a burst of failures still cannot grow the buffer without bound.
+ */
+export function evictForCapacity(entries: DiagEntry[], max: number): DiagEntry[] {
+  if (max <= 0) return [];
+  if (entries.length <= max) return entries.slice();
+  const out = entries.slice();
+  while (out.length > max) {
+    const idx = out.findIndex((e) => e.severity !== "error");
+    out.splice(idx === -1 ? 0 : idx, 1);
+  }
+  return out;
+}
+
 export const MAX_ENTRIES = 500;
 export const MAX_ENTRY_LENGTH = 1000;
 
@@ -203,6 +242,7 @@ export function buildReport(input: {
   client?: DiagClientInfo | null;
   server?: DiagServerInfo | null;
   entries: DiagEntry[];
+  sessionId?: string;
   now?: Date;
   id?: string;
 }): DiagnosticReport {
@@ -210,19 +250,34 @@ export function buildReport(input: {
   const entries = input.entries.slice(-MAX_ENTRIES).map(redactEntry);
   const counts: Record<DiagSeverity, number> = { error: 0, warn: 0, info: 0 };
   for (const e of entries) counts[e.severity] = (counts[e.severity] ?? 0) + 1;
+  // Kept separate from severity: an info entry can still be a failure.
+
+  const sessionId = input.sessionId ?? makeSessionId(now);
+  // Stamp every entry with the session, so a report that spans two sessions is
+  // still readable.
+  const stamped = entries.map((e) => (e.sessionId ? e : { ...e, sessionId }));
 
   return {
     id: input.id ?? makeReportId(now),
+    schemaVersion: SCHEMA_VERSION,
     generatedAt: now.toISOString(),
+    sessionId,
     platform: input.platform,
     appVersion: input.appVersion,
     signedIn: input.signedIn,
     userId: input.userId ?? null,
     client: input.client ?? null,
     server: input.server ?? null,
-    entries,
+    entries: stamped,
     counts
   };
+}
+
+/** One id per page load. Short, and safe to put in a subject line. */
+export function makeSessionId(now: Date = new Date(), random: number = Math.random()): string {
+  const stamp = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const suffix = Math.floor(random * 1679616).toString(36).padStart(4, "0");
+  return `sess_${stamp}_${suffix}`;
 }
 
 /** Short, sortable, and safe to put in a subject line. */
@@ -243,6 +298,8 @@ export function reportFilename(report: DiagnosticReport, format: DiagFormat): st
 function envRows(report: DiagnosticReport): DiagEntry[] {
   const rows: DiagEntry[] = [
     { at: report.generatedAt, kind: "env", severity: "info", message: `report ${report.id}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `schema ${report.schemaVersion}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `session ${report.sessionId}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `app ${report.appVersion} (${report.platform})` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` }
   ];
@@ -294,9 +351,9 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
     // Environment details are simply rows of kind `env`.
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = [...envRows(report), ...report.entries];
-    const lines = ["at,severity,kind,message,detail"];
+    const lines = ["at,severity,kind,outcome,session,message,detail"];
     for (const r of rows) {
-      lines.push([r.at, r.severity, r.kind, esc(r.message), esc(detailText(r.detail))].join(","));
+      lines.push([r.at, r.severity, r.kind, r.outcome ?? "", r.sessionId ?? "", esc(r.message), esc(detailText(r.detail))].join(","));
     }
     return lines.join("\n");
   }
@@ -317,7 +374,9 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
     out.push("-- events --");
     for (const e of report.entries) {
       const d = detailText(e.detail);
-      out.push(`  [${e.at}] ${e.severity.toUpperCase().padEnd(5)} ${e.kind.padEnd(9)} ${e.message}${d ? `  ${d}` : ""}`);
+      out.push(
+        `  [${e.at}] ${e.severity.toUpperCase().padEnd(5)} ${e.kind.padEnd(9)} ${(e.outcome ?? "-").padEnd(7)} ${e.message}${d ? `  ${d}` : ""}`
+      );
     }
     if (!report.entries.length) out.push("  (nothing recorded)");
     return out.join("\n");
@@ -330,6 +389,8 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   out.push(`| | |`);
   out.push(`|---|---|`);
   out.push(`| Report id | \`${report.id}\` |`);
+  out.push(`| Schema | ${report.schemaVersion} |`);
+  out.push(`| Session | \`${report.sessionId}\` |`);
   out.push(`| Generated | ${report.generatedAt} |`);
   out.push(`| App | ${report.appVersion} (${report.platform}) |`);
   out.push(`| Signed in | ${report.signedIn} |`);
@@ -346,10 +407,10 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   if (!report.entries.length) {
     out.push("_Nothing recorded. That is itself useful: it means no error was captured._");
   } else {
-    out.push("| Time | Severity | Kind | Message |");
-    out.push("|---|---|---|---|");
+    out.push("| Time | Severity | Kind | Outcome | Message |");
+    out.push("|---|---|---|---|---|");
     for (const e of report.entries) {
-      out.push(`| ${e.at} | ${e.severity} | ${e.kind} | ${e.message.replace(/\|/g, "\\|")} |`);
+      out.push(`| ${e.at} | ${e.severity} | ${e.kind} | ${e.outcome ?? "-"} | ${e.message.replace(/\|/g, "\\|")} |`);
     }
   }
   return out.join("\n");
@@ -363,6 +424,8 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
 export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
   const lines: string[] = [];
   lines.push(`Report id : ${report.id}`);
+  lines.push(`Schema    : ${report.schemaVersion}`);
+  lines.push(`Session   : ${report.sessionId}`);
   lines.push(`Generated : ${report.generatedAt}`);
   lines.push(`App       : ${report.appVersion} (${report.platform})`);
   if (report.client) {
@@ -378,6 +441,27 @@ export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
     for (const e of shown) lines.push(`  [${e.at}] ${e.kind}: ${e.message.slice(0, 160)}`);
   }
   return lines;
+}
+
+/**
+ * A Gmail compose URL, prefilled.
+ *
+ * Google accepts to / subject / body through the URL and nothing else - there is
+ * no parameter for an attachment, in Gmail or in the mailto scheme. So this gets
+ * the user to a filled-in compose window in one click, and the file has to be
+ * attached by hand. When a real attachment is needed, the report goes through
+ * the server instead (see lib/mailer.ts) or through the share sheet.
+ */
+export function buildGmailCompose(input: { to: string; subject: string; body: string }): string {
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    tf: "1",
+    to: input.to,
+    su: input.subject,
+    body: input.body
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
 }
 
 export const MAILTO_BODY_LIMIT = 1600;

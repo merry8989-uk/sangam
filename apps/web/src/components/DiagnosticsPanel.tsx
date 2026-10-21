@@ -5,6 +5,7 @@ import {
   DIAG_FORMATS,
   DIAGNOSTICS_EXCLUDES,
   DIAGNOSTICS_INCLUDES,
+  buildGmailCompose,
   buildMailto,
   buildReport,
   formatHint,
@@ -18,7 +19,15 @@ import {
   type DiagServerInfo,
   type DiagnosticReport
 } from "@/lib/diagnostics";
-import { clearEntries, clientInfo, getEntries, subscribe } from "@/lib/diagnosticsClient";
+import {
+  canShareFiles,
+  clearEntries,
+  clientInfo,
+  getEntries,
+  getSessionId,
+  shareReportFile,
+  subscribe
+} from "@/lib/diagnosticsClient";
 
 /**
  * The Diagnostics screen.
@@ -45,6 +54,8 @@ export default function DiagnosticsPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [emailReady, setEmailReady] = useState(false);
+  const [canShare, setCanShare] = useState(false);
 
   const refresh = useCallback(async () => {
     setEntries(getEntries());
@@ -52,12 +63,14 @@ export default function DiagnosticsPanel({
       const res = await fetch("/api/diagnostics");
       const data = await res.json();
       setServer(data.server ?? null);
+      setEmailReady(Boolean(data.emailReady));
     } catch {
       setServer(null);
     }
   }, []);
 
   useEffect(() => {
+    setCanShare(canShareFiles());
     void refresh();
     return subscribe(() => setEntries(getEntries()));
   }, [refresh]);
@@ -70,6 +83,7 @@ export default function DiagnosticsPanel({
         signedIn: Boolean(server),
         client: clientInfo(appVersion),
         server,
+        sessionId: getSessionId(),
         entries
       }),
     [appVersion, server, entries]
@@ -118,6 +132,75 @@ export default function DiagnosticsPanel({
     } finally {
       setBusy(null);
     }
+  }
+
+  /**
+   * The only path that arrives with a real attachment and no user step: the
+   * server sends the mail. A mailto link and a Gmail compose URL cannot carry a
+   * file, so this is what "attached" actually means.
+   */
+  async function sendViaServer() {
+    setBusy("email");
+    setStatus(null);
+    try {
+      const res = await fetch("/api/diagnostics/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note,
+          platform: "web",
+          appVersion,
+          format,
+          sessionId: getSessionId(),
+          entries,
+          client: clientInfo(appVersion)
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      setStatus(
+        res.ok
+          ? `Sent to support, with ${filename} attached. Nothing else to do.`
+          : `Could not send: ${data.error ?? "the mail provider refused it"}. Try the other options below.`
+      );
+    } catch {
+      setStatus("Could not reach the server. Try Download instead.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Hand the file to the system share sheet. On a phone the user picks Gmail
+   * and the file is already attached - no server needed.
+   */
+  async function shareToGmail() {
+    setBusy("share");
+    setStatus(null);
+    try {
+      const text = formatReport(report, format);
+      const ok = await shareReportFile(text, filename, mimeType(format));
+      if (ok) {
+        setStatus("Choose Gmail in the share sheet - the report is already attached.");
+      } else {
+        setStatus("Sharing was cancelled, or this device cannot share files. Try another option.");
+      }
+    } catch {
+      setStatus("Sharing did not work on this device.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Desktop fallback: Gmail compose, prefilled, plus the file to attach. */
+  function openGmail() {
+    download();
+    const link = buildGmailCompose({
+      to: supportEmail,
+      subject: `Sangam diagnostics ${report.id} - ${report.appVersion} - ${report.platform}`,
+      body: summaryLines(report).join("\n") + `\n\nAttach the file that was just downloaded:\n  ${filename}\n`
+    });
+    window.open(link, "_blank", "noopener");
+    setStatus(`Gmail is open. Attach the file that was just saved as ${filename}.`);
   }
 
   /** Save the file, submit a copy, then open the mail client already filled in. */
@@ -273,13 +356,40 @@ export default function DiagnosticsPanel({
 
       {/* ---- actions ---- */}
       <section className="flex flex-wrap gap-2">
+        {supportEmail && emailReady && (
+          <button
+            onClick={sendViaServer}
+            disabled={busy !== null}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {busy === "email" ? "Sending..." : "Email it with the report attached"}
+          </button>
+        )}
+        {canShare && (
+          <button
+            onClick={shareToGmail}
+            disabled={busy !== null}
+            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
+          >
+            {busy === "share" ? "Sharing..." : "Share to Gmail"}
+          </button>
+        )}
+        {supportEmail && !emailReady && (
+          <button
+            onClick={openGmail}
+            disabled={busy !== null}
+            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
+          >
+            Open in Gmail
+          </button>
+        )}
         {supportEmail && (
           <button
             onClick={send}
             disabled={busy !== null}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-slate-200 disabled:opacity-50"
           >
-            {busy === "send" ? "Preparing..." : "Send to support"}
+            {busy === "send" ? "Preparing..." : "Send from my mail app"}
           </button>
         )}
         <button
@@ -321,9 +431,19 @@ export default function DiagnosticsPanel({
 
       {!supportEmail && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          No support address is configured on this server, so the email button is hidden. Use Download
-          or Send without email instead. Set <code className="font-mono">DIAGNOSTICS_SUPPORT_EMAIL</code>{" "}
-          to turn it on.
+          No support address is configured on this server, so the email options are hidden. Use
+          Download or Send without email instead. Set{" "}
+          <code className="font-mono">DIAGNOSTICS_SUPPORT_EMAIL</code> to turn them on.
+        </p>
+      )}
+      {supportEmail && !emailReady && (
+        <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-ink-700">
+          A mail provider is not configured on this server, so the report cannot be sent with the
+          attachment automatically. <b>Open in Gmail</b> fills in the message and saves the file - you
+          then attach it. To send it attached with no step, set{" "}
+          <code className="font-mono">EMAIL_PROVIDER</code>,{" "}
+          <code className="font-mono">EMAIL_API_KEY</code> and{" "}
+          <code className="font-mono">EMAIL_FROM</code>.
         </p>
       )}
 
