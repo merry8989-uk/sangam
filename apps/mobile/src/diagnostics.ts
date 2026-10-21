@@ -89,11 +89,14 @@ export type DiagnosticReport = {
   platform: string;
   appVersion: string;
   signedIn: boolean;
-  userId: string | null;
+  /** The pseudonymous account code. The real id is deliberately not included. */
+  userCode: string;
   device: DiagDeviceInfo | null;
   server: DiagServerInfo | null;
   entries: DiagEntry[];
   counts: Record<DiagSeverity, number>;
+  /** Set when exported from a filtered view. */
+  filter?: DiagFilter;
 };
 
 export const REDACTED = "[redacted]";
@@ -147,16 +150,109 @@ export function redactEntry(entry: DiagEntry): DiagEntry {
   };
 }
 
+/** A code that is not a code, for a report sent with no account. */
+export const ANONYMOUS_CODE = "SG-ANON";
+
+/** The code to put in a report, or the anonymous label. */
+export function codeForReport(code: string | null | undefined): string {
+  return code && /^SG-[0-9A-Z]{6}$/.test(code) ? code : ANONYMOUS_CODE;
+}
+
+/** A filter over the recorded events. An absent field means "no opinion". */
+export type DiagFilter = {
+  severities?: DiagSeverity[];
+  kinds?: string[];
+  outcomes?: DiagOutcome[];
+  sessionId?: string;
+  text?: string;
+  since?: string;
+  until?: string;
+};
+
+export const EMPTY_FILTER: DiagFilter = {};
+
+function matchesList<T>(value: T | undefined, allowed: T[] | undefined): boolean {
+  if (!allowed || allowed.length === 0) return true;
+  return value !== undefined && allowed.includes(value);
+}
+
+/** Apply a filter. The only place the matching rules live. */
+export function filterEntries(entries: DiagEntry[], filter: DiagFilter = EMPTY_FILTER): DiagEntry[] {
+  const text = filter.text?.trim().toLowerCase();
+  const since = filter.since ? Date.parse(filter.since) : NaN;
+  const until = filter.until ? Date.parse(filter.until) : NaN;
+  return entries.filter((e) => {
+    if (!matchesList(e.severity, filter.severities)) return false;
+    if (!matchesList(e.kind, filter.kinds)) return false;
+    if (!matchesList(e.outcome, filter.outcomes)) return false;
+    if (filter.sessionId && e.sessionId !== filter.sessionId) return false;
+    if (text && !`${e.message} ${detailText(e.detail)}`.toLowerCase().includes(text)) return false;
+    if (!Number.isNaN(since) || !Number.isNaN(until)) {
+      const at = Date.parse(e.at);
+      if (Number.isNaN(at)) return false;
+      if (!Number.isNaN(since) && at < since) return false;
+      if (!Number.isNaN(until) && at > until) return false;
+    }
+    return true;
+  });
+}
+
+export function filterIsActive(filter: DiagFilter = EMPTY_FILTER): boolean {
+  return Boolean(
+    filter.severities?.length || filter.kinds?.length || filter.outcomes?.length ||
+      filter.sessionId || filter.text?.trim() || filter.since || filter.until
+  );
+}
+
+/** The values actually present, so the UI offers real choices. */
+export function filterFacets(entries: DiagEntry[]): {
+  severities: DiagSeverity[];
+  kinds: string[];
+  outcomes: DiagOutcome[];
+  sessions: string[];
+} {
+  const sev = new Set<DiagSeverity>();
+  const kinds = new Set<string>();
+  const outs = new Set<DiagOutcome>();
+  const sessions = new Set<string>();
+  for (const e of entries) {
+    sev.add(e.severity);
+    kinds.add(e.kind);
+    if (e.outcome) outs.add(e.outcome);
+    if (e.sessionId) sessions.add(e.sessionId);
+  }
+  const order: DiagSeverity[] = ["error", "warn", "info"];
+  return {
+    severities: order.filter((x) => sev.has(x)),
+    kinds: [...kinds].sort(),
+    outcomes: (["failure", "success", "noop"] as DiagOutcome[]).filter((x) => outs.has(x)),
+    sessions: [...sessions].sort()
+  };
+}
+
+export function describeFilter(filter: DiagFilter = EMPTY_FILTER): string {
+  const parts: string[] = [];
+  if (filter.severities?.length) parts.push(`severity: ${filter.severities.join(", ")}`);
+  if (filter.kinds?.length) parts.push(`kind: ${filter.kinds.join(", ")}`);
+  if (filter.outcomes?.length) parts.push(`outcome: ${filter.outcomes.join(", ")}`);
+  if (filter.sessionId) parts.push(`session: ${filter.sessionId}`);
+  if (filter.text?.trim()) parts.push(`text: "${filter.text.trim()}"`);
+  if (filter.since) parts.push(`from ${filter.since}`);
+  if (filter.until) parts.push(`to ${filter.until}`);
+  return parts.length ? parts.join(" · ") : "no filter";
+}
+
 export const MAX_ENTRIES = 500;
 
 export function buildReport(input: {
   appVersion: string;
   signedIn: boolean;
-  userId?: string | null;
+  userCode?: string | null;
   device?: DiagDeviceInfo | null;
   server?: DiagServerInfo | null;
   entries: DiagEntry[];
   sessionId?: string;
+  filter?: DiagFilter;
   now?: Date;
 }): DiagnosticReport {
   const now = input.now ?? new Date();
@@ -173,11 +269,12 @@ export function buildReport(input: {
     platform: "android",
     appVersion: input.appVersion,
     signedIn: input.signedIn,
-    userId: input.userId ?? null,
+    userCode: codeForReport(input.userCode),
     device: input.device ?? null,
     server: input.server ?? null,
     entries: stamped,
-    counts
+    counts,
+    filter: input.filter && filterIsActive(input.filter) ? input.filter : undefined
   };
 }
 
@@ -279,6 +376,7 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   out.push(`| Report id | \`${report.id}\` |`);
   out.push(`| Schema | ${report.schemaVersion} |`);
   out.push(`| Session | \`${report.sessionId}\` |`);
+  out.push(`| User code | \`${report.userCode}\` |`);
   out.push(`| Generated | ${report.generatedAt} |`);
   out.push(`| App | ${report.appVersion} (${report.platform}) |`);
   out.push(`| Events | ${report.entries.length} |`);
@@ -300,6 +398,7 @@ export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
   lines.push(`Report id : ${report.id}`);
   lines.push(`Schema    : ${report.schemaVersion}`);
   lines.push(`Session   : ${report.sessionId}`);
+  lines.push(`User code : ${report.userCode}`);
   lines.push(`Generated : ${report.generatedAt}`);
   lines.push(`App       : ${report.appVersion} (${report.platform})`);
   if (report.device) {

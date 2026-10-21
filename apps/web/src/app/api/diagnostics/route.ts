@@ -5,6 +5,9 @@ import { getViewerId } from "@/lib/viewer";
 import { getSettingsOptional } from "@/lib/settings";
 import { APP_VERSION } from "@/lib/appInfo";
 import { mailerConfigured } from "@/lib/mailer";
+import { ensureUserCode } from "@/lib/userCodeServer";
+import { notionConfigured } from "@/lib/notion";
+import { codeForReport } from "@/lib/userCode";
 import type { DiagCheck, DiagServerInfo } from "@/lib/diagnostics";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +51,11 @@ export async function GET(req: Request) {
   // The user's own switch. A report is only assembled if they left it on.
   const settings = await getSettingsOptional(userId);
   if (settings && settings.diagnosticsEnabled === false) {
-    return NextResponse.json({ enabled: false, server: null, supportEmail: "", emailReady: false });
+    return NextResponse.json({ enabled: false, server: null, supportEmail: "", emailReady: false, notionReady: false, userCode: codeForReport(null) });
   }
+
+  // The user's own code, created on first use, so the screen can show it.
+  const userCode = userId ? await ensureUserCode(userId) : null;
 
   const checks = await Promise.all([
     timed("database", async () => {
@@ -83,7 +89,8 @@ export async function GET(req: Request) {
       "backup encryption key set": on(process.env.BACKUP_KEY) || on(process.env.SECRETS_KEY),
       // Whether a support address is configured - never the address itself.
       "support address configured": on(process.env.DIAGNOSTICS_SUPPORT_EMAIL),
-      "mail provider configured": mailerConfigured()
+      "mail provider configured": mailerConfigured(),
+      "notion configured": notionConfigured()
     }
   };
 
@@ -95,6 +102,8 @@ export async function GET(req: Request) {
     supportEmail: (process.env.DIAGNOSTICS_SUPPORT_EMAIL ?? "").trim(),
     // When this is true the server can send the report itself, which is the
     // only path that arrives with a real attachment and no user step.
-    emailReady: mailerConfigured()
+    emailReady: mailerConfigured(),
+    notionReady: notionConfigured(),
+    userCode: codeForReport(userCode)
   });
 }

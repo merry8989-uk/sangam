@@ -15,6 +15,8 @@
  * The report envelope is versioned. Bumping this is a breaking change to the
  * shape, and any consumer that parses a report should check it first.
  */
+import { codeForReport } from "./userCode";
+
 export const SCHEMA_VERSION = "1.0.0";
 
 export const DIAG_FORMATS = ["md", "json", "txt", "csv"] as const;
@@ -129,12 +131,22 @@ export type DiagnosticReport = {
   platform: string;
   appVersion: string;
   signedIn: boolean;
-  /** The user's own id. Never an email address. */
-  userId: string | null;
+  /**
+   * The pseudonymous account code, and nothing else. The real account id is
+   * deliberately not in the report: the logging standard this follows asks for
+   * a pseudonymous identifier, and an id in a file that travels by email is
+   * one more thing to leak.
+   */
+  userCode: string;
   client: DiagClientInfo | null;
   server: DiagServerInfo | null;
   entries: DiagEntry[];
   counts: Record<DiagSeverity, number>;
+  /**
+   * Set when the report was exported from a filtered view. Present so a reader
+   * knows the report is a slice and not everything that was recorded.
+   */
+  filter?: DiagFilter;
 };
 
 // ---------------------------------------------------------------------------
@@ -231,6 +243,149 @@ export function evictForCapacity(entries: DiagEntry[], max: number): DiagEntry[]
   return out;
 }
 
+/**
+ * A filter over the recorded events.
+ *
+ * Every field is optional, and an absent field means "no opinion" rather than
+ * "match nothing" - so an empty filter returns everything, which is what the
+ * screen starts from.
+ */
+export type DiagFilter = {
+  severities?: DiagSeverity[];
+  kinds?: string[];
+  outcomes?: DiagOutcome[];
+  sessionId?: string;
+  /** Case-insensitive substring, matched against the message. */
+  text?: string;
+  /** ISO timestamps. Inclusive. */
+  since?: string;
+  until?: string;
+};
+
+export const EMPTY_FILTER: DiagFilter = {};
+
+function matchesList<T>(value: T | undefined, allowed: T[] | undefined): boolean {
+  if (!allowed || allowed.length === 0) return true;
+  return value !== undefined && allowed.includes(value);
+}
+
+/**
+ * Apply a filter. Pure, and the only place the matching rules live, so the
+ * screen, the export and the internal endpoint all agree on what a filter means.
+ */
+export function filterEntries(entries: DiagEntry[], filter: DiagFilter = EMPTY_FILTER): DiagEntry[] {
+  const text = filter.text?.trim().toLowerCase();
+  const since = filter.since ? Date.parse(filter.since) : NaN;
+  const until = filter.until ? Date.parse(filter.until) : NaN;
+
+  return entries.filter((e) => {
+    if (!matchesList(e.severity, filter.severities)) return false;
+    if (!matchesList(e.kind, filter.kinds)) return false;
+    if (!matchesList(e.outcome, filter.outcomes)) return false;
+    if (filter.sessionId && e.sessionId !== filter.sessionId) return false;
+    if (text) {
+      const hay = `${e.message} ${detailText(e.detail)}`.toLowerCase();
+      if (!hay.includes(text)) return false;
+    }
+    if (!Number.isNaN(since) || !Number.isNaN(until)) {
+      const at = Date.parse(e.at);
+      if (Number.isNaN(at)) return false;
+      if (!Number.isNaN(since) && at < since) return false;
+      if (!Number.isNaN(until) && at > until) return false;
+    }
+    return true;
+  });
+}
+
+/** Is anything actually being filtered out? Drives the "clear" affordance. */
+export function filterIsActive(filter: DiagFilter = EMPTY_FILTER): boolean {
+  return Boolean(
+    filter.severities?.length ||
+      filter.kinds?.length ||
+      filter.outcomes?.length ||
+      filter.sessionId ||
+      filter.text?.trim() ||
+      filter.since ||
+      filter.until
+  );
+}
+
+/** The values actually present, so the UI offers real choices rather than guesses. */
+export function filterFacets(entries: DiagEntry[]): {
+  severities: DiagSeverity[];
+  kinds: string[];
+  outcomes: DiagOutcome[];
+  sessions: string[];
+} {
+  const severities = new Set<DiagSeverity>();
+  const kinds = new Set<string>();
+  const outcomes = new Set<DiagOutcome>();
+  const sessions = new Set<string>();
+  for (const e of entries) {
+    severities.add(e.severity);
+    kinds.add(e.kind);
+    if (e.outcome) outcomes.add(e.outcome);
+    if (e.sessionId) sessions.add(e.sessionId);
+  }
+  const order: DiagSeverity[] = ["error", "warn", "info"];
+  return {
+    severities: order.filter((s) => severities.has(s)),
+    kinds: [...kinds].sort(),
+    outcomes: (["failure", "success", "noop"] as DiagOutcome[]).filter((o) => outcomes.has(o)),
+    sessions: [...sessions].sort()
+  };
+}
+
+/** One line describing the filter, for an export header or a count. */
+export function describeFilter(filter: DiagFilter = EMPTY_FILTER): string {
+  const parts: string[] = [];
+  if (filter.severities?.length) parts.push(`severity: ${filter.severities.join(", ")}`);
+  if (filter.kinds?.length) parts.push(`kind: ${filter.kinds.join(", ")}`);
+  if (filter.outcomes?.length) parts.push(`outcome: ${filter.outcomes.join(", ")}`);
+  if (filter.sessionId) parts.push(`session: ${filter.sessionId}`);
+  if (filter.text?.trim()) parts.push(`text: "${filter.text.trim()}"`);
+  if (filter.since) parts.push(`from ${filter.since}`);
+  if (filter.until) parts.push(`to ${filter.until}`);
+  return parts.length ? parts.join(" · ") : "no filter";
+}
+
+/** Read a filter out of a URL, so a filtered view can be linked and bookmarked. */
+export function filterFromParams(params: URLSearchParams): DiagFilter {
+  const list = (key: string): string[] =>
+    (params.get(key) ?? "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+  const severities = list("severity").filter((v): v is DiagSeverity =>
+    v === "error" || v === "warn" || v === "info"
+  );
+  const outcomes = list("outcome").filter((v): v is DiagOutcome =>
+    v === "success" || v === "failure" || v === "noop"
+  );
+  return {
+    severities: severities.length ? severities : undefined,
+    kinds: list("kind").length ? list("kind") : undefined,
+    outcomes: outcomes.length ? outcomes : undefined,
+    sessionId: params.get("session") ?? undefined,
+    text: params.get("q") ?? undefined,
+    since: params.get("since") ?? undefined,
+    until: params.get("until") ?? undefined
+  };
+}
+
+/** The reverse, so the current view can be put in the address bar. */
+export function filterToParams(filter: DiagFilter): string {
+  const p = new URLSearchParams();
+  if (filter.severities?.length) p.set("severity", filter.severities.join(","));
+  if (filter.kinds?.length) p.set("kind", filter.kinds.join(","));
+  if (filter.outcomes?.length) p.set("outcome", filter.outcomes.join(","));
+  if (filter.sessionId) p.set("session", filter.sessionId);
+  if (filter.text?.trim()) p.set("q", filter.text.trim());
+  if (filter.since) p.set("since", filter.since);
+  if (filter.until) p.set("until", filter.until);
+  return p.toString();
+}
+
 export const MAX_ENTRIES = 500;
 export const MAX_ENTRY_LENGTH = 1000;
 
@@ -238,11 +393,12 @@ export function buildReport(input: {
   platform: string;
   appVersion: string;
   signedIn: boolean;
-  userId?: string | null;
+  userCode?: string | null;
   client?: DiagClientInfo | null;
   server?: DiagServerInfo | null;
   entries: DiagEntry[];
   sessionId?: string;
+  filter?: DiagFilter;
   now?: Date;
   id?: string;
 }): DiagnosticReport {
@@ -265,11 +421,12 @@ export function buildReport(input: {
     platform: input.platform,
     appVersion: input.appVersion,
     signedIn: input.signedIn,
-    userId: input.userId ?? null,
+    userCode: codeForReport(input.userCode),
     client: input.client ?? null,
     server: input.server ?? null,
     entries: stamped,
-    counts
+    counts,
+    filter: input.filter && filterIsActive(input.filter) ? input.filter : undefined
   };
 }
 
@@ -301,7 +458,8 @@ function envRows(report: DiagnosticReport): DiagEntry[] {
     { at: report.generatedAt, kind: "env", severity: "info", message: `schema ${report.schemaVersion}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `session ${report.sessionId}` },
     { at: report.generatedAt, kind: "env", severity: "info", message: `app ${report.appVersion} (${report.platform})` },
-    { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` }
+    { at: report.generatedAt, kind: "env", severity: "info", message: `signed in: ${report.signedIn}` },
+    { at: report.generatedAt, kind: "env", severity: "info", message: `user code ${report.userCode}` }
   ];
   if (report.client) {
     const c = report.client;
@@ -391,10 +549,12 @@ export function formatReport(report: DiagnosticReport, format: DiagFormat): stri
   out.push(`| Report id | \`${report.id}\` |`);
   out.push(`| Schema | ${report.schemaVersion} |`);
   out.push(`| Session | \`${report.sessionId}\` |`);
+  out.push(`| User code | \`${report.userCode}\` |`);
   out.push(`| Generated | ${report.generatedAt} |`);
   out.push(`| App | ${report.appVersion} (${report.platform}) |`);
   out.push(`| Signed in | ${report.signedIn} |`);
   out.push(`| Events | ${report.entries.length} |`);
+  if (report.filter) out.push(`| Filter | ${describeFilter(report.filter)} |`);
   out.push(`| Errors | ${report.counts.error} |`);
   out.push(`| Warnings | ${report.counts.warn} |`);
   out.push("");
@@ -426,6 +586,7 @@ export function summaryLines(report: DiagnosticReport, limit = 12): string[] {
   lines.push(`Report id : ${report.id}`);
   lines.push(`Schema    : ${report.schemaVersion}`);
   lines.push(`Session   : ${report.sessionId}`);
+  lines.push(`User code : ${report.userCode}`);
   lines.push(`Generated : ${report.generatedAt}`);
   lines.push(`App       : ${report.appVersion} (${report.platform})`);
   if (report.client) {

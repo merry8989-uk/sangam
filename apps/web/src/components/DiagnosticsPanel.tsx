@@ -5,9 +5,17 @@ import {
   DIAG_FORMATS,
   DIAGNOSTICS_EXCLUDES,
   DIAGNOSTICS_INCLUDES,
+  EMPTY_FILTER,
   buildGmailCompose,
   buildMailto,
   buildReport,
+  describeFilter,
+  filterEntries,
+  filterFacets,
+  filterIsActive,
+  type DiagFilter,
+  type DiagOutcome,
+  type DiagSeverity,
   formatHint,
   formatLabel,
   formatReport,
@@ -56,6 +64,10 @@ export default function DiagnosticsPanel({
   const [copied, setCopied] = useState(false);
   const [emailReady, setEmailReady] = useState(false);
   const [canShare, setCanShare] = useState(false);
+  const [notionReady, setNotionReady] = useState(false);
+  const [userCode, setUserCode] = useState("SG-ANON");
+  const [filter, setFilter] = useState<DiagFilter>(EMPTY_FILTER);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     setEntries(getEntries());
@@ -64,6 +76,8 @@ export default function DiagnosticsPanel({
       const data = await res.json();
       setServer(data.server ?? null);
       setEmailReady(Boolean(data.emailReady));
+      setNotionReady(Boolean(data.notionReady));
+      if (data.userCode) setUserCode(data.userCode);
     } catch {
       setServer(null);
     }
@@ -75,6 +89,12 @@ export default function DiagnosticsPanel({
     return subscribe(() => setEntries(getEntries()));
   }, [refresh]);
 
+  // Everything downstream - the preview, the export, the email, the Notion row -
+  // works from the filtered list, so what the user sees is what they send.
+  const shown = useMemo(() => filterEntries(entries, filter), [entries, filter]);
+  const facets = useMemo(() => filterFacets(entries), [entries]);
+  const filtering = filterIsActive(filter);
+
   const report: DiagnosticReport = useMemo(
     () =>
       buildReport({
@@ -84,9 +104,11 @@ export default function DiagnosticsPanel({
         client: clientInfo(appVersion),
         server,
         sessionId: getSessionId(),
-        entries
+        userCode,
+        filter,
+        entries: shown
       }),
-    [appVersion, server, entries]
+    [appVersion, server, userCode, filter, shown]
   );
 
   const filename = reportFilename(report, format);
@@ -113,7 +135,7 @@ export default function DiagnosticsPanel({
         platform: "web",
         appVersion,
         format,
-        entries,
+        entries: shown,
         client: clientInfo(appVersion)
       })
     });
@@ -152,7 +174,7 @@ export default function DiagnosticsPanel({
           appVersion,
           format,
           sessionId: getSessionId(),
-          entries,
+          entries: shown,
           client: clientInfo(appVersion)
         })
       });
@@ -279,7 +301,46 @@ export default function DiagnosticsPanel({
               value={report.server.checks.map((c) => `${c.name}: ${c.ok ? "ok" : "failed"}`).join(", ")}
             />
           )}
+          <Row label="Your code" value={userCode} />
+          <Row
+            label="Goes to"
+            value={[
+              notionReady ? "Notion" : null,
+              supportEmail && emailReady ? "support inbox" : null,
+              "this device (until you send)"
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          />
         </dl>
+      </section>
+
+      {/* ---- the account code ---- */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="mb-1 text-sm font-semibold text-ink-900">Your code</h2>
+        <p className="mb-3 text-xs text-ink-500">
+          A short label for your account. Support sees this instead of your name or email address, so
+          you can quote it without giving anything away.
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-sm tracking-wider text-ink-900">
+            {userCode}
+          </code>
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(userCode);
+                setCodeCopied(true);
+                setTimeout(() => setCodeCopied(false), 2000);
+              } catch {
+                setStatus("Could not copy. Select the code and copy it by hand.");
+              }
+            }}
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-slate-200"
+          >
+            {codeCopied ? "Copied" : "Copy"}
+          </button>
+        </div>
       </section>
 
       {/* ---- what is in it, and what is not ---- */}
@@ -447,19 +508,99 @@ export default function DiagnosticsPanel({
         </p>
       )}
 
+      {/* ---- the filter ---- */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-semibold text-ink-900">Filter</h2>
+          {filtering && (
+            <>
+              <span className="text-xs text-ink-500">
+                {shown.length} of {entries.length} · {describeFilter(filter)}
+              </span>
+              <button
+                onClick={() => setFilter(EMPTY_FILTER)}
+                className="ml-auto rounded-lg bg-slate-100 px-2 py-1 text-xs text-ink-700 hover:bg-slate-200"
+              >
+                Clear filter
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <Facet
+            label="Severity"
+            options={facets.severities}
+            selected={filter.severities ?? []}
+            onToggle={(v) => setFilter((f) => ({ ...f, severities: toggle(f.severities, v as DiagSeverity) }))}
+          />
+          <Facet
+            label="Kind"
+            options={facets.kinds}
+            selected={filter.kinds ?? []}
+            onToggle={(v) => setFilter((f) => ({ ...f, kinds: toggle(f.kinds, v) }))}
+          />
+          {facets.outcomes.length > 0 && (
+            <Facet
+              label="Outcome"
+              options={facets.outcomes}
+              selected={filter.outcomes ?? []}
+              onToggle={(v) => setFilter((f) => ({ ...f, outcomes: toggle(f.outcomes, v as DiagOutcome) }))}
+            />
+          )}
+          {facets.sessions.length > 1 && (
+            <div>
+              <span className="mb-1 block text-xs text-ink-500">Session</span>
+              <select
+                value={filter.sessionId ?? ""}
+                onChange={(e) => setFilter((f) => ({ ...f, sessionId: e.target.value || undefined }))}
+                className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+              >
+                <option value="">Any session</option>
+                {facets.sessions.map((sess) => (
+                  <option key={sess} value={sess}>
+                    {sess}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label htmlFor="diag-filter-text" className="mb-1 block text-xs text-ink-500">
+              Search the messages
+            </label>
+            <input
+              id="diag-filter-text"
+              type="text"
+              value={filter.text ?? ""}
+              onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value || undefined }))}
+              placeholder="e.g. 500, timeout, /api/posts"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-ink-500">
+          The export and the email use this filter too, so what you send is what you see.
+        </p>
+      </section>
+
       {/* ---- the raw log ---- */}
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-ink-900">
-          Recorded events <span className="font-normal text-ink-500">({entries.length})</span>
+          Recorded events{" "}
+          <span className="font-normal text-ink-500">
+            {filtering ? `${shown.length} of ${entries.length}` : `(${entries.length})`}
+          </span>
         </h2>
-        {entries.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="text-xs text-ink-500">
-            Nothing recorded yet. That is normal if nothing has gone wrong - and it is itself useful
-            to send.
+            {filtering
+              ? "No events match this filter."
+              : "Nothing recorded yet. That is normal if nothing has gone wrong - and it is itself useful to send."}
           </p>
         ) : (
           <ul className="max-h-80 space-y-1 overflow-y-auto">
-            {entries
+            {shown
               .slice()
               .reverse()
               .map((e, i) => (
@@ -472,6 +613,7 @@ export default function DiagnosticsPanel({
                     {e.severity}
                   </span>
                   <span className="mr-2 text-ink-500">{e.kind}</span>
+                  {e.outcome && <span className="mr-2 text-ink-500">{e.outcome}</span>}
                   <span className="text-ink-900">{e.message}</span>
                 </li>
               ))}
@@ -495,6 +637,49 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex gap-2">
       <dt className="w-32 shrink-0 text-ink-500">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-ink-900">{value}</dd>
+    </div>
+  );
+}
+
+/** Add or remove one value from a list, keeping it undefined when empty. */
+function toggle<T>(list: T[] | undefined, value: T): T[] | undefined {
+  const current = list ?? [];
+  const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+  return next.length ? next : undefined;
+}
+
+/** A row of chips for one filter dimension, built from what is actually present. */
+function Facet({
+  label,
+  options,
+  selected,
+  onToggle
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <span className="mb-1 block text-xs text-ink-500">{label}</span>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => {
+          const on = selected.includes(o);
+          return (
+            <button
+              key={o}
+              onClick={() => onToggle(o)}
+              className={`rounded-lg border px-2 py-1 text-xs ${
+                on ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 text-ink-700 hover:bg-slate-50"
+              }`}
+            >
+              {o}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

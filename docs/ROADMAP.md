@@ -395,3 +395,39 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] SMTP as a provider, for a Gmail app password or an internal relay. Needs a
       mail library, so it is deliberately not here yet.
 - [ ] Attach a screenshot with the report.
+
+## Phase 24 - Notion, user codes, and a log filter
+- [x] Every submitted report also becomes a row in a Notion database, so support
+      sees it where they already look. The fields are database properties they
+      can filter and sort on, not a wall of text: platform, app version, route,
+      session, schema, event and error counts, status, and the user code.
+- [x] The page body is structured too - a one-line read of the situation, then
+      where it happened, the server state at the time, the errors, and the whole
+      report as a JSON code block. Chunked to stay inside Notion's 100-block and
+      2000-character limits, so a large report is trimmed rather than rejected.
+- [x] Written with plain `fetch` against the Notion REST API, so there is no
+      SDK to install and the page body can be built by a pure function and
+      tested without a network. Best effort: the report is already in our own
+      database, so a Notion outage never loses it or fails the request.
+- [x] Every account gets a **user code** (`SG-7K2M4P`), generated once and
+      stored. It is what every view sees instead of an id, a name or an email -
+      the logging standard this project follows asks for a pseudonymous
+      identifier and nothing else.
+- [x] The alphabet follows Crockford Base32, so a code survives being read off
+      a screen and typed back: `I` and `L` read as `1`, `O` reads as `0`. An
+      explicit `SG-` separator is treated as intent, so `SG-7K2M` is rejected as
+      too short rather than re-read as the body `SG7K2M`.
+- [x] Creating a code is safe under concurrency: the unique index arbitrates,
+      and the loser of a race re-reads and takes the winner's code instead of
+      generating another. An existing code is never changed.
+- [x] A **log filter** over the recorded events: severity, kind, outcome,
+      session, a text search, and a time range. Pure, so the screen, the export,
+      the email and the internal endpoint all agree on what a filter means.
+- [x] The export and the email use the filter, so what is sent is what is seen,
+      and a filtered report says so in its own header.
+- [x] The internal endpoint filters at two levels: the list on the stored
+      columns, and one report's entries in memory, so "only the errors in this
+      report" costs one query rather than a scan.
+- [ ] A support view over submitted reports in the UI. Today they are read
+      through the guarded internal endpoint, and mirrored into Notion.
+- [ ] Attach a screenshot with the report.

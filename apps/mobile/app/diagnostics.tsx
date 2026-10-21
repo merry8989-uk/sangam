@@ -17,6 +17,12 @@ import {
   mimeType,
   reportFilename,
   makeSessionId,
+  EMPTY_FILTER,
+  filterEntries,
+  filterFacets,
+  filterIsActive,
+  describeFilter,
+  type DiagFilter,
   type DiagFormat,
   type DiagServerInfo
 } from "../src/diagnostics";
@@ -37,6 +43,8 @@ export default function Diagnostics() {
   const [enabled, setEnabled] = useState(true);
   const [emailReady, setEmailReady] = useState(false);
   const [sessionId] = useState(() => makeSessionId());
+  const [userCode, setUserCode] = useState("SG-ANON");
+  const [filter, setFilter] = useState<DiagFilter>(EMPTY_FILTER);
   const [format, setFormat] = useState<DiagFormat>("md");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -50,10 +58,12 @@ export default function Diagnostics() {
         server: DiagServerInfo | null;
         supportEmail: string;
         emailReady: boolean;
+        userCode: string;
       }>("/api/diagnostics");
       setServer(d.server ?? null);
       setSupportEmail(d.supportEmail ?? "");
       setEmailReady(Boolean(d.emailReady));
+      if (d.userCode) setUserCode(d.userCode);
       setEnabled(d.enabled !== false);
     } catch {
       setServer(null);
@@ -65,6 +75,11 @@ export default function Diagnostics() {
     void refresh();
   }, [refresh]);
 
+  // Everything downstream uses the filtered list, so what is sent is what is seen.
+  const shown = useMemo(() => filterEntries(entries, filter), [entries, filter]);
+  const facets = useMemo(() => filterFacets(entries), [entries]);
+  const filtering = filterIsActive(filter);
+
   const report = useMemo(
     () =>
       buildReport({
@@ -73,9 +88,11 @@ export default function Diagnostics() {
         device: deviceInfo(APP_VERSION, "app/diagnostics"),
         server,
         sessionId,
-        entries
+        userCode,
+        filter,
+        entries: shown
       }),
-    [server, entries, sessionId]
+    [server, entries, sessionId, userCode, filter, shown]
   );
 
   const filename = reportFilename(report, format);
@@ -116,7 +133,7 @@ export default function Diagnostics() {
           platform: "android",
           appVersion: APP_VERSION,
           format,
-          entries,
+          entries: shown,
           client: deviceInfo(APP_VERSION, "app/diagnostics")
         })
       });
@@ -142,7 +159,7 @@ export default function Diagnostics() {
           appVersion: APP_VERSION,
           format,
           sessionId,
-          entries,
+          entries: shown,
           client: deviceInfo(APP_VERSION, "app/diagnostics")
         })
       });
@@ -230,6 +247,7 @@ export default function Diagnostics() {
           <Line c={c} k="Report id" v={report.id} />
           <Line c={c} k="App" v={`${APP_VERSION} (android)`} />
           <Line c={c} k="Events" v={`${entries.length} (${errors} errors)`} />
+          <Line c={c} k="Your code" v={userCode} />
           {report.device && <Line c={c} k="Device" v={`${report.device.deviceName} | ${report.device.osName} ${report.device.osVersion}`} />}
           {report.server && (
             <Line c={c} k="Server" v={report.server.checks.map((k) => `${k.name}: ${k.ok ? "ok" : "failed"}`).join(", ")} />
@@ -342,13 +360,98 @@ export default function Diagnostics() {
         </Card>
 
         <Card>
-          <Heading>Recorded events ({entries.length})</Heading>
-          {entries.length === 0 ? (
+          <Heading>Your code</Heading>
+          <Text style={{ color: c.ink500, fontSize: 11, marginTop: 6 }}>
+            A short label for your account. Support sees this instead of your name or email address.
+          </Text>
+          <Text style={{ color: c.ink900, fontSize: 18, fontFamily: "monospace", marginTop: 8, letterSpacing: 1 }}>
+            {userCode}
+          </Text>
+        </Card>
+
+        <Card>
+          <Heading>Filter</Heading>
+          {filtering && (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
+              <Text style={{ color: c.ink500, fontSize: 11, flex: 1 }}>
+                {shown.length} of {entries.length} · {describeFilter(filter)}
+              </Text>
+              <Pressable onPress={() => setFilter(EMPTY_FILTER)}>
+                <Text style={{ color: c.brand700, fontSize: 11 }}>Clear</Text>
+              </Pressable>
+            </View>
+          )}
+          {([
+            ["Severity", "severities", facets.severities],
+            ["Kind", "kinds", facets.kinds],
+            ["Outcome", "outcomes", facets.outcomes]
+          ] as const).map(([label, key, options]) =>
+            options.length === 0 ? null : (
+              <View key={label} style={{ marginTop: 10 }}>
+                <Text style={{ color: c.ink500, fontSize: 11, marginBottom: 4 }}>{label}</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                  {options.map((o: string) => {
+                    const on = (filter[key] ?? []).includes(o as never);
+                    return (
+                      <Pressable
+                        key={o}
+                        onPress={() =>
+                          setFilter((f) => {
+                            const cur = (f[key] ?? []) as string[];
+                            const next = cur.includes(o) ? cur.filter((v) => v !== o) : [...cur, o];
+                            return { ...f, [key]: next.length ? next : undefined } as DiagFilter;
+                          })
+                        }
+                      >
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: on ? c.brand600 : c.line,
+                            backgroundColor: on ? c.brand50 : c.surface,
+                            borderRadius: 8,
+                            paddingVertical: 4,
+                            paddingHorizontal: 8
+                          }}
+                        >
+                          <Text style={{ color: on ? c.brand700 : c.ink700, fontSize: 11 }}>{o}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )
+          )}
+          <TextInput
+            value={filter.text ?? ""}
+            onChangeText={(v) => setFilter((f) => ({ ...f, text: v || undefined }))}
+            placeholder="Search the messages"
+            style={{
+              borderWidth: 1,
+              borderColor: c.line,
+              borderRadius: 8,
+              padding: 8,
+              marginTop: 10,
+              color: c.ink900
+            }}
+          />
+          <Text style={{ color: c.ink500, fontSize: 11, marginTop: 6 }}>
+            The export and the email use this filter too.
+          </Text>
+        </Card>
+
+        <Card>
+          <Heading>
+            Recorded events {filtering ? `${shown.length} of ${entries.length}` : `(${entries.length})`}
+          </Heading>
+          {shown.length === 0 ? (
             <Text style={{ color: c.ink500, fontSize: 12, marginTop: 6 }}>
-              Nothing recorded yet. That is normal if nothing has gone wrong.
+              {filtering
+                ? "No events match this filter."
+                : "Nothing recorded yet. That is normal if nothing has gone wrong."}
             </Text>
           ) : (
-            entries
+            shown
               .slice()
               .reverse()
               .slice(0, 50)

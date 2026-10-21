@@ -16,6 +16,10 @@ model User {
   phone         String?   @unique
   username      String    @unique
   displayName   String
+  // A short, stable, pseudonymous code. Shown to the user so they can quote it,
+  // and used in every diagnostics report instead of an id, a name or an email.
+  // Generated on first need, never reused, and never derived from the identity.
+  code          String?   @unique
   passwordHash  String?
   bio           String?
   avatarUrl     String?
@@ -491,6 +495,9 @@ model PostStat {
 model DiagnosticReport {
   id         String   @id @default(cuid())
   userId     String?
+  // The pseudonymous account code, copied in so a report is self-contained and
+  // still readable if the account is later deleted.
+  userCode   String   @default("")
   // What the user typed in, if anything. The report itself is in `body`.
   note       String   @default("")
   // Which app the report came from: web | android
@@ -507,6 +514,7 @@ model DiagnosticReport {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([userCode])
 }
 
 model Alert {

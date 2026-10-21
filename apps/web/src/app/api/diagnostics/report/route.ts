@@ -5,6 +5,8 @@ import { getViewerId } from "@/lib/viewer";
 import { getSettingsOptional } from "@/lib/settings";
 import { APP_VERSION } from "@/lib/appInfo";
 import { buildReport, redactValue, isDiagFormat } from "@/lib/diagnostics";
+import { ensureUserCode } from "@/lib/userCodeServer";
+import { createNotionPage, notionConfigured } from "@/lib/notion";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +63,14 @@ export async function POST(req: Request) {
   });
 
   const format = isDiagFormat(data.format) ? data.format : "json";
+  // The pseudonymous code, created on first use. This is what every downstream
+  // view sees instead of an id, a name or an email.
+  const userCode = userId ? await ensureUserCode(userId) : null;
 
   const saved = await prisma.diagnosticReport.create({
     data: {
       userId: userId ?? null,
+      userCode: userCode ?? "",
       note: data.note ?? "",
       platform: report.platform,
       appVersion: report.appVersion,
@@ -80,6 +86,18 @@ export async function POST(req: Request) {
     },
     select: { id: true }
   });
+
+  // A row in Notion, so support sees it where they already look. Best effort:
+  // the report is already stored, so a Notion outage must not fail the request.
+  let notion = { ok: false, url: undefined as string | undefined };
+  if (notionConfigured()) {
+    const r = await createNotionPage(report, {
+      code: userCode,
+      note: data.note ?? "",
+      deliveredBy: "app"
+    });
+    notion = { ok: r.ok, url: r.url };
+  }
 
   // Optional delivery, if the deployment set one up. Best effort: a failure to
   // forward must not lose the report, which is already stored.
@@ -98,5 +116,12 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, id: saved.id, reportId: report.id, forwarded });
+  return NextResponse.json({
+    ok: true,
+    id: saved.id,
+    reportId: report.id,
+    userCode: userCode ?? "SG-ANON",
+    notion: notion.url ?? null,
+    forwarded
+  });
 }

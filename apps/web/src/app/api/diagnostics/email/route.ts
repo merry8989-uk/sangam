@@ -7,6 +7,8 @@ import { getSettingsOptional } from "@/lib/settings";
 import { APP_VERSION } from "@/lib/appInfo";
 import { buildReport, formatReport, reportFilename, mimeType, isDiagFormat } from "@/lib/diagnostics";
 import { mailerConfigured, sendMail, toBase64 } from "@/lib/mailer";
+import { ensureUserCode } from "@/lib/userCodeServer";
+import { createNotionPage, notionConfigured } from "@/lib/notion";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +105,7 @@ export async function POST(req: Request) {
   });
 
   const format = isDiagFormat(data.format) ? data.format : "md";
+  const userCode = userId ? await ensureUserCode(userId) : null;
   const filename = reportFilename(report, format);
   const bodyText = formatReport(report, format);
 
@@ -110,6 +113,7 @@ export async function POST(req: Request) {
   const saved = await prisma.diagnosticReport.create({
     data: {
       userId: userId ?? null,
+      userCode: userCode ?? "",
       note: data.note ?? "",
       platform: report.platform,
       appVersion: report.appVersion,
@@ -127,12 +131,20 @@ export async function POST(req: Request) {
     select: { id: true }
   });
 
+  // A row in Notion as well, so the report is in both places support looks.
+  let notionUrl: string | null = null;
+  if (notionConfigured()) {
+    const n = await createNotionPage(report, { code: userCode, note: data.note ?? "", deliveredBy: "email" });
+    notionUrl = n.url ?? null;
+  }
+
   const intro: string[] = [];
   intro.push("A diagnostics report was sent from the Sangam app.");
   intro.push("");
   intro.push("What the user said (may be empty):");
   intro.push(`  ${(data.note ?? "").trim() || "(nothing)"}`);
   intro.push("");
+  intro.push(`User code : ${userCode ?? "SG-ANON"}`);
   intro.push(`Report id : ${report.id}`);
   intro.push(`Schema    : ${report.schemaVersion}`);
   intro.push(`Session   : ${report.sessionId}`);
@@ -155,7 +167,15 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(
-    { ok: result.ok, storedId: saved.id, reportId: report.id, provider: result.provider, detail: result.detail },
+    {
+      ok: result.ok,
+      storedId: saved.id,
+      reportId: report.id,
+      userCode: userCode ?? "SG-ANON",
+      notion: notionUrl,
+      provider: result.provider,
+      detail: result.detail
+    },
     { status: result.ok ? 200 : 502 }
   );
 }
