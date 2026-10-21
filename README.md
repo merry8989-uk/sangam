@@ -127,6 +127,19 @@ Notes:
 - To use the durable media queue and the GPU/ML inference worker, see
   [docs/JOBS.md](docs/JOBS.md) and set `MEDIA_QUEUE_ENABLED=true`.
 
+Diagnostics: a user can send you the technical detail instead of describing it.
+
+- `/diagnostics` collects app version, device, route, recorded errors and server
+  health checks, writes it as Markdown, JSON, text or CSV, and opens the user's
+  mail client with the subject and body already written.
+- It is recorded on the device only. Nothing is uploaded until the user presses
+  Send. Passwords, tokens and post or message content are stripped before a
+  report is built, and stripped again on the server.
+- On by default, and switchable off in Settings.
+- Set `DIAGNOSTICS_SUPPORT_EMAIL` to the address reports should go to. It is an
+  environment value rather than a constant, so your address is not published
+  with the source.
+
 Check the whole database schema without Docker:
 
 ```bash

@@ -121,6 +121,7 @@ const Body = z.object({
   compactFeed: z.boolean().optional(),
   focusMode: z.boolean().optional(),
 
+  diagnosticsEnabled: z.boolean().optional(),
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });

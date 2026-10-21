@@ -8,6 +8,7 @@ import { pickTheme } from "@/lib/themes";
 import Nav from "@/components/Nav";
 import AiBar from "@/components/AiBar";
 import ThemeProvider from "@/components/ThemeProvider";
+import DiagnosticsCapture from "@/components/DiagnosticsCapture";
 
 export const metadata: Metadata = {
   title: "Sangam",
@@ -39,6 +40,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en-IN" data-sangam-theme={theme.id} data-mode={theme.mode}>
       <body className="min-h-screen">
         <ThemeProvider vars={theme.vars} mode={theme.mode} id={theme.id} />
+        {/* Records errors locally so a report has something in it. Does nothing
+            when the user has turned diagnostics off. */}
+        <DiagnosticsCapture enabled={settings?.diagnosticsEnabled !== false} />
         <Nav />
         <div className="flex">
           <div className="min-w-0 flex-1">{children}</div>

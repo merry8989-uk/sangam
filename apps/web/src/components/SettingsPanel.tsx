@@ -17,6 +17,7 @@ type S = {
   whoCanComment: string; whoCanShare: string; whoCanReshare: string;
   profileVisible: boolean; whoCanViewPosts: string;
   autoSaveDrafts: boolean;
+  diagnosticsEnabled: boolean;
   hideSensitive: boolean; blockedWords: string[];
   callRingtone: string; callVibrate: boolean; whoCanCallMe: string; callAutoAnswer: boolean;
   dndEnabled: boolean; dndFrom: string; dndTo: string;
@@ -224,6 +225,25 @@ export default function SettingsPanel({
           <select className={SEL} value={s.whoCanViewPosts} onChange={(e) => set("whoCanViewPosts", e.target.value)}>{opts(["PUBLIC", "FOLLOWERS", "PRIVATE"])}</select>
         </Row>
         <Toggle label="Show my profile" hint="Off = your profile is not visible to others." value={s.profileVisible} onChange={(v) => set("profileVisible", v)} />
+      </Section>
+
+      <Section
+        title="Diagnostics"
+        hint="Lets you send technical detail to support when something breaks. It is recorded on your device and sent only when you press Send."
+      >
+        <Toggle
+          label="Record diagnostics"
+          hint="Errors and failed requests are kept on this device so a report has something in it. Off means nothing is recorded and anything already held is cleared."
+          value={s.diagnosticsEnabled}
+          onChange={(v) => set("diagnosticsEnabled", v)}
+        />
+        <p className="mt-3 text-xs text-ink-500">
+          See what is collected, and send a report, on the{" "}
+          <a href="/diagnostics" className="underline">
+            Diagnostics page
+          </a>
+          . Passwords, tokens and the content of your posts and messages are never included.
+        </p>
       </Section>
 
       <Section title="Bookmarks &amp; saving">

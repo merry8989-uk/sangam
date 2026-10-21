@@ -242,6 +242,21 @@ export default function Settings() {
         </Card>
 
         <Card>
+          <Heading>Diagnostics</Heading>
+          <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
+            Records errors and failed requests on this device so a report has something in it. It is
+            only ever sent when you press Send.
+          </Text>
+          <Toggle
+            label="Record diagnostics"
+            field="diagnosticsEnabled"
+          />
+          <View style={{ marginTop: 10 }}>
+            <Button label="Open diagnostics" variant="ghost" onPress={() => router.push("/diagnostics")} />
+          </View>
+        </Card>
+
+        <Card>
           <Heading>Quality</Heading>
           <Text style={{ color: c.ink500, marginTop: 4, fontSize: 12 }}>
             A lower setting caps the rendition the player loads, so it uses less data.

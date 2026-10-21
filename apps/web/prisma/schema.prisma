@@ -49,6 +49,7 @@ model User {
   groupMembers  GroupMember[]
   settings      UserSettings?
   viewHistory   ViewHistory[]
+  diagnosticReports DiagnosticReport[]
 
   skipSegments  SkipSegment[]
   skipVotes     SkipVote[]
@@ -485,6 +486,29 @@ model PostStat {
 }
 
 // ---------- Alerting ----------
+// A diagnostics report a user chose to send to support. Only created when the
+// user presses Send - nothing is uploaded in the background.
+model DiagnosticReport {
+  id         String   @id @default(cuid())
+  userId     String?
+  // What the user typed in, if anything. The report itself is in `body`.
+  note       String   @default("")
+  // Which app the report came from: web | android
+  platform   String   @default("web")
+  appVersion String   @default("")
+  route      String   @default("")
+  // The report, in the format it was exported as.
+  format     String   @default("md")     // md | json | txt | csv
+  body       String
+  // Small structured copy, so the list view does not have to parse `body`.
+  summary    Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
 model Alert {
   id           String   @id @default(cuid())
   slo          String
@@ -642,6 +666,10 @@ model UserSettings {
 
   // One switch that hides every count at once.
   focusMode           Boolean @default(false)
+
+  // Diagnostics. On by default so a bug report can actually be acted on; the
+  // user can switch it off and nothing is collected or kept.
+  diagnosticsEnabled Boolean @default(true)
 
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")

@@ -21,6 +21,7 @@ const more = [
   { href: "/studio", label: "Studio" },
   { href: "/groups", label: "Groups" },
   { href: "/saved", label: "Saved" },
+  { href: "/diagnostics", label: "Diagnostics" },
   { href: "/history", label: "History" },
   { href: "/moderation", label: "Moderation" },
   { href: "/ops", label: "Ops" }

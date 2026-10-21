@@ -338,3 +338,31 @@ Narrow, sequential phases. Each phase ships something usable.
       plainly active again.
 - [ ] Let the user search their own history.
 - [ ] Per-item retention, so one entry can be kept while the rest expire.
+
+## Phase 22 - Diagnostics a user can actually send
+- [x] `/diagnostics` assembles a technical report: app version, platform, route,
+      device and screen, recorded errors and failed requests, and the server's
+      own health checks.
+- [x] Four export formats, chosen by the user: Markdown, JSON, plain text and
+      CSV. CSV is one consistent table so Excel and Sheets open it without
+      anything to fix - the environment details are simply rows too.
+- [x] "Send to support" does three things at once so the user types nothing:
+      saves the file, submits a copy, and opens their mail client with the
+      subject and body already written and the filename named in the body.
+- [x] Also: send without email, download, copy as Markdown, refresh, and clear.
+- [x] Errors and failed requests are recorded by themselves, with no user
+      action, and mirrored into storage so a reload does not lose them - the
+      moment you most need the log is the moment after the page broke.
+- [x] Recording is on by default and switchable off. Off clears what was held.
+- [x] Redaction runs twice: once in the browser before the report is built, and
+      again on the server, because anything a browser sends can be edited on the
+      way. Passwords, tokens, connection strings, other people's addresses and
+      phone numbers never reach the report.
+- [x] The support address comes from `DIAGNOSTICS_SUPPORT_EMAIL`, not from the
+      code, so a personal address is never published with the source.
+- [x] The same screen on Android, sharing through the system share sheet.
+- [ ] Attach the report to the email automatically. A mailto link cannot carry
+      an attachment, so today the body asks the user to attach the saved file.
+      Doing it properly needs a server-side mail provider.
+- [ ] A support view over submitted reports in the UI. Today they are read
+      through the guarded internal endpoint.
