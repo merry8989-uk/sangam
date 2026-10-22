@@ -40,6 +40,7 @@ model User {
   followers     Follow[]  @relation("followee")
   notifications Notification[] @relation("recipient")
   agent         Agent?
+  logs          LogEntry[]
   chatSessions  ChatSession[]
   conversations ConversationParticipant[]
   directMessages DirectMessage[]
@@ -492,6 +493,43 @@ model PostStat {
 // ---------- Alerting ----------
 // A diagnostics report a user chose to send to support. Only created when the
 // user presses Send - nothing is uploaded in the background.
+// ---------- Observability ----------
+// One structured log record. See apps/web/src/lib/logger.ts for the envelope and
+// the rules about what may be written into one.
+//
+// The indexes follow the questions the log screen asks: "what happened
+// recently", "what went wrong", "what did this request do", "what did this
+// person do", and "what happened in this category".
+model LogEntry {
+  id         String   @id @default(cuid())
+  // ISO 8601 UTC. Stored as a date so retention can delete by range.
+  ts         DateTime @default(now())
+  severity   String   // TRACE | DEBUG | INFO | WARN | ERROR | FATAL
+  category   String   // one of the twelve in lib/logger.ts
+  message    String
+  appId      String   @default("web")
+  environment String  @default("development")
+  // Ties the records of one request together, across services.
+  requestId  String?
+  // The pseudonymous user code, never a raw id or an email.
+  actorCode  String?
+  source     String?
+  metadata   Json     @default("{}")
+
+  // The user this was about, when there is one. Set null on delete so the log
+  // survives the account - an audit trail that vanishes with the account it
+  // describes is not an audit trail.
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ts])
+  @@index([severity, ts])
+  @@index([category, ts])
+  @@index([requestId])
+  @@index([actorCode, ts])
+  @@index([source, ts])
+}
+
 model DiagnosticReport {
   id         String   @id @default(cuid())
   userId     String?

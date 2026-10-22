@@ -39,3 +39,23 @@ other.
 
 The job is idempotent: it only archives rows whose `archivedAt` is still null,
 so running it twice does not reset an archive date or move the same row again.
+
+## Log retention
+
+`POST /api/internal/prune-logs` (header `x-internal-secret`) applies the log
+retention policy. Run it daily.
+
+Each category is kept for its own period - an audit trail for a year, trace
+lines for three days - because they are not equally valuable and not equally
+large. The periods are the defaults in `apps/web/src/lib/logger.ts`, overridable
+with `LOG_RETENTION_JSON`:
+
+```
+0 4 * * * curl -fsS -X POST -H "x-internal-secret: $INTERNAL_SECRET" \
+  http://web:3000/api/internal/prune-logs
+
+LOG_RETENTION_JSON={"ERROR":180,"AUDIT":730}
+```
+
+A category set to `0` is kept forever and skipped. `GET` on the same path
+returns the policy without deleting anything.

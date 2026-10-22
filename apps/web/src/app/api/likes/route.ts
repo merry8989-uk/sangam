@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({ postId: z.string().min(1) });
 
 // Toggle a like for the current user and return the authoritative state.
-export async function POST(req: Request) {
+export const POST = withLogging("likes:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -40,4 +41,4 @@ export async function POST(req: Request) {
 
   const post = await prisma.post.findUnique({ where: { id: postId }, select: { likeCount: true } });
   return NextResponse.json({ liked, likeCount: post?.likeCount ?? 0 });
-}
+});

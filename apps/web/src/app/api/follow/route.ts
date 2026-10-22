@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 import { isBlockedEitherWay } from "@/lib/filters";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * The primary interaction between two people.
@@ -31,7 +32,7 @@ const Body = z.object({
   ])
 });
 
-export async function POST(req: Request) {
+export const POST = withLogging("follow:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -142,9 +143,9 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function GET(req: Request) {
+export const GET = withLogging("follow:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -163,4 +164,4 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json({ outgoing, incoming });
-}
+});

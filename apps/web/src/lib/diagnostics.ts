@@ -170,6 +170,20 @@ const PHONE = /(?:\+91[\s-]?)?\b[6-9]\d{9}\b/g;
 
 export const REDACTED = "[redacted]";
 
+/**
+ * Is this property name one whose value must never be written down?
+ *
+ * Exported so every sink can apply the same rule. The logger originally checked
+ * only the values, so `{ password: "hunter2" }` went through untouched - the
+ * value did not look like a secret, and nobody asked about the key.
+ *
+ * The pattern deliberately carries no `g` flag: with one, `test()` is stateful
+ * and alternates between true and false across calls.
+ */
+export function isSecretKey(key: string): boolean {
+  return SECRET_KEY.test(String(key ?? ""));
+}
+
 /** Mask an address but keep enough to recognise it: a***@example.com */
 function maskEmail(local: string, domain: string): string {
   const head = local.slice(0, 1) || "?";

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { indexUsers } from "@/lib/search";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   email: z.string().email(),
@@ -11,7 +12,7 @@ const Body = z.object({
   password: z.string().min(8).max(128)
 });
 
-export async function POST(req: Request) {
+export const POST = withLogging("auth:register", async (req: Request) => {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -40,4 +41,4 @@ export async function POST(req: Request) {
   });
   await indexUsers([{ id: user.id, username: user.username, displayName }]);
   return NextResponse.json(user, { status: 201 });
-}
+});

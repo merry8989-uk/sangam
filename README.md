@@ -158,6 +158,26 @@ Diagnostics: a user can send you the technical detail instead of describing it.
   kind, outcome, session, and a text search. The export and the email use the
   same filter, so what you send is what you see.
 
+Logging: twelve categories, six severities, one envelope.
+
+- Every record carries `ts`, `severity`, `category`, `message`, `appId`,
+  `environment` and `requestId`, with redacted metadata on top.
+- `withLogging(name, handler)` wraps a route and emits an API line per request,
+  a SECURITY line on 401 and 403, a PERFORMANCE line when it was slow, and an
+  ERROR line when it threw. It also puts a request id on the response, so a user
+  can quote one number and every line from that request can be found - across
+  the web tier, the AI service and the worker.
+- Errors and above are never sampled. High-volume ordinary categories are, so a
+  busy day does not bury the failures.
+- Redaction runs on the way in, on both the message and the metadata **keys**.
+  A log line is copied into a backup, an export and a support ticket.
+- `/logs` reads them back with search, filters, a live tail and CSV, text or
+  JSON export. Operators only - the guard is in the page and in the API.
+- Retention is per category: an audit trail for a year, trace lines for three
+  days. `POST /api/internal/prune-logs` applies it.
+- `LOG_LEVEL`, `APP_ID`, `APP_ENV`, `LOG_SYNC` and `LOG_RETENTION_JSON` are in
+  `.env.example`.
+
 Check the whole database schema without Docker:
 
 ```bash

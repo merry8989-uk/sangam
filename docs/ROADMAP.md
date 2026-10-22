@@ -507,3 +507,35 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] A support view over submitted reports in the UI.
 - [ ] The remaining audit items: an unauthenticated media redirect, and the
       `MEDIA_QUEUE_ENABLED` in-process fallback.
+
+## Phase 27 - A real logging platform
+- [x] Built to the logging standard: twelve categories, six severities, and one
+      envelope every record carries - `ts`, `severity`, `category`, `message`,
+      `appId`, `environment`, `requestId` - with sanitised metadata on top.
+- [x] `lib/logger.ts` holds the taxonomy and the rules; `lib/loggerServer.ts` is
+      the sink. Records are batched, the level gate is applied in the sink, and
+      logging can never break the thing it is logging - every path is wrapped.
+- [x] `withLogging(name, handler)` wraps a route handler and emits an API line
+      per request, a SECURITY line on 401 and 403, a PERFORMANCE line when slow,
+      and an ERROR line when it threw. It returns a request id on the response,
+      so one number finds every line from one request across services.
+      Applied to sign-in, register, upload, posts, comments, follow, likes,
+      bookmarks, settings, messages and rooms.
+- [x] The sign-in route had **no rate limiting at all**. Ten attempts per
+      quarter hour, per address and account, so guessing is a losing game - and
+      the counter is on the pair, so one attacker cannot lock out an account by
+      trying from elsewhere. Every failure is a SECURITY record.
+- [x] The response is the same for "no such account" and "wrong password", so
+      the endpoint cannot be used to enumerate addresses. The log is not: an
+      operator needs to tell those apart, and a log is not public.
+- [x] `/logs` reads them back with search, filters, a live tail, and CSV, text
+      or JSON export that uses the same filter as the screen. Operators only.
+- [x] There was no operator check anywhere: the ops page was described as
+      admin-only in a comment and nothing enforced it. `lib/admin.ts` adds one,
+      and a refused attempt to read the logs is itself logged.
+- [x] Retention per category, applied by `POST /api/internal/prune-logs`:
+      an audit trail for a year, trace lines for three days.
+- [ ] Instrument the remaining routes. Ten are wrapped; the rest can adopt
+      `withLogging` as they are touched, rather than in one unreviewable sweep.
+- [ ] Ship records to an external collector. The sink writes to Postgres; a
+      production deployment would usually also want a stream to a log service.

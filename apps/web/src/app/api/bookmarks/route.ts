@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { POST_INCLUDE_PUBLIC } from "@/lib/select";
+import { withLogging } from "@/lib/withLogging";
 
 // GET /api/bookmarks?postId=X - is this post saved by me?
 // GET /api/bookmarks             - my saved posts, newest first.
-export async function GET(req: Request) {
+export const GET = withLogging("bookmarks:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ saved: false, items: [] });
 
@@ -26,12 +27,12 @@ export async function GET(req: Request) {
     include: { post: { include: POST_INCLUDE_PUBLIC } }
   });
   return NextResponse.json({ items: items.map((b) => b.post) });
-}
+});
 
 const Body = z.object({ postId: z.string().min(1) });
 
 // POST /api/bookmarks - toggle a save.
-export async function POST(req: Request) {
+export const POST = withLogging("bookmarks:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -46,4 +47,4 @@ export async function POST(req: Request) {
   }
   await prisma.bookmark.create({ data: { userId, postId } });
   return NextResponse.json({ saved: true });
-}
+});

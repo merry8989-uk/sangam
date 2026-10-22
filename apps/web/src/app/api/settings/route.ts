@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { sealPassphrase } from "@/lib/backupCrypto";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   theme: z.enum(["system", "light", "dark"]).optional(),
@@ -126,7 +127,7 @@ const Body = z.object({
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });
 
-export async function GET(req: Request) {
+export const GET = withLogging("settings:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const settings = await getSettings(userId);
@@ -135,9 +136,9 @@ export async function GET(req: Request) {
   const { backupPassphraseCipher: _omit, ...safe } = settings;
   void _omit;
   return NextResponse.json({ settings: safe });
-}
+});
 
-export async function PUT(req: Request) {
+export const PUT = withLogging("settings:put", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -157,4 +158,4 @@ export async function PUT(req: Request) {
   const settings = await prisma.userSettings.update({ where: { userId }, data });
   const { backupPassphraseCipher: _omit, ...safe } = settings;
   return NextResponse.json({ settings: safe });
-}
+});

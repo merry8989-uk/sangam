@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { presignUpload } from "@/lib/s3";
+import { withLogging } from "@/lib/withLogging";
 
 // Any file type is allowed; the kind is only a hint for the caller.
 const Body = z.object({
@@ -13,7 +14,7 @@ const Body = z.object({
 
 // Returns a pre-signed PUT URL so the browser uploads bytes directly to
 // India-region object storage - the app tier never proxies large media.
-export async function POST(req: Request) {
+export const POST = withLogging("media:presign", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,4 +27,4 @@ export async function POST(req: Request) {
   const url = await presignUpload(key, contentType);
 
   return NextResponse.json({ key, url, kind, contentType });
-}
+});

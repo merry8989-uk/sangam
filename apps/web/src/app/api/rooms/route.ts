@@ -6,6 +6,7 @@ import { newJoinCode, ROOM_KINDS } from "@/lib/rooms";
 import { roomNameFor, livekitConfigured } from "@/lib/livekit";
 import { createIngress } from "@/lib/livekitAdmin";
 import { getSettingsOptional } from "@/lib/settings";
+import { withLogging } from "@/lib/withLogging";
 
 const CreateBody = z.object({
   kind: z.enum(ROOM_KINDS),
@@ -14,7 +15,7 @@ const CreateBody = z.object({
 });
 
 // List the rooms you own or joined, plus any public live streams.
-export async function GET(req: Request) {
+export const GET = withLogging("rooms:get", async (req: Request) => {
   const userId = await getViewerId(req);
   const kind = new URL(req.url).searchParams.get("kind");
 
@@ -46,10 +47,10 @@ export async function GET(req: Request) {
     })),
     livekitConfigured: livekitConfigured()
   });
-}
+});
 
 // Create a room: a 1:1 call, a meeting, or a live stream.
-export async function POST(req: Request) {
+export const POST = withLogging("rooms:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -101,4 +102,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ room }, { status: 201 });
-}
+});

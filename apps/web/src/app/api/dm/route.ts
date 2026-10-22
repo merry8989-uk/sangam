@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isBlockedEitherWay } from "@/lib/filters";
+import { withLogging } from "@/lib/withLogging";
 
 // GET /api/dm - my conversations, most recent first, with the other person,
 // the last message and an unread count.
-export async function GET(req: Request) {
+export const GET = withLogging("dm:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ items: [] });
 
@@ -47,12 +48,12 @@ export async function GET(req: Request) {
   );
 
   return NextResponse.json({ items });
-}
+});
 
 const StartBody = z.object({ userId: z.string().min(1) });
 
 // POST /api/dm - find or create the 1:1 conversation with another user.
-export async function POST(req: Request) {
+export const POST = withLogging("dm:post", async (req: Request) => {
   const me = await getViewerId(req);
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -77,4 +78,4 @@ export async function POST(req: Request) {
     data: { participants: { create: [{ userId: me }, { userId: target }] } }
   });
   return NextResponse.json({ conversationId: conversation.id }, { status: 201 });
-}
+});

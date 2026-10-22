@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   postId: z.string().min(1),
@@ -10,7 +11,7 @@ const Body = z.object({
   parentId: z.string().optional()
 });
 
-export async function GET(req: Request) {
+export const GET = withLogging("comments:get", async (req: Request) => {
   const postId = new URL(req.url).searchParams.get("postId");
   if (!postId) return NextResponse.json({ error: "postId required" }, { status: 400 });
 
@@ -21,9 +22,9 @@ export async function GET(req: Request) {
     include: { author: { select: { username: true, displayName: true } } }
   });
   return NextResponse.json({ items: comments });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withLogging("comments:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -48,4 +49,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(comment, { status: 201 });
-}
+});
