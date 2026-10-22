@@ -24,6 +24,19 @@ export function mediaUrl(key: string): string {
   return `${PUBLIC_BASE}/${MEDIA_BUCKET}/${key}`;
 }
 
+/**
+ * Does this storage key belong to an upload this user was given?
+ *
+ * The upload route mints keys as `raw/<userId>/<uuid>.<ext>`, so the prefix is
+ * proof of who was issued the key. Without this check a post could be created
+ * referencing someone else's key and republish their media: the feed exposes
+ * every media key, and the new Media row would be owned by the poster, so every
+ * later access check would pass.
+ */
+export function keyBelongsToUser(key: string, userId: string): boolean {
+  return typeof key === "string" && key.startsWith(`raw/${userId}/`);
+}
+
 export async function presignUpload(key: string, contentType: string) {
   const cmd = new PutObjectCommand({
     Bucket: MEDIA_BUCKET,

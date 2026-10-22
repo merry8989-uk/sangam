@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import VideoPlayer from "@/components/VideoPlayer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function ShortsPage() {
     },
     orderBy: { createdAt: "desc" },
     take: 20,
-    include: { author: true, media: true }
+    include: POST_INCLUDE_PUBLIC
   });
 
   return (

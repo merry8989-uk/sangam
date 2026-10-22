@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
     },
     orderBy: { createdAt: "desc" },
     take: 30,
-    include: { author: true, media: true }
+    include: POST_INCLUDE_PUBLIC
   });
 
   return (

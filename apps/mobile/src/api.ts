@@ -20,6 +20,17 @@ export async function setToken(t: string | null): Promise<void> {
 export function hasToken(): boolean {
   return Boolean(token);
 }
+/**
+ * The token as it is held in memory.
+ *
+ * The upload paths build their own headers because they send a multipart body
+ * rather than JSON, and they called this before it existed - so both of them
+ * threw ReferenceError and every WorkDrive upload failed with a generic
+ * "upload failed" message. Sync on purpose: reading it is not a network call.
+ */
+export function getToken(): string | null {
+  return token;
+}
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -219,6 +230,43 @@ export type DriveItem = {
   updatedAt: string;
 };
 
+// ---- direct messages ----
+// The shapes here mirror what the routes actually return. They did not before:
+// the screen read `participants` and `updatedAt`, which /api/dm has never sent,
+// so the list crashed on `undefined[0]` and every row said "Invalid Date".
+
+export type Conversation = {
+  id: string;
+  /** The other person, or null for a conversation with yourself. */
+  other: { id: string; username: string; displayName: string; avatarUrl: string | null } | null;
+  lastBody: string | null;
+  lastAt: string | null;
+  unread: number;
+};
+
+export type DirectMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+};
+
+export function listConversations() {
+  return api<{ items: Conversation[] }>("/api/dm");
+}
+
+export function getConversation(id: string) {
+  return api<{ other: Conversation["other"]; messages: DirectMessage[] }>("/api/dm/" + id);
+}
+
+export function sendMessage(id: string, body: string) {
+  return api<DirectMessage>("/api/dm/" + id, {
+    method: "POST",
+    body: JSON.stringify({ body })
+  });
+}
+
 export function listDrive(parentId?: string | null) {
   return api<{ items: DriveItem[]; parent: { id: string; name: string; parentId: string | null } | null }>(
     "/api/drive" + (parentId ? "?parentId=" + parentId : "")
@@ -333,7 +381,8 @@ export async function uploadToWorkDrive(file: { uri: string; name: string; mimeT
   form.append("file", { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
   if (parentId) form.append("parentId", parentId);
   const headers: Record<string, string> = {};
-  if (getToken()) headers.Authorization = "Bearer " + getToken();
+  const t = getToken();
+  if (t) headers.Authorization = "Bearer " + t;
   const res = await fetch(BASE_URL + "/api/drive/zoho/upload", { method: "POST", headers, body: form });
   if (!res.ok) throw new Error("HTTP " + res.status);
   return (await res.json()) as { item: DriveItem };

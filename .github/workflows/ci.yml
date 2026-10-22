@@ -60,3 +60,19 @@ jobs:
         working-directory: apps/web
       - run: pip install pgserver
       - run: python tools/verify-schema.py
+
+  # Fails if any route can serialise a user's private columns.
+  #
+  # This guards a bug that really shipped: the public feed used
+  # `include: { author: true }`, which selects every column of the User row, and
+  # returned it verbatim - so anyone could read the bcrypt hash, the email
+  # address and the phone number of every post author.
+  leaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check no route can leak a private column
+        run: python3 tools/check-leaks.py

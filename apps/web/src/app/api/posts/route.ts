@@ -9,6 +9,7 @@ import { enqueueMedia, queueEnabled } from "@/lib/queue";
 import { newTraceparent } from "@/lib/trace";
 import { indexPosts } from "@/lib/search";
 import { recordRoute } from "@/lib/metrics";
+import { keyBelongsToUser } from "@/lib/s3";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -28,26 +29,46 @@ const CreateBody = z.object({
 // GET /api/posts?cursor=<id>&limit=20&type=<TYPE> - cursor-paginated feed.
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 50);
-  const cursor = url.searchParams.get("cursor");
-  const type = url.searchParams.get("type");
 
-  const posts = await prisma.post.findMany({
-    where: {
-      visibility: "PUBLIC",
-      status: "READY",
-      ...(type ? { type: type as "IMAGE" | "VIDEO" | "SHORT" | "TEXT" } : {})
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    include: POST_INCLUDE
-  });
+  // Every one of these reached Prisma unchecked: `limit=abc` gave NaN, a
+  // negative limit was passed straight through, and an unknown `type` was cast
+  // to the enum without being checked. Any of them raised a
+  // PrismaClientValidationError that nothing caught, so a malformed query
+  // string returned a 500 with a stack instead of a clean answer.
+  const rawLimit = Number(url.searchParams.get("limit") ?? 20);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(Math.trunc(rawLimit), 1), 50)
+    : 20;
 
-  return NextResponse.json({
-    items: posts,
-    nextCursor: posts.length === limit ? posts[posts.length - 1].id : null
-  });
+  const cursor = url.searchParams.get("cursor")?.trim() || null;
+  const rawType = url.searchParams.get("type");
+  const POST_TYPES = ["IMAGE", "VIDEO", "SHORT", "TEXT"] as const;
+  const type = POST_TYPES.includes(rawType as (typeof POST_TYPES)[number])
+    ? (rawType as (typeof POST_TYPES)[number])
+    : null;
+
+  try {
+    const posts = await prisma.post.findMany({
+      where: {
+        visibility: "PUBLIC",
+        status: "READY",
+        ...(type ? { type } : {})
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      // A cursor that does not exist is a bad request, not a crash.
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      include: POST_INCLUDE
+    });
+
+    return NextResponse.json({
+      items: posts,
+      nextCursor: posts.length === limit ? posts[posts.length - 1].id : null
+    });
+  } catch {
+    // A stale cursor is the likely cause, and it is the client's to fix.
+    return NextResponse.json({ error: "Invalid cursor or query" }, { status: 400 });
+  }
 }
 
 // POST /api/posts - create, moderate, then enrich.
@@ -68,6 +89,14 @@ async function handleCreatePost(req: Request): Promise<Response> {
   const parsed = CreateBody.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { caption, type, visibility, media, groupId } = parsed.data;
+
+  // Every key must be one this user was issued. The upload route mints keys as
+  // raw/<userId>/<uuid>, and the feed exposes every media key, so without this
+  // a post could be built around someone else's media and republish it.
+  const foreign = media.find((m) => !keyBelongsToUser(m.key, userId));
+  if (foreign) {
+    return NextResponse.json({ error: "Unknown media key" }, { status: 400 });
+  }
 
   let post = await prisma.post.create({
     data: {

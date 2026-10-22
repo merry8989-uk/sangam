@@ -8,6 +8,7 @@ import DeletePostButton from "@/components/DeletePostButton";
 import { getSettingsOptional } from "@/lib/settings";
 import ReportButton from "@/components/ReportButton";
 import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
 
   const post = await prisma.post.findUnique({
     where: { id: params.id },
-    include: { author: true, media: true }
+    include: POST_INCLUDE_PUBLIC
   });
   if (!post || post.status === "REMOVED") notFound();
 

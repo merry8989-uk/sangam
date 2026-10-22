@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { rankFeed, type RankCandidate } from "@/lib/ai";
 import PostCard from "@/components/PostCard";
 import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function ForYouPage() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
-  const include = { author: true, media: true } as const;
+  const include = POST_INCLUDE_PUBLIC;
   const followedIds = userId
     ? (
         await prisma.follow.findMany({

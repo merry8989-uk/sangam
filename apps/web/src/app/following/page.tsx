@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { formatCount, formatDuration, timeAgo } from "@/lib/format";
 import PreviewThumb from "@/components/PreviewThumb";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function FollowingPage() {
         where: { authorId: { in: ids }, type: "VIDEO", status: "READY", visibility: "PUBLIC" },
         orderBy: { createdAt: "desc" },
         take: 40,
-        include: { author: true, media: true }
+        include: POST_INCLUDE_PUBLIC
       })
     : [];
 

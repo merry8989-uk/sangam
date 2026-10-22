@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import PostCard from "@/components/PostCard";
 import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function SavedPage() {
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: 60,
-    include: { post: { include: { author: true, media: true } } }
+    include: { post: { include: POST_INCLUDE_PUBLIC } }
   });
 
   const display = await loadDisplay(userId);

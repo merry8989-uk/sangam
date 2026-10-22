@@ -6,6 +6,7 @@ import PostCard from "@/components/PostCard";
 import Composer from "@/components/Composer";
 import JoinGroupButton from "@/components/JoinGroupButton";
 import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function GroupPage({ params }: { params: { slug: string } }
         where: { groupId: group.id, status: "READY" },
         orderBy: { createdAt: "desc" },
         take: 30,
-        include: { author: true, media: true }
+        include: POST_INCLUDE_PUBLIC
       })
     : [];
 

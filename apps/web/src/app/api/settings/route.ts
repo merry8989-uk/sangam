@@ -129,7 +129,12 @@ const Body = z.object({
 export async function GET(req: Request) {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ settings: await getSettings(userId) });
+  const settings = await getSettings(userId);
+  // The sealed backup passphrase stays on the server. The PUT path already
+  // drops it; this path used to return the whole row, so the cipher went out.
+  const { backupPassphraseCipher: _omit, ...safe } = settings;
+  void _omit;
+  return NextResponse.json({ settings: safe });
 }
 
 export async function PUT(req: Request) {

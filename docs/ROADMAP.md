@@ -456,3 +456,54 @@ Narrow, sequential phases. Each phase ships something usable.
       column, and it was dropping the note on a failed server check.
 - [ ] Attach a screenshot with the report.
 - [ ] SMTP as a mail provider, for a Gmail app password or an internal relay.
+
+## Phase 26 - Audit, and the bugs it found
+- [x] Audited the codebase rather than guessing at it: a mechanical pass over 86
+      route handlers and 34 pages, then three deep reviews of the web API, the
+      Android app and the schema. The mechanical pass was mostly false
+      positives; the reading found the real ones.
+- [x] **The public feed was publishing the bcrypt hash, the email address and
+      the phone number of every post author.** `include: { author: true }`
+      selects every column of the User row, and the unauthenticated feed
+      returned that object verbatim. It was in twelve places, not one - the
+      bookmarks list, five feed pages, the watch, saved, shorts, tag and post
+      pages. All now select an explicit set.
+- [x] Added `lib/select.ts`, so a column added to the schema cannot leak by
+      being forgotten: nothing is selected until someone deliberately lists it.
+- [x] Added `tools/check-leaks.py` and a CI job, and proved the guard fires by
+      reintroducing the leak and watching it fail. A guard that has never been
+      seen to fail is not a guard.
+- [x] A `FOLLOWERS` post was readable by anyone who knew its id - and the id is
+      in the public feed. Only `PRIVATE` was checked. Every tier is enforced now.
+- [x] `GET /api/rooms/[id]` handed the join code for any room to any caller.
+      The code is the invitation to a private room; it is now the host and the
+      people already inside who see it, and a private room's guest list is not
+      for strangers either.
+- [x] `GET /api/posts/[id]/status` answered anyone who knew an id and returned
+      media keys, including for a private post. Author only now.
+- [x] A post or story could be created around **someone else's** media key and
+      republish it: the feed exposes every key, and the new Media row would be
+      owned by the poster, so every later access check passed. Keys are minted
+      as `raw/<userId>/...`, and both routes now verify the prefix.
+- [x] `GET /api/settings` returned the sealed backup passphrase. The PUT path
+      already dropped it; the GET did not.
+- [x] The feed's query params reached Prisma unchecked, so `limit=abc` or a
+      stale cursor returned a 500 with a stack. Clamped and validated, and a bad
+      cursor is now a 400.
+- [x] **The Messages tab crashed on open.** It read `participants` and
+      `updatedAt`, which `/api/dm` has never returned, so the first row threw on
+      `undefined[0]`. Tapping a conversation pushed to `/post/<conversationId>`
+      and got "Post not found", because there was no conversation screen at all.
+      The list is fixed and `/dm/[id]` now exists, with sending.
+- [x] `getToken()` was called in two upload paths and defined nowhere, so every
+      WorkDrive upload threw and reported a generic failure.
+- [x] `/api/drive/[id]/share` did not exist, but both the web share dialog and
+      the Android drive screen called it. Every call 404'd and was swallowed, so
+      the symptom was an always-empty share list. The route is written.
+- [x] Three "stuck busy" bugs: the room Join button, and both drive uploads,
+      cleared their busy flag after the `try` rather than in a `finally`, so an
+      early return - LiveKit unconfigured, or the file picker cancelled - left
+      the UI permanently disabled.
+- [ ] A support view over submitted reports in the UI.
+- [ ] The remaining audit items: an unauthenticated media redirect, and the
+      `MEDIA_QUEUE_ENABLED` in-process fallback.

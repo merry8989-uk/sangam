@@ -126,8 +126,11 @@ export default function DriveScreen() {
       await load();
     } catch {
       setError("Upload to WorkDrive failed.");
+    } finally {
+      // Cancelling the picker returns early, which used to skip this and leave
+      // every button on the screen disabled.
+      setBusy(null);
     }
-    setBusy(null);
   }
 
   async function zohoShowFiles() {
@@ -214,8 +217,9 @@ export default function DriveScreen() {
       await load();
     } catch {
       setError("Upload failed.");
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   }
 
   if (loading) return <Screen><Loading /></Screen>;

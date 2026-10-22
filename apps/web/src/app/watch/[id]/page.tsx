@@ -17,6 +17,7 @@ import { getSettingsOptional } from "@/lib/settings";
 import { playbackCap, type Rendition } from "@/lib/quality";
 import ReportButton from "@/components/ReportButton";
 import ThumbnailPicker from "@/components/ThumbnailPicker";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
 
   const post = await prisma.post.findUnique({
     where: { id: params.id },
-    include: { author: true, media: true, hashtags: { include: { hashtag: true } } }
+    include: { ...POST_INCLUDE_PUBLIC, hashtags: { include: { hashtag: true } } }
   });
   if (!post || post.status !== "READY") notFound();
 
@@ -90,7 +91,7 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
     },
     orderBy: { createdAt: "desc" },
     take: 8,
-    include: { author: true, media: true }
+    include: POST_INCLUDE_PUBLIC
   });
 
   return (

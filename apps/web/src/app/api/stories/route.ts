@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { processImage } from "@/lib/ai";
+import { keyBelongsToUser } from "@/lib/s3";
 
 const Body = z.object({
   mediaKey: z.string().min(1),
@@ -59,6 +60,10 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { mediaKey, kind, mimeType, sizeBytes, caption } = parsed.data;
+
+  if (!keyBelongsToUser(mediaKey, userId)) {
+    return NextResponse.json({ error: "Unknown media key" }, { status: 400 });
+  }
 
   const story = await prisma.story.create({
     data: {

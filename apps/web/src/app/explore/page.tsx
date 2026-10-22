@@ -5,6 +5,7 @@ import { mediaUrl } from "@/lib/s3";
 import PreviewThumb from "@/components/PreviewThumb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function ExplorePage() {
       },
       orderBy: [{ likeCount: "desc" }, { commentCount: "desc" }, { createdAt: "desc" }],
       take: 24,
-      include: { author: true, media: true }
+      include: POST_INCLUDE_PUBLIC
     }),
     prisma.hashtag.findMany({
       orderBy: { posts: { _count: "desc" } },

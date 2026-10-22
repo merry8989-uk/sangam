@@ -2,6 +2,7 @@ import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 // GET /api/bookmarks?postId=X - is this post saved by me?
 // GET /api/bookmarks             - my saved posts, newest first.
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: 60,
-    include: { post: { include: { author: true, media: true } } }
+    include: { post: { include: POST_INCLUDE_PUBLIC } }
   });
   return NextResponse.json({ items: items.map((b) => b.post) });
 }

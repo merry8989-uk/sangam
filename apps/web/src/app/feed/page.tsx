@@ -7,6 +7,7 @@ import Composer from "@/components/Composer";
 import PostCard from "@/components/PostCard";
 import StoriesBar from "@/components/StoriesBar";
 import { loadDisplay, primaryStatesFor } from "@/lib/postDisplayServer";
+import { POST_INCLUDE_PUBLIC } from "@/lib/select";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function FeedPage() {
     },
     orderBy: { createdAt: "desc" },
     take: 30,
-    include: { author: true, media: true }
+    include: POST_INCLUDE_PUBLIC
   });
 
   const ids = posts.map((p) => p.id);

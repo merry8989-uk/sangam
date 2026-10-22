@@ -10,11 +10,31 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     include: { author: { select: { username: true, displayName: true } }, media: true }
   });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const viewerId = await getViewerId(req);
-  if (post.visibility === "PRIVATE" && viewerId !== post.authorId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const isOwner = Boolean(viewerId) && viewerId === post.authorId;
+
+  // Every tier is enforced here, not only PRIVATE. A FOLLOWERS post used to be
+  // returned to anyone who knew the id - and the id is in the public feed - so
+  // the tier the feed advertises was not actually a boundary.
+  if (!isOwner) {
+    if (post.visibility === "PRIVATE") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (post.visibility === "FOLLOWERS") {
+      const follows = viewerId
+        ? await prisma.follow.findUnique({
+            where: { followerId_followeeId: { followerId: viewerId, followeeId: post.authorId } },
+            select: { status: true }
+          })
+        : null;
+      if (!follows || follows.status !== "ACCEPTED") {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+    }
   }
-  return NextResponse.json({ post, isOwner: Boolean(viewerId) && viewerId === post.authorId });
+
+  return NextResponse.json({ post, isOwner });
 }
 
 // Delete a post. Only the author may delete it. Media, likes, comments and

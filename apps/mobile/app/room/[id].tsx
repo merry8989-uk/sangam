@@ -65,8 +65,11 @@ export default function RoomScreen() {
       setJoined({ token: d.token, wsUrl: d.wsUrl, role: d.role, canPublish: Boolean(d.canPublish) });
     } catch {
       setError("Could not join this room.");
+    } finally {
+      // In a finally, not after the try: the early return above used to skip it
+      // and leave the button stuck on "Joining..." for good.
+      setBusy(false);
     }
-    setBusy(false);
   }, [id, code]);
 
   if (loading) return <Screen><Loading /></Screen>;

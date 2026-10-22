@@ -3,8 +3,17 @@ import { redis, feedKey } from "./redis";
 import { processImage, processVideo } from "./ai";
 import { getSettingsOptional } from "./settings";
 import { uploadCapHeight, uploadAudioBitrate } from "./quality";
+import { POST_INCLUDE_PUBLIC } from "./select";
 
-export const POST_INCLUDE = { author: true, media: true } as const;
+/**
+ * The include shape for a post in a list.
+ *
+ * `author: true` used to be here, and it selected every column of the User row -
+ * including the bcrypt hash, the email address and the phone number. The public
+ * feed returned that object verbatim, so anyone could read them. Selecting an
+ * explicit set means a new column on User cannot leak by being forgotten.
+ */
+export const POST_INCLUDE = POST_INCLUDE_PUBLIC;
 
 // Fan-out-on-write into each follower's Redis timeline (capped at 1000).
 export async function fanOut(userId: string, postId: string, visibility: string) {
