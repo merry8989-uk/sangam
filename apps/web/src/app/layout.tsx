@@ -12,7 +12,7 @@ import DiagnosticsCapture from "@/components/DiagnosticsCapture";
 
 export const metadata: Metadata = {
   title: "Sangam",
-  description: "A homegrown, India-hosted social + video media platform."
+  description: "A homegrown social + video media platform, built for India."
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

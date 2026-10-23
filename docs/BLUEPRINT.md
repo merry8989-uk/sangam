@@ -1,7 +1,9 @@
 # Sangam — Product & Engineering Blueprint
 
 *Reference analysis, unified feature model, architecture, security, AI and
-hosting for an India-hosted social + video media platform.*
+hosting for a social + video media platform built for India. Media storage is
+the one part where that is a configuration choice rather than a given - see the
+note in README.md.*
 
 ---
 
@@ -174,7 +176,7 @@ Three ideas make the three experiences coexist cleanly:
 
 ---
 
-## 5. Architecture (India-hosted)
+## 5. Architecture (India-hosted, with one exception)
 
 **Design goal:** serve media fast to Indian users, keep all personal data in
 India, and scale each layer independently.

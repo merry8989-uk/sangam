@@ -31,6 +31,17 @@ it should not, or claims to have done something it has not.
 
 ---
 
+## P0.5 — A decision, not a task
+
+- [ ] **Is "India-hosted" a promise to users, or a legal posture?** The app tier,
+      database, cache and AI service are in Indian regions either way. Media is
+      the open question: Cloudflare R2 is now a supported backend and has no
+      India storage jurisdiction, so choosing it means media is not in India.
+      DPDP does not require in-country storage, so the law does not decide this.
+      Everything else on this list can proceed; only this one needs an answer.
+
+---
+
 ## P1 — It has never been run
 
 The honest one. Everything above was verified by reading, parsing and unit

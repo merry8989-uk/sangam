@@ -1,6 +1,19 @@
 # Sangam
 
-**A homegrown, India-hosted social + video media platform** — combining the
+**A homegrown social + video media platform, built for India** — combining the
+
+
+> **On "India-hosted".** The app tier, the database, the cache and the AI service
+> run in Indian regions, and every provider chosen so far was chosen for its
+> Indian presence. Media storage is the one part where that is a choice rather
+> than a given: the supported backends are AWS S3 in `ap-south-1`, an Indian
+> provider such as E2E EOS or NxtGen, a local MinIO, and Cloudflare R2. **R2 has
+> no India storage jurisdiction** — its guaranteed jurisdictions are the EU, the
+> US and FedRAMP — so a deployment on R2 is not India-hosted for media. India's
+> DPDP Act 2023 does not require in-country storage (section 16(1) is a blocklist,
+> not a residency mandate), so this is a question of what the project promises,
+> not of what the law demands. `lib/storage.ts` resolves the choice and reports
+> whether the bytes leave India; `/api/health` shows it.
 best ideas from Facebook (social graph, groups, feed), Instagram (visual
 posts, stories, reels, discovery) and YouTube (long-form video, channels,
 channel follows) into **one** product, built on our **own stack**.

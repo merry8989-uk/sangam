@@ -13,7 +13,8 @@ const Body = z.object({
 });
 
 // Returns a pre-signed PUT URL so the browser uploads bytes directly to
-// India-region object storage - the app tier never proxies large media.
+// object storage directly - the app tier never proxies large media.
+// Where that storage is depends on the backend; see lib/storage.ts.
 export const POST = withLogging("media:presign", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

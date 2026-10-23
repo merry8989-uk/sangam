@@ -554,3 +554,25 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Still to do: delete the Notion database itself, which lives in the
       workspace rather than in this repository, so removing it is a click rather
       than a commit.
+
+## Phase 29 - Cloudflare R2 as a storage backend
+- [x] The storage layer was already endpoint-driven and used nothing beyond
+      PutObject, GetObject, DeleteObject and a presigned URL, so R2 is a
+      configuration choice rather than a code change.
+- [x] `lib/storage.ts` resolves the backend from the environment - R2, AWS,
+      MinIO, or any other S3-compatible endpoint - and reports whether the bytes
+      leave India. The resolution is pure and covered by 42 checks.
+- [x] **The honest part.** R2 has no India storage jurisdiction: the guaranteed
+      ones are eu, us, fedramp and fedramp-high, and the location hints such as
+      `apac` are documented as "best effort and not a guarantee". So a deployment
+      on R2 is not India-hosted for media. India's DPDP Act 2023 does not require
+      in-country storage - section 16(1) is a blocklist, not a residency mandate -
+      so this is a promise rather than a legal constraint, and the README now says
+      so instead of claiming otherwise.
+- [x] `/api/health` reports the backend, the region and whether the media is in
+      India, so an operator can see it rather than infer it.
+- [x] Why R2 is worth it anyway: egress is free on every storage class. For a
+      video platform that is the difference between a bill that scales with views
+      and one that does not.
+- [ ] Decide whether "India-hosted" is a promise to users or a legal posture.
+      If it is a promise, media stays on an Indian backend and R2 is not used.
