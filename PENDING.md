@@ -81,8 +81,10 @@ tests. The stack itself has never been booted.
 - [ ] Two-way sync that mirrors WorkDrive changes back into the drive.
 - [ ] WorkDrive's chunked upload above 1 GB, so a flaky connection resumes
       rather than restarts.
-- [ ] A support view over submitted reports in the UI. Today they are read
-      through the guarded internal endpoint and mirrored into Notion.
+- [ ] **A support view over submitted reports in the UI.** Today they are read
+      through the guarded internal endpoint. This moved up the list when the
+      Notion mirror was removed: it is now the replacement for it rather than a
+      convenience on top.
 - [ ] SMTP as a mail provider, for a Gmail app password or an internal relay.
       Needs a mail library, which is why it is not done — every other provider
       works through plain `fetch`.

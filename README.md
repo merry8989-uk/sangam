@@ -147,9 +147,9 @@ Diagnostics: a user can send you the technical detail instead of describing it.
 - The recipient is always `DIAGNOSTICS_SUPPORT_EMAIL` from the environment,
   never from the request. Accepting a recipient would make the endpoint an open
   relay. It is also rate limited per account.
-- Set `NOTION_TOKEN` and `NOTION_DATABASE_ID` and every submitted report also
-  becomes a row in a Notion database, with the fields as properties. See the
-  Notion block in `.env.example` for the schema.
+- Reports live in Sangam's own database. There is no third-party mirror: the
+  guarded internal endpoint reads them, and a support view in the UI is on the
+  pending list.
 - Every account gets a **user code** (`SG-7K2M4P`) the first time one is needed.
   It is what support sees - the report carries the code and not the account id,
   the name or the email. The code survives a support thread, so it is never

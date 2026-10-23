@@ -8,7 +8,6 @@ import { APP_VERSION } from "@/lib/appInfo";
 import { buildReport, formatReport, reportFilename, mimeType, isDiagFormat } from "@/lib/diagnostics";
 import { mailerConfigured, sendMail, toBase64 } from "@/lib/mailer";
 import { ensureUserCode } from "@/lib/userCodeServer";
-import { createNotionPage, notionConfigured } from "@/lib/notion";
 
 export const dynamic = "force-dynamic";
 
@@ -131,13 +130,6 @@ export async function POST(req: Request) {
     select: { id: true }
   });
 
-  // A row in Notion as well, so the report is in both places support looks.
-  let notionUrl: string | null = null;
-  if (notionConfigured()) {
-    const n = await createNotionPage(report, { code: userCode, note: data.note ?? "", deliveredBy: "email" });
-    notionUrl = n.url ?? null;
-  }
-
   const intro: string[] = [];
   intro.push("A diagnostics report was sent from the Sangam app.");
   intro.push("");
@@ -172,7 +164,6 @@ export async function POST(req: Request) {
       storedId: saved.id,
       reportId: report.id,
       userCode: userCode ?? "SG-ANON",
-      notion: notionUrl,
       provider: result.provider,
       detail: result.detail
     },

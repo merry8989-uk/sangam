@@ -396,7 +396,7 @@ Narrow, sequential phases. Each phase ships something usable.
       mail library, so it is deliberately not here yet.
 - [ ] Attach a screenshot with the report.
 
-## Phase 24 - Notion, user codes, and a log filter
+## Phase 24 - User codes, and a log filter  (the Notion half was removed in Phase 28)
 - [x] Every submitted report also becomes a row in a Notion database, so support
       sees it where they already look. The fields are database properties they
       can filter and sort on, not a wall of text: platform, app version, route,
@@ -429,7 +429,7 @@ Narrow, sequential phases. Each phase ships something usable.
       columns, and one report's entries in memory, so "only the errors in this
       report" costs one query rather than a scan.
 - [ ] A support view over submitted reports in the UI. Today they are read
-      through the guarded internal endpoint, and mirrored into Notion.
+      through the guarded internal endpoint.
 - [ ] Attach a screenshot with the report.
 
 ## Phase 25 - The compose carries the logs, and export stands alone
@@ -539,3 +539,18 @@ Narrow, sequential phases. Each phase ships something usable.
       `withLogging` as they are touched, rather than in one unreviewable sweep.
 - [ ] Ship records to an external collector. The sink writes to Postgres; a
       production deployment would usually also want a stream to a log service.
+
+## Phase 28 - Notion removed
+- [x] The Notion mirror is gone: the library, the three call sites, the response
+      fields, the panel's "Goes to" line, and the four environment variables.
+      Reports live in Sangam's own database and are read through the guarded
+      internal endpoint, which was always the source of truth - Notion was a
+      convenience copy, so nothing is lost by removing it.
+- [x] What this costs: support no longer gets a pre-built view for free. The
+      support view over submitted reports moves up the pending list from
+      "nice to have" to "the replacement for what was just removed".
+- [x] Kept from that phase, because neither depended on Notion: the user code,
+      and the log filter.
+- [x] Still to do: delete the Notion database itself, which lives in the
+      workspace rather than in this repository, so removing it is a click rather
+      than a commit.

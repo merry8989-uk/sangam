@@ -65,7 +65,6 @@ export default function DiagnosticsPanel({
   const [copied, setCopied] = useState(false);
   const [emailReady, setEmailReady] = useState(false);
   const [canShare, setCanShare] = useState(false);
-  const [notionReady, setNotionReady] = useState(false);
   const [userCode, setUserCode] = useState("SG-ANON");
   const [filter, setFilter] = useState<DiagFilter>(EMPTY_FILTER);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -80,7 +79,6 @@ export default function DiagnosticsPanel({
       const data = await res.json();
       setServer(data.server ?? null);
       setEmailReady(Boolean(data.emailReady));
-      setNotionReady(Boolean(data.notionReady));
       if (data.userCode) setUserCode(data.userCode);
     } catch {
       setServer(null);
@@ -93,7 +91,7 @@ export default function DiagnosticsPanel({
     return subscribe(() => setEntries(getEntries()));
   }, [refresh]);
 
-  // Everything downstream - the preview, the export, the email, the Notion row -
+  // Everything downstream - the preview, the export, the email -
   // works from the filtered list, so what the user sees is what they send.
   const shown = useMemo(() => filterEntries(entries, filter), [entries, filter]);
   const facets = useMemo(() => filterFacets(entries), [entries]);
@@ -335,8 +333,8 @@ export default function DiagnosticsPanel({
           <Row
             label="Goes to"
             value={[
-              notionReady ? "Notion" : null,
               supportEmail && emailReady ? "support inbox" : null,
+              "stored on the server",
               "this device (until you send)"
             ]
               .filter(Boolean)
