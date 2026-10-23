@@ -213,6 +213,9 @@ model Media {
   skipSegments SkipSegment[]
 
   @@index([postId])
+  // The media route resolves a key to its row on every request. Without this it
+  // is a full scan of every media row, once per media byte served.
+  @@index([storageKey])
 }
 
 enum MediaKind {

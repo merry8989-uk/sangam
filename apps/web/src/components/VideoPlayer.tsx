@@ -4,6 +4,12 @@ import { qualityLabel, type Rendition } from "@/lib/quality";
 
 export type SkipMark = { startSec: number; endSec: number };
 
+/** The speeds a browser will actually accept. */
+export function clampSpeed(speed: number | null | undefined): number {
+  if (typeof speed !== "number" || !Number.isFinite(speed)) return 1;
+  return Math.min(3, Math.max(0.25, speed));
+}
+
 type HlsLike = {
   destroy: () => void;
   currentLevel: number;
@@ -22,7 +28,8 @@ export default function VideoPlayer({
   segments = [],
   skipEnabled = false,
   variants = [],
-  cap = null
+  cap = null,
+  speed = 1
 }: {
   src: string;
   poster?: string;
@@ -32,6 +39,8 @@ export default function VideoPlayer({
   skipEnabled?: boolean;
   variants?: Rendition[];
   cap?: number | null;
+  /** The viewer's playback speed setting. Applied once the media is ready. */
+  speed?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsLike | null>(null);
@@ -121,7 +130,20 @@ export default function VideoPlayer({
 
   return (
     <div className={className}>
-      <video ref={ref} controls playsInline poster={poster} autoPlay={autoPlay} className="w-full rounded-xl bg-black" />
+      <video
+        ref={ref}
+        controls
+        playsInline
+        poster={poster}
+        autoPlay={autoPlay}
+        className="w-full rounded-xl bg-black"
+        // playbackSpeed was stored and never read, so a viewer who set 1.5x got
+        // 1x on every video. Applied on the element rather than through a
+        // ref callback so it survives the source being swapped.
+        onLoadedMetadata={(e) => {
+          e.currentTarget.playbackRate = clampSpeed(speed);
+        }}
+      />
       {heights.length > 1 ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-ink-500">Quality</span>

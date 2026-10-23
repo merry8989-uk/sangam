@@ -24,7 +24,10 @@
 }
 
 body {
+  /* The theme's colour, or the viewer's chosen background when there is one.
+     --sangam-background is set by ThemeProvider from an allowlisted value. */
   background-color: rgb(var(--canvas));
+  background-image: var(--sangam-background, none);
   color: rgb(var(--ink-900));
   transition: background-color 0.3s ease, color 0.3s ease;
 }

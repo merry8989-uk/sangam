@@ -107,7 +107,8 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
               skipEnabled={settings?.sponsorSkip ?? false}
               variants={(video.renditions ?? []) as unknown as Rendition[]}
               cap={playbackCap(settings?.videoQuality, settings?.audioQuality)}
-            />
+                        speed={settings?.playbackSpeed ?? 1}
+/>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img

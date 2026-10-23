@@ -2,11 +2,17 @@ import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import VideoPlayer from "@/components/VideoPlayer";
 import { POST_INCLUDE_PUBLIC } from "@/lib/select";
+import { getViewerId } from "@/lib/viewer";
+import { getSettingsOptional } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 // Vertical short-video surface: full-height players stacked in a scroll feed.
 export default async function ShortsPage() {
+  // The viewer's playback speed, so the setting is read here rather than only
+  // stored. A signed-out viewer gets the defaults.
+  const settings = await getSettingsOptional(await getViewerId());
+
   const posts = await prisma.post.findMany({
     where: {
       visibility: "PUBLIC",
@@ -33,6 +39,7 @@ export default async function ShortsPage() {
                 src={mediaUrl(vid.hlsKey as string)}
                 poster={vid.thumbnailKey ? mediaUrl(vid.thumbnailKey) : undefined}
                 className="aspect-[9/16] w-full bg-black"
+                speed={settings?.playbackSpeed ?? 1}
               />
               <div className="bg-white px-3 py-2">
                 <span className="font-medium">@{p.author.username}</span>
