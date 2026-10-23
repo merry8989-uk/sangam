@@ -67,6 +67,24 @@ tests. The stack itself has never been booted.
 
 ---
 
+## P1.5 — The event standard, half wired
+
+The schema, the client module and the CI gate are done. What is not:
+
+- [ ] **The Android half.** `lib/events.ts` and `lib/analytics.ts` are written to
+      be shared, but the app emits none of it. Every app event in the catalog -
+      `screen_view`, `permission_state_resolved`, `access_fix_requested` and its
+      result, `media_query_result`, `anr` - is declared and unused. The standard's
+      own example, the 71-request loop, is an app case, so this is the half that
+      matters most.
+- [ ] **Test the logging on a real device and a real browser.** The standard asks
+      for it and it is the one thing that cannot be checked by reading. A log
+      that never fires is worse than none.
+- [ ] `dead_click` on Android needs a native hook; on the web it is best effort.
+- [ ] Nothing ships to an external collector yet.
+
+---
+
 ## P2 — Reliability and operations
 
 - [ ] **Instrument the remaining routes.** Ten of the eighty-nine routes are

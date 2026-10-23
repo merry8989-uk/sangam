@@ -191,6 +191,22 @@ Logging: twelve categories, six severities, one envelope.
 - `LOG_LEVEL`, `APP_ID`, `APP_ENV`, `LOG_SYNC` and `LOG_RETENTION_JSON` are in
   `.env.example`.
 
+Analytics and crash reports are diagnostics logs, not a separate system.
+
+- One table holds both, so "what broke" and "what the user was doing" are one
+  query rather than a join across two systems that were never designed to meet.
+- The schema is shared with the Android app: `event_name` in `object_action`
+  snake_case, a `session_id`, and an `attempt_id` that groups an intent with its
+  outcome. An event carries intent, outcome and context together, never intent
+  alone - that rule came from a log that showed 71 "fix requested" entries and
+  not one "fix result".
+- `/logs` lists the attempts that were opened and never closed, because that
+  list is the answer the log could not give.
+- Consent defaults to **off**, unlike diagnostics. Diagnostics is something a
+  user asks for; analytics is something the product does quietly.
+- `python3 tools/check-events.py` validates the schema and every call site, and
+  CI runs it. See `docs/EVENTS.md`.
+
 Check the whole database schema without Docker:
 
 ```bash

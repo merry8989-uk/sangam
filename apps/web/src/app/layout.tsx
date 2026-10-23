@@ -9,6 +9,7 @@ import Nav from "@/components/Nav";
 import AiBar from "@/components/AiBar";
 import ThemeProvider from "@/components/ThemeProvider";
 import DiagnosticsCapture from "@/components/DiagnosticsCapture";
+import AnalyticsCapture from "@/components/AnalyticsCapture";
 
 export const metadata: Metadata = {
   title: "Sangam",
@@ -43,6 +44,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Records errors locally so a report has something in it. Does nothing
             when the user has turned diagnostics off. */}
         <DiagnosticsCapture enabled={settings?.diagnosticsEnabled !== false} />
+        {/* The event standard's web half: page views, web vitals, errors and the
+            friction signals. Silent unless the user has agreed to analytics. */}
+        <AnalyticsCapture
+          releaseChannel={(process.env.APP_ENV as "production" | "beta" | "development") ?? undefined}
+          consent={settings?.analyticsEnabled === true}
+        />
         <Nav />
         <div className="flex">
           <div className="min-w-0 flex-1">{children}</div>

@@ -514,6 +514,22 @@ model LogEntry {
   // The pseudonymous user code, never a raw id or an email.
   actorCode  String?
   source     String?
+
+  // ---- the event standard ----
+  // An analytics event and a log record share this row, so "what broke" and
+  // "what the user was doing" are one query rather than a join across two
+  // systems that were never designed to meet.
+  eventName     String?
+  schemaVersion String?
+  // One id per app launch or visit.
+  sessionId     String?
+  // Groups the intent and the outcome of one user action. A request with no
+  // result is the failure this whole standard exists to make visible.
+  attemptId     String?
+  // The session context - platform, app version, os, device, network, release
+  // channel - sent once per session rather than repeated on every event.
+  session       Json?
+
   metadata   Json     @default("{}")
 
   // The user this was about, when there is one. Set null on delete so the log
@@ -528,6 +544,10 @@ model LogEntry {
   @@index([requestId])
   @@index([actorCode, ts])
   @@index([source, ts])
+  @@index([eventName, ts])
+  @@index([sessionId, ts])
+  // An attempt that was opened and never closed is found by this one.
+  @@index([attemptId])
 }
 
 model DiagnosticReport {
@@ -716,6 +736,11 @@ model UserSettings {
   // Diagnostics. On by default so a bug report can actually be acted on; the
   // user can switch it off and nothing is collected or kept.
   diagnosticsEnabled Boolean @default(true)
+  // Product analytics. Off by default, unlike diagnostics: diagnostics is
+  // something a user asks for to report a problem, analytics is something the
+  // product does quietly, and those are different asks. DPDP wants consent for
+  // the second one, so the default is no.
+  analyticsEnabled   Boolean @default(false)
 
   hideSensitive Boolean @default(false)
   blockedWords  Json    @default("[]")

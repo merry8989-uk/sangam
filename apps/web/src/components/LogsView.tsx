@@ -24,8 +24,10 @@ import {
 type Payload = {
   count: number;
   scanned: number;
-  facets: { severities: LogSeverity[]; categories: LogCategory[]; sources: string[] };
+  facets: { severities: LogSeverity[]; categories: LogCategory[]; sources: string[]; eventNames: string[] };
   retention: Record<string, number>;
+  /** Actions that were started and never finished. The point of the standard. */
+  unfinished: { attemptId: string; openedBy: string; sessionId: string | null; ts: string }[];
   entries: LogRecord[];
 };
 
@@ -52,6 +54,9 @@ export default function LogsView() {
     if (filter.source) p.set("source", filter.source);
     if (filter.actorCode) p.set("actor", filter.actorCode);
     if (filter.requestId) p.set("request", filter.requestId);
+    if (filter.eventNames?.length) p.set("event", filter.eventNames.join(","));
+    if (filter.sessionId) p.set("session", filter.sessionId);
+    if (filter.attemptId) p.set("attempt", filter.attemptId);
     if (filter.text?.trim()) p.set("q", filter.text.trim());
     if (filter.since) p.set("since", filter.since);
     if (filter.until) p.set("until", filter.until);
@@ -158,6 +163,14 @@ export default function LogsView() {
             selected={filter.categories ?? []}
             onToggle={(v) => setFilter((f) => ({ ...f, categories: toggle(f.categories, v as LogCategory) }))}
           />
+          {facets?.eventNames?.length ? (
+            <Chips
+              label="Event"
+              options={facets.eventNames.slice(0, 24)}
+              selected={filter.eventNames ?? []}
+              onToggle={(v) => setFilter((f) => ({ ...f, eventNames: toggle(f.eventNames, v) }))}
+            />
+          ) : null}
           {facets?.sources?.length ? (
             <Chips
               label="Source"
@@ -202,6 +215,41 @@ export default function LogsView() {
         </div>
       </section>
 
+      {/* ---- the point of the whole standard ---- */}
+      {data && data.unfinished.length > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <h2 className="text-sm font-semibold text-amber-900">
+            {data.unfinished.length} action{data.unfinished.length === 1 ? "" : "s"} started and never finished
+          </h2>
+          <p className="mt-1 text-xs text-amber-800">
+            Each of these was requested and never reported a result. This is the shape of a user
+            stuck in a loop.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {data.unfinished.slice(0, 10).map((u) => (
+              <li key={u.attemptId} className="flex flex-wrap items-baseline gap-2 text-xs">
+                <button
+                  onClick={() => setFilter((f) => ({ ...f, attemptId: u.attemptId }))}
+                  className="font-mono text-amber-900 underline"
+                >
+                  {u.attemptId.slice(0, 10)}
+                </button>
+                <span className="text-amber-800">{u.openedBy}</span>
+                <span className="text-amber-700">{u.ts}</span>
+                {u.sessionId && (
+                  <button
+                    onClick={() => setFilter((f) => ({ ...f, sessionId: u.sessionId ?? undefined }))}
+                    className="text-amber-700 underline"
+                  >
+                    session
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* ---- export ---- */}
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-1 text-sm font-semibold text-ink-900">Export</h2>
@@ -243,6 +291,15 @@ export default function LogsView() {
                     {r.severity}
                   </span>
                   <span className="text-[10px] font-medium text-ink-500">{r.category}</span>
+                  {r.eventName && (
+                    <button
+                      onClick={() => setFilter((f) => ({ ...f, eventNames: [r.eventName as string] }))}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-ink-700 hover:bg-slate-200"
+                      title="Show only this event"
+                    >
+                      {r.eventName}
+                    </button>
+                  )}
                   <span className="text-[10px] text-ink-500">{r.ts}</span>
                   {r.source && <span className="text-[10px] text-ink-500">src={r.source}</span>}
                   {r.requestId && (
@@ -252,6 +309,15 @@ export default function LogsView() {
                       title="Show everything from this request"
                     >
                       req={r.requestId.slice(0, 8)}
+                    </button>
+                  )}
+                  {r.attemptId && (
+                    <button
+                      onClick={() => setFilter((f) => ({ ...f, attemptId: r.attemptId ?? undefined }))}
+                      className="text-[10px] font-mono text-brand-700 hover:underline"
+                      title="Show both halves of this action"
+                    >
+                      att={r.attemptId.slice(0, 8)}
                     </button>
                   )}
                   {r.actorCode && (

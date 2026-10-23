@@ -39,7 +39,7 @@ const MAX_BUFFER = 500;
 
 // A record plus the account it was about. The account is an internal link and
 // deliberately not part of LogRecord, so it travels beside it rather than in it.
-type Pending = { record: LogRecord; userId: string | null };
+type Pending = { record: LogRecord; userId: string | null; session: Record<string, unknown> | null };
 
 let buffer: Pending[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -67,6 +67,14 @@ type LogInput = {
   metadata?: LogMetadata;
   /** The account this was about, when there is one. */
   userId?: string | null;
+
+  // ---- the event standard ----
+  eventName?: string | null;
+  schemaVersion?: string | null;
+  sessionId?: string | null;
+  attemptId?: string | null;
+  /** Sent once per session, on session_start. */
+  session?: Record<string, unknown> | null;
 };
 
 /** A request id, short enough to read out loud and unique enough to follow. */
@@ -94,6 +102,10 @@ export function log(input: LogInput): void {
       requestId: input.requestId ?? null,
       actorCode: input.actorCode ?? null,
       source: input.source ?? null,
+      eventName: input.eventName ?? null,
+      schemaVersion: input.schemaVersion ?? null,
+      sessionId: input.sessionId ?? null,
+      attemptId: input.attemptId ?? null,
       metadata: input.metadata ?? {}
     });
 
@@ -105,10 +117,10 @@ export function log(input: LogInput): void {
     }
 
     if (syncMode()) {
-      void writeOne(record, input.userId ?? null);
+      void writeOne(record, input.userId ?? null, input.session ?? null);
       return;
     }
-    buffer.push({ record, userId: input.userId ?? null });
+    buffer.push({ record, userId: input.userId ?? null, session: input.session ?? null });
     if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER);
     schedule();
   } catch {
@@ -116,7 +128,7 @@ export function log(input: LogInput): void {
   }
 }
 
-function toRow(record: LogRecord, userId: string | null) {
+function toRow(record: LogRecord, userId: string | null, session: Record<string, unknown> | null) {
   return {
     ts: new Date(record.ts),
     severity: record.severity,
@@ -127,6 +139,11 @@ function toRow(record: LogRecord, userId: string | null) {
     requestId: record.requestId,
     actorCode: record.actorCode,
     source: record.source,
+    eventName: record.eventName,
+    schemaVersion: record.schemaVersion,
+    sessionId: record.sessionId,
+    attemptId: record.attemptId,
+    session: (session ?? undefined) as object | undefined,
     metadata: record.metadata as object,
     userId
   };
@@ -141,9 +158,13 @@ function schedule(): void {
   if (typeof timer.unref === "function") timer.unref();
 }
 
-async function writeOne(record: LogRecord, userId: string | null): Promise<void> {
+async function writeOne(
+  record: LogRecord,
+  userId: string | null,
+  session: Record<string, unknown> | null
+): Promise<void> {
   try {
-    await prisma.logEntry.create({ data: toRow(record, userId) });
+    await prisma.logEntry.create({ data: toRow(record, userId, session) });
   } catch {
     /* a lost log line is better than a broken request */
   }
@@ -160,7 +181,7 @@ export async function flush(): Promise<void> {
   const batch = buffer;
   buffer = [];
   try {
-    await prisma.logEntry.createMany({ data: batch.map((p) => toRow(p.record, p.userId)) });
+    await prisma.logEntry.createMany({ data: batch.map((p) => toRow(p.record, p.userId, p.session)) });
   } catch {
     // Put them back once, so a transient failure does not lose the batch. If it
     // fails again they age out rather than growing without bound.

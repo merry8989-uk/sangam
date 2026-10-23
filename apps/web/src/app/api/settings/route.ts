@@ -123,6 +123,7 @@ const Body = z.object({
   focusMode: z.boolean().optional(),
 
   diagnosticsEnabled: z.boolean().optional(),
+  analyticsEnabled: z.boolean().optional(),
   hideSensitive: z.boolean().optional(),
   blockedWords: z.array(z.string().max(60)).max(200).optional()
 });

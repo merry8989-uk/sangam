@@ -576,3 +576,39 @@ Narrow, sequential phases. Each phase ships something usable.
       and one that does not.
 - [ ] Decide whether "India-hosted" is a promise to users or a legal posture.
       If it is a promise, media stays on an Indian backend and R2 is not used.
+
+## Phase 30 - Analytics and crash reports as diagnostics logs
+- [x] The ProGallery standard applied: one shared schema for the Android app and
+      the web, so the two can be joined and compared.
+- [x] `lib/events.ts` holds the catalog - 26 events across app, web and the
+      user-friendliness signals - the fixed enums, the validator and the schema
+      version. Pure, and covered by 50 checks.
+- [x] **The rule the standard exists for.** A log showed 71 "access fix
+      requested" entries and not one "fix result": it proved a user was stuck and
+      could not say why. `access_fix_requested` and `access_fix_result` now share
+      an `attempt_id`, and `unfinishedAttempts()` returns the pairs that never
+      closed. The log screen has a panel for exactly that list.
+- [x] The log envelope carries `event_name`, `schema_version`, `session_id` and
+      `attempt_id`, so an analytics event and a log record are one row rather
+      than two systems. The category is the class of log, the event name is the
+      specific thing, and one query can ask either question.
+- [x] Session context - platform, app version, os, device, network, release
+      channel - is sent once with `session_start`, not repeated on every event.
+- [x] Crash reporting: `crash`, `js_error` and `anr`, with the stack **hashed,
+      never stored**. The hash groups occurrences; the raw stack is file paths
+      that change every deploy and the likeliest place for a stray value.
+- [x] The friction signals - rage click, dead click, back-button spam - are one
+      event told apart by a `signal` value, so a new signal is a value rather
+      than a new event.
+- [x] Consent defaults to **off**, unlike diagnostics. Diagnostics is something a
+      user asks for; analytics is something the product does quietly, and DPDP
+      wants consent for that difference. The gate is checked inside `track`, so a
+      new call site cannot forget it.
+- [x] `tools/check-events.py` is the CI gate the standard asks for. It was proved
+      by reintroducing a typo'd event name, a dangling enum reference and a
+      non-snake_case name, and watching it fail on each.
+- [x] The web half is wired: page views, Core Web Vitals, unhandled errors and
+      the friction signals.
+- [ ] The Android half. The catalog and the client module are written to be
+      shared; the wiring is not there, so no app event is emitted yet.
+- [ ] Ship to an external collector.

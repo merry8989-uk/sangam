@@ -18,6 +18,7 @@ type S = {
   profileVisible: boolean; whoCanViewPosts: string;
   autoSaveDrafts: boolean;
   diagnosticsEnabled: boolean;
+  analyticsEnabled: boolean;
   hideSensitive: boolean; blockedWords: string[];
   callRingtone: string; callVibrate: boolean; whoCanCallMe: string; callAutoAnswer: boolean;
   dndEnabled: boolean; dndFrom: string; dndTo: string;
@@ -231,6 +232,12 @@ export default function SettingsPanel({
         title="Diagnostics"
         hint="Lets you send technical detail to support when something breaks. It is recorded on your device and sent only when you press Send."
       >
+        <Toggle
+          label="Share anonymous usage analytics"
+          hint="Page views, load timings and which features are used, so the product can be improved. Off by default. No post, message, search text or file name is ever included, and errors are always reported to support regardless of this setting."
+          value={s.analyticsEnabled}
+          onChange={(v) => set("analyticsEnabled", v)}
+        />
         <Toggle
           label="Record diagnostics"
           hint="Errors and failed requests are kept on this device so a report has something in it. Off means nothing is recorded and anything already held is cleared."

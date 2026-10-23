@@ -69,6 +69,26 @@ export type LogRecord = {
   actorCode?: string | null;
   /** The route or job that produced it. */
   source?: string | null;
+
+  // ---- the event standard ----
+  // A log record and an analytics event are the same object seen from two
+  // angles, so these ride on the same envelope rather than in a parallel table.
+  // That is what lets one query join "what broke" to "what the user was doing".
+  /** `object_action` in snake_case. Null for a plain log line. */
+  eventName?: string | null;
+  /** The event schema this was written against. */
+  schemaVersion?: string | null;
+  /** One id per app launch or visit. */
+  sessionId?: string | null;
+  /**
+   * Groups the intent and the outcome of one user action.
+   *
+   * The standard exists because of a log that showed 71 "access fix requested"
+   * entries and no "fix result". Both halves now carry the same attempt id, so
+   * a request with no result is visible as exactly that.
+   */
+  attemptId?: string | null;
+
   metadata: LogMetadata;
 };
 
@@ -128,6 +148,10 @@ export function buildRecord(input: {
   requestId?: string | null;
   actorCode?: string | null;
   source?: string | null;
+  eventName?: string | null;
+  schemaVersion?: string | null;
+  sessionId?: string | null;
+  attemptId?: string | null;
   metadata?: LogMetadata;
   now?: Date;
 }): LogRecord {
@@ -144,6 +168,10 @@ export function buildRecord(input: {
     requestId: input.requestId ?? null,
     actorCode: input.actorCode ?? null,
     source: input.source ?? null,
+    eventName: input.eventName ?? null,
+    schemaVersion: input.schemaVersion ?? null,
+    sessionId: input.sessionId ?? null,
+    attemptId: input.attemptId ?? null,
     metadata: redactMetadata(input.metadata ?? {})
   };
 }
@@ -230,6 +258,8 @@ export function formatLine(record: LogRecord): string {
     record.appId,
     record.requestId ? `req=${record.requestId.slice(0, 8)}` : null,
     record.source ? `src=${record.source}` : null,
+    record.eventName ? `evt=${record.eventName}` : null,
+    record.attemptId ? `att=${record.attemptId.slice(0, 8)}` : null,
     record.actorCode ? `who=${record.actorCode}` : null,
     record.message
   ].filter(Boolean);
@@ -247,6 +277,11 @@ export type LogFilter = {
   text?: string;
   since?: string;
   until?: string;
+  // ---- the event standard ----
+  eventNames?: string[];
+  sessionId?: string;
+  /** Filters to one attempt, which is how the intent and its outcome meet. */
+  attemptId?: string;
 };
 
 export const EMPTY_LOG_FILTER: LogFilter = {};
@@ -268,6 +303,9 @@ export function filterRecords(records: LogRecord[], filter: LogFilter = EMPTY_LO
     if (filter.source && r.source !== filter.source) return false;
     if (filter.actorCode && r.actorCode !== filter.actorCode) return false;
     if (filter.requestId && r.requestId !== filter.requestId) return false;
+    if (filter.eventNames?.length && !(r.eventName && filter.eventNames.includes(r.eventName))) return false;
+    if (filter.sessionId && r.sessionId !== filter.sessionId) return false;
+    if (filter.attemptId && r.attemptId !== filter.attemptId) return false;
     if (text) {
       const hay = `${r.message} ${JSON.stringify(r.metadata)}`.toLowerCase();
       if (!hay.includes(text)) return false;
@@ -289,6 +327,9 @@ export function logFilterIsActive(filter: LogFilter = EMPTY_LOG_FILTER): boolean
       filter.source ||
       filter.actorCode ||
       filter.requestId ||
+      filter.eventNames?.length ||
+      filter.sessionId ||
+      filter.attemptId ||
       filter.text?.trim() ||
       filter.since ||
       filter.until
@@ -300,21 +341,63 @@ export function logFacets(records: LogRecord[]): {
   severities: LogSeverity[];
   categories: LogCategory[];
   sources: string[];
+  eventNames: string[];
 } {
   const sev = new Set<LogSeverity>();
   const cat = new Set<LogCategory>();
   const src = new Set<string>();
+  const evt = new Set<string>();
   for (const r of records) {
     sev.add(r.severity);
     cat.add(r.category);
     if (r.source) src.add(r.source);
+    if (r.eventName) evt.add(r.eventName);
   }
   return {
     severities: LOG_SEVERITIES.filter((s) => sev.has(s)),
     categories: LOG_CATEGORIES.filter((c) => cat.has(c)),
-    sources: [...src].sort()
+    sources: [...src].sort(),
+    eventNames: [...evt].sort()
   };
 }
+
+/**
+ * Attempts that were opened and never closed, across the records given.
+ *
+ * This is the query the whole standard was written for. An
+ * `access_fix_requested` with no `access_fix_result` is a user who tried to fix
+ * something and the app never told them whether it worked.
+ */
+export type UnfinishedAttempt = {
+  attemptId: string;
+  openedBy: string;
+  sessionId: string | null;
+  ts: string;
+};
+
+export function unfinishedAttempts(records: LogRecord[]): UnfinishedAttempt[] {
+  const opened: Map<string, AttemptOpener> = new Map();
+  const closed: Set<string> = new Set();
+
+  for (const r of records) {
+    if (!r.attemptId) continue;
+    if (r.eventName && Object.prototype.hasOwnProperty.call(ATTEMPT_OPENERS, r.eventName)) {
+      opened.set(r.attemptId, { openedBy: r.eventName, sessionId: r.sessionId ?? null, ts: r.ts });
+    } else {
+      closed.add(r.attemptId);
+    }
+  }
+
+  return [...opened.entries()]
+    .filter(([id]) => !closed.has(id))
+    .map(([attemptId, info]) => ({ attemptId, ...info }))
+    .sort((a, b) => (a.ts < b.ts ? 1 : -1));
+}
+
+type AttemptOpener = { openedBy: string; sessionId: string | null; ts: string };
+
+/** Events that open an attempt. Kept here so the reader does not import events.ts. */
+const ATTEMPT_OPENERS: Record<string, true> = { access_fix_requested: true };
 
 export function describeLogFilter(filter: LogFilter = EMPTY_LOG_FILTER): string {
   const parts: string[] = [];
@@ -323,6 +406,9 @@ export function describeLogFilter(filter: LogFilter = EMPTY_LOG_FILTER): string 
   if (filter.source) parts.push(`source: ${filter.source}`);
   if (filter.actorCode) parts.push(`who: ${filter.actorCode}`);
   if (filter.requestId) parts.push(`request: ${filter.requestId}`);
+  if (filter.eventNames?.length) parts.push(`event: ${filter.eventNames.join(", ")}`);
+  if (filter.sessionId) parts.push(`session: ${filter.sessionId}`);
+  if (filter.attemptId) parts.push(`attempt: ${filter.attemptId}`);
   if (filter.text?.trim()) parts.push(`text: "${filter.text.trim()}"`);
   if (filter.since) parts.push(`from ${filter.since}`);
   if (filter.until) parts.push(`to ${filter.until}`);

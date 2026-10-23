@@ -76,3 +76,19 @@ jobs:
           python-version: "3.12"
       - name: Check no route can leak a private column
         run: python3 tools/check-leaks.py
+
+  # Validates the event schema and every call site that uses it.
+  #
+  # The standard asks for this explicitly. It catches a typo'd event name, a
+  # property pointing at an enum that does not exist, and an event used on the
+  # platform it does not belong to - all of which would otherwise be found weeks
+  # later, in a dashboard, when the number looked wrong.
+  events:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the event schema and its call sites
+        run: python3 tools/check-events.py

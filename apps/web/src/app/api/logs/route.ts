@@ -10,6 +10,7 @@ import {
   filterRecords,
   logFacets,
   retentionFor,
+  unfinishedAttempts,
   type LogCategory,
   type LogFilter,
   type LogRecord,
@@ -51,6 +52,9 @@ function filterFrom(params: URLSearchParams): LogFilter {
     source: pick(params, "source"),
     actorCode: pick(params, "actor"),
     requestId: pick(params, "request"),
+    eventNames: list("event").length ? list("event") : undefined,
+    sessionId: pick(params, "session"),
+    attemptId: pick(params, "attempt"),
     text: pick(params, "q"),
     since: pick(params, "since"),
     until: pick(params, "until")
@@ -67,6 +71,10 @@ function toRecord(row: {
   requestId: string | null;
   actorCode: string | null;
   source: string | null;
+  eventName: string | null;
+  schemaVersion: string | null;
+  sessionId: string | null;
+  attemptId: string | null;
   metadata: unknown;
 }): LogRecord {
   return {
@@ -79,6 +87,10 @@ function toRecord(row: {
     requestId: row.requestId,
     actorCode: row.actorCode,
     source: row.source,
+    eventName: row.eventName,
+    schemaVersion: row.schemaVersion,
+    sessionId: row.sessionId,
+    attemptId: row.attemptId,
     metadata: (row.metadata ?? {}) as Record<string, unknown>
   };
 }
@@ -92,11 +104,14 @@ function render(records: LogRecord[], format: string, filter: LogFilter): string
 
   if (format === "csv") {
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = ["ts,severity,category,app,environment,requestId,actorCode,source,message,metadata"];
+    const lines = [
+      "ts,severity,category,eventName,attemptId,sessionId,app,environment,requestId,actorCode,source,message,metadata"
+    ];
     for (const r of records) {
       lines.push(
         [
-          r.ts, r.severity, r.category, r.appId, r.environment,
+          r.ts, r.severity, r.category, r.eventName ?? "", r.attemptId ?? "", r.sessionId ?? "",
+          r.appId, r.environment,
           r.requestId ?? "", r.actorCode ?? "", r.source ?? "",
           esc(r.message), esc(JSON.stringify(r.metadata))
         ].join(",")
@@ -142,6 +157,9 @@ export async function GET(req: Request) {
       ...(filter.source ? { source: filter.source } : {}),
       ...(filter.actorCode ? { actorCode: filter.actorCode } : {}),
       ...(filter.requestId ? { requestId: filter.requestId } : {}),
+      ...(filter.eventNames?.length ? { eventName: { in: filter.eventNames } } : {}),
+      ...(filter.sessionId ? { sessionId: filter.sessionId } : {}),
+      ...(filter.attemptId ? { attemptId: filter.attemptId } : {}),
       ...(filter.since || filter.until
         ? {
             ts: {
@@ -155,7 +173,8 @@ export async function GET(req: Request) {
     take: limit,
     select: {
       ts: true, severity: true, category: true, message: true, appId: true,
-      environment: true, requestId: true, actorCode: true, source: true, metadata: true
+      environment: true, requestId: true, actorCode: true, source: true, metadata: true,
+      eventName: true, schemaVersion: true, sessionId: true, attemptId: true
     }
   });
 
@@ -174,12 +193,18 @@ export async function GET(req: Request) {
     });
   }
 
+  // The query this whole standard was written for: actions that were started
+  // and never finished. A request with no result is a user who tried something
+  // and was never told whether it worked.
+  const unfinished = unfinishedAttempts(records);
+
   return NextResponse.json({
     count: records.length,
     scanned: rows.length,
     filter,
     facets: logFacets(records),
     retention: retentionFor(),
+    unfinished,
     entries: records
   });
 }
