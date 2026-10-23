@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { embedKnowledgeBase, ensureAgent } from "@/lib/agent";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   name: z.string().max(60).optional(),
@@ -27,15 +28,15 @@ const Body = z.object({
 });
 
 // One agent per user - created on first read.
-export async function GET() {
+export const GET = withLogging("agent:get", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const agent = await ensureAgent(userId);
   return NextResponse.json({ agent });
-}
+});
 
-export async function PUT(req: Request) {
+export const PUT = withLogging("agent:put", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,4 +57,4 @@ export async function PUT(req: Request) {
 
   const fresh = embedded ? await prisma.agent.findUnique({ where: { userId } }) : agent;
   return NextResponse.json({ agent: fresh, knowledgeEmbedded: embedded });
-}
+});

@@ -3,10 +3,11 @@ import { metricsWindow } from "@/lib/metrics";
 import { computeStatuses, SLOS } from "@/lib/slo";
 import { raiseAlert } from "@/lib/alert";
 import { recordJob, recordRoute } from "@/lib/metrics";
+import { withLogging } from "@/lib/withLogging";
 
 // Evaluates the error budgets and raises alerts on breach. Run every few
 // minutes from a scheduler (see docs/JOBS.md).
-export async function POST(req: Request) {
+export const POST = withLogging("internal:evaluate-slo:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("evaluate-slo", 403);
@@ -40,4 +41,4 @@ export async function POST(req: Request) {
     await recordRoute("evaluate-slo", 500);
     return NextResponse.json({ error: "Evaluation failed" }, { status: 500 });
   }
-}
+});

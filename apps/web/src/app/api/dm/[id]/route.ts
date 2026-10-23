@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 import { dmChannel, redis } from "@/lib/redis";
+import { withLogging } from "@/lib/withLogging";
 
 async function membership(conversationId: string, userId: string) {
   return prisma.conversationParticipant.findUnique({
@@ -12,7 +13,7 @@ async function membership(conversationId: string, userId: string) {
 }
 
 // GET /api/dm/[id] - the thread. Marks it read for the caller.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("dm:id:get", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -37,12 +38,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const other = conversation.participants.find((p) => p.userId !== userId)?.user ?? null;
   return NextResponse.json({ other, messages: conversation.messages });
-}
+});
 
 const SendBody = z.object({ body: z.string().min(1).max(4000) });
 
 // POST /api/dm/[id] - send a message.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("dm:id:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -81,4 +82,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.json(message, { status: 201 });
-}
+});

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { loadByShareToken } from "@/lib/driveAccess";
+import { withLogging } from "@/lib/withLogging";
 
 // Open a link share. No account needed - the token is the key.
-export async function GET(_req: Request, { params }: { params: { token: string } }) {
+export const GET = withLogging("share:token:get", async (_req: Request, { params }: { params: { token: string } }) => {
   const found = await loadByShareToken(params.token);
   if (!found) return NextResponse.json({ error: "This link is not valid or has expired" }, { status: 404 });
 
@@ -21,4 +22,4 @@ export async function GET(_req: Request, { params }: { params: { token: string }
     },
     access: level
   });
-}
+});

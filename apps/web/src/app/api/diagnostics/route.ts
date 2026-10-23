@@ -8,6 +8,7 @@ import { mailerConfigured } from "@/lib/mailer";
 import { ensureUserCode } from "@/lib/userCodeServer";
 import { codeForReport } from "@/lib/userCode";
 import type { DiagCheck, DiagServerInfo } from "@/lib/diagnostics";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ async function aiReachable(): Promise<boolean> {
   }
 }
 
-export async function GET(req: Request) {
+export const GET = withLogging("diagnostics:get", async (req: Request) => {
   const userId = await getViewerId(req);
 
   // The user's own switch. A report is only assembled if they left it on.
@@ -103,4 +104,4 @@ export async function GET(req: Request) {
     emailReady: mailerConfigured(),
     userCode: codeForReport(userCode)
   });
-}
+});

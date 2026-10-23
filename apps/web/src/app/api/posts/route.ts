@@ -10,6 +10,7 @@ import { newTraceparent } from "@/lib/trace";
 import { indexPosts } from "@/lib/search";
 import { recordRoute } from "@/lib/metrics";
 import { keyBelongsToUser } from "@/lib/s3";
+import { withLogging } from "@/lib/withLogging";
 
 const MediaIn = z.object({
   key: z.string().min(1),
@@ -27,7 +28,7 @@ const CreateBody = z.object({
 });
 
 // GET /api/posts?cursor=<id>&limit=20&type=<TYPE> - cursor-paginated feed.
-export async function GET(req: Request) {
+export const GET = withLogging("posts:get", async (req: Request) => {
   const url = new URL(req.url);
 
   // Every one of these reached Prisma unchecked: `limit=abc` gave NaN, a
@@ -69,18 +70,18 @@ export async function GET(req: Request) {
     // A stale cursor is the likely cause, and it is the client's to fix.
     return NextResponse.json({ error: "Invalid cursor or query" }, { status: 400 });
   }
-}
+});
 
 // POST /api/posts - create, moderate, then enrich.
 //
 // Images are enriched inline (fast). Posts with video are handed to the media
 // queue (MEDIA_QUEUE_ENABLED=true) or, if the queue is off, to an in-process
 // background task; either way the client polls /api/posts/[id]/status.
-export async function POST(req: Request) {
+export const POST = withLogging("posts:post", async (req: Request) => {
   const res = await handleCreatePost(req);
   await recordRoute("posts:create", res.status);
   return res;
-}
+});
 
 async function handleCreatePost(req: Request): Promise<Response> {
   const userId = await getViewerId(req);

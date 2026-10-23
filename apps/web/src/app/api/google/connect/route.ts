@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getViewerId } from "@/lib/viewer";
 import { googleConfigured, buildGoogleAuthUrl, newGoogleState } from "@/lib/google";
+import { withLogging } from "@/lib/withLogging";
 
-export async function GET(req: Request) {
+export const GET = withLogging("google:connect:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.redirect(new URL("/settings", req.url));
 
@@ -27,4 +28,4 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.redirect(buildGoogleAuthUrl({ clientId: process.env.GOOGLE_CLIENT_ID ?? "", state }));
-}
+});

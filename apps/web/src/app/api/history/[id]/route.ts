@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getViewerId } from "@/lib/viewer";
 import { prisma } from "@/lib/prisma";
 import type { HistoryType } from "@/lib/history";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * One history row.
@@ -21,7 +22,7 @@ function parseType(v: string | null): HistoryType | null {
   return null;
 }
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export const PATCH = withLogging("history:id:patch", async (req: Request, ctx: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -40,9 +41,9 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
 
   if (result.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true, archived: parsed.data.archived });
-}
+});
 
-export async function DELETE(req: Request, ctx: { params: { id: string } }) {
+export const DELETE = withLogging("history:id:delete", async (req: Request, ctx: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -57,4 +58,4 @@ export async function DELETE(req: Request, ctx: { params: { id: string } }) {
 
   if (result.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
-}
+});

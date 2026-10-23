@@ -6,6 +6,7 @@ import { getSettingsOptional } from "@/lib/settings";
 import { APP_VERSION } from "@/lib/appInfo";
 import { buildReport, redactValue, isDiagFormat } from "@/lib/diagnostics";
 import { ensureUserCode } from "@/lib/userCodeServer";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ const Body = z.object({
   forward: z.boolean().optional()
 });
 
-export async function POST(req: Request) {
+export const POST = withLogging("diagnostics:report:post", async (req: Request) => {
   const userId = await getViewerId(req);
 
   const settings = await getSettingsOptional(userId);
@@ -110,4 +111,4 @@ export async function POST(req: Request) {
     userCode: userCode ?? "SG-ANON",
     forwarded
   });
-}
+});

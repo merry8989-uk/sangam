@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getViewerId } from "@/lib/viewer";
 import { teraboxOAuthConfigured, teraboxApiBase, oauthSign } from "@/lib/terabox";
+import { withLogging } from "@/lib/withLogging";
 
 // Start the official Terabox OAuth device-code flow (QR scan in the app).
 // Only works when Terabox has issued us a client id and secret.
-export async function POST(req: Request) {
+export const POST = withLogging("terabox:device-code:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -38,4 +39,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Could not reach Terabox." }, { status: 502 });
   }
-}
+});

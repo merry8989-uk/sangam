@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { recordJob, recordRoute } from "@/lib/metrics";
 import { logJob } from "@/lib/loggerServer";
 import { LOG_CATEGORIES, retentionCutoff, retentionFor, type LogCategory } from "@/lib/logger";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * Applies the log retention policy. Run daily; see docs/JOBS.md.
@@ -32,7 +33,7 @@ function retentionFromEnv(): Record<LogCategory, number> {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withLogging("internal:prune-logs:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("internal-prune-logs", 403);
@@ -67,13 +68,13 @@ export async function POST(req: Request) {
   await recordRoute("internal-prune-logs", 200);
 
   return NextResponse.json({ ok: true, deleted, total, retention });
-}
+});
 
 // A GET is allowed so a scheduler can check the policy without deleting.
-export async function GET(req: Request) {
+export const GET = withLogging("internal:prune-logs:get", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return NextResponse.json({ retention: retentionFromEnv() });
-}
+});

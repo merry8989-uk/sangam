@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({ value: z.union([z.literal(1), z.literal(-1)]) });
 
 // Vote on a community skip point. One vote per user; changing a vote adjusts
 // the counters by the difference, so scores cannot be inflated by repeats.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("skip-points:id:vote:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -51,4 +52,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   await prisma.skipSegment.update({ where: { id: params.id }, data: delta });
 
   return NextResponse.json({ ok: true, vote: value });
-}
+});

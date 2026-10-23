@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { roomNameFor, livekitConfigured } from "@/lib/livekit";
 import { createIngress, deleteIngress } from "@/lib/livekitAdmin";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({ action: z.enum(["start", "stop"]) });
 
 // Start or stop the RTMP ingest for a live room.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("rooms:id:live:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -50,4 +51,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     data: { ingressId: null, isLive: false, rtmpUrl: null, hlsPlaybackUrl: null }
   });
   return NextResponse.json({ room: updated });
-}
+});

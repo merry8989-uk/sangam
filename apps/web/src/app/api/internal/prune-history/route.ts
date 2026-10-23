@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { recordJob, recordRoute } from "@/lib/metrics";
 import { cutoffFor, resolveHistoryPolicy, shouldPrune } from "@/lib/history";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * Applies each user's history policy. Run daily; see docs/JOBS.md.
@@ -17,7 +18,7 @@ import { cutoffFor, resolveHistoryPolicy, shouldPrune } from "@/lib/history";
  * Rows are already in Postgres, so nothing here is lost to a cache restart -
  * this job is the only thing that removes them.
  */
-export async function POST(req: Request) {
+export const POST = withLogging("internal:prune-history:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("prune-history", 403);
@@ -107,4 +108,4 @@ export async function POST(req: Request) {
     await recordRoute("prune-history", 500);
     return NextResponse.json({ error: "Prune failed" }, { status: 500 });
   }
-}
+});

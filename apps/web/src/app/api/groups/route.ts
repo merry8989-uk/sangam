@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { withLogging } from "@/lib/withLogging";
 
 function slugify(name: string): string {
   return name
@@ -20,7 +21,7 @@ const Body = z.object({
 });
 
 // Create a group. The creator becomes OWNER and first member.
-export async function POST(req: Request) {
+export const POST = withLogging("groups:post", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,4 +48,4 @@ export async function POST(req: Request) {
     }
   });
   return NextResponse.json({ slug: group.slug }, { status: 201 });
-}
+});

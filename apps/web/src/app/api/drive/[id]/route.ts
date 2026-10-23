@@ -5,9 +5,10 @@ import { getViewerId } from "@/lib/viewer";
 import { sanitizeName, canMoveTo } from "@/lib/drive";
 import { loadItemWithAccess } from "@/lib/driveAccess";
 import { canRead, canWrite, canManage } from "@/lib/drive-share";
+import { withLogging } from "@/lib/withLogging";
 
 // Read one item, including its content.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("drive:id:get", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await loadItemWithAccess(userId, params.id);
@@ -17,7 +18,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   return NextResponse.json({ item: access.item, access: access.level, via: access.via });
-}
+});
 
 const PatchBody = z.object({
   name: z.string().max(300).optional(),
@@ -27,7 +28,7 @@ const PatchBody = z.object({
 });
 
 // Rename, edit content, move or star an item.
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export const PATCH = withLogging("drive:id:patch", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -74,10 +75,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const updated = await prisma.driveItem.update({ where: { id: item.id }, data });
   return NextResponse.json({ item: updated });
-}
+});
 
 // Move to trash, or delete for good with ?hard=1.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export const DELETE = withLogging("drive:id:delete", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await loadItemWithAccess(userId, params.id);
@@ -92,4 +93,4 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
   await prisma.driveItem.update({ where: { id: item.id }, data: { trashedAt: new Date() } });
   return NextResponse.json({ ok: true, trashed: true });
-}
+});

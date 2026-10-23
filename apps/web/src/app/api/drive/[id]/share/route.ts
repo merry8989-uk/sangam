@@ -5,6 +5,7 @@ import { getViewerId } from "@/lib/viewer";
 import { loadItemWithAccess } from "@/lib/driveAccess";
 import { canManage, expiresAtFromDays, newShareToken } from "@/lib/drive-share";
 import { PUBLIC_USER_SELECT } from "@/lib/select";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * Sharing one drive item.
@@ -41,7 +42,7 @@ async function loadManageable(userId: string, itemId: string) {
   return { item: access.item };
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("drive:id:share:get", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -64,9 +65,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   return NextResponse.json({ shares });
-}
+});
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("drive:id:share:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -116,4 +117,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
 
   return NextResponse.json({ share });
-}
+});

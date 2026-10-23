@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
+import { withLogging } from "@/lib/withLogging";
 
 // Room details plus who is in it.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("rooms:id:get", async (req: Request, { params }: { params: { id: string } }) => {
   const viewerId = await getViewerId(req);
   const room = await prisma.room.findUnique({
     where: { id: params.id },
@@ -46,4 +47,4 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       canSeeInvite: maySeeInvite
     }
   });
-}
+});

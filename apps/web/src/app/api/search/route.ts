@@ -6,13 +6,14 @@ import { searchEnabled, searchPosts as meiliPosts, searchUsers as meiliUsers } f
 import { recordRoute } from "@/lib/metrics";
 import { getSettingsOptional } from "@/lib/settings";
 import { resolveHistoryPolicy, shouldRecord } from "@/lib/history";
+import { withLogging } from "@/lib/withLogging";
 
 const EMPTY = { users: [], tags: [], posts: [] };
 
 // Search people, hashtags and posts. Posts and people use Meilisearch when it
 // is configured; otherwise both fall back to Postgres `contains`. Hashtags
 // always come from Postgres (they are just counts).
-export async function GET(req: Request) {
+export const GET = withLogging("search:get", async (req: Request) => {
   const res = await handleSearch(req);
   await recordRoute("search", res.status);
 
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
     }
   }
   return res;
-}
+});
 
 async function handleSearch(req: Request): Promise<Response> {
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();

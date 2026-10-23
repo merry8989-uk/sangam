@@ -3,6 +3,7 @@ import { getViewerId } from "@/lib/viewer";
 import { prisma } from "@/lib/prisma";
 import { getSettingsOptional } from "@/lib/settings";
 import { resolveHistoryPolicy, type HistoryType } from "@/lib/history";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * Watch and search history.
@@ -21,7 +22,7 @@ function parseType(v: string | null): HistoryType {
   return v === "search" ? "search" : "watch";
 }
 
-export async function GET(req: Request) {
+export const GET = withLogging("history:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ items: [], policy: null });
 
@@ -71,9 +72,9 @@ export async function GET(req: Request) {
       // A post that has since been deleted leaves the row with nothing to show.
       .filter((r) => r.post)
   });
-}
+});
 
-export async function DELETE(req: Request) {
+export const DELETE = withLogging("history:delete", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -90,4 +91,4 @@ export async function DELETE(req: Request) {
     removed.search = (await prisma.searchHistory.deleteMany({ where: { userId } })).count;
   }
   return NextResponse.json({ ok: true, removed });
-}
+});

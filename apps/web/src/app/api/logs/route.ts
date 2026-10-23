@@ -16,6 +16,7 @@ import {
   type LogRecord,
   type LogSeverity
 } from "@/lib/logger";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
@@ -133,7 +134,7 @@ function render(records: LogRecord[], format: string, filter: LogFilter): string
   return lines.join("\n");
 }
 
-export async function GET(req: Request) {
+export const GET = withLogging("logs:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if ((await denyNonOperator(userId, "logs:read")).denied) {
@@ -207,9 +208,9 @@ export async function GET(req: Request) {
     unfinished,
     entries: records
   });
-}
+});
 
-export async function DELETE(req: Request) {
+export const DELETE = withLogging("logs:delete", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if ((await denyNonOperator(userId, "logs:delete")).denied) {
@@ -229,4 +230,4 @@ export async function DELETE(req: Request) {
   const res = await prisma.logEntry.deleteMany({ where: { ts: { lt: when } } });
   logAudit({ userId, action: "delete", resource: "logs", metadata: { before, deleted: res.count } });
   return NextResponse.json({ ok: true, deleted: res.count });
-}
+});

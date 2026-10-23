@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getViewerId } from "@/lib/viewer";
 import { zohoConfigured, zohoDc, buildAuthUrl, newOAuthState } from "@/lib/zoho";
+import { withLogging } from "@/lib/withLogging";
 
 // Kick off the Zoho consent flow. The state is kept in a short-lived cookie so
 // the callback can prove the round trip started here.
-export async function GET(req: Request) {
+export const GET = withLogging("zoho:connect:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.redirect(new URL("/settings", req.url));
 
@@ -30,4 +31,4 @@ export async function GET(req: Request) {
 
   const url = buildAuthUrl({ clientId: process.env.ZOHO_CLIENT_ID ?? "", dc: zohoDc(), state });
   return NextResponse.redirect(url);
-}
+});

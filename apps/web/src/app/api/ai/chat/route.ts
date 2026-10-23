@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sarvamChat } from "@/lib/ai";
 import { buildSystemPrompt, getAgentForUser } from "@/lib/agent";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   messages: z
@@ -18,7 +19,7 @@ const Body = z.object({
 
 // Public chat endpoint - works with or without login.
 // Logged-in users get their conversation persisted (and may use their agent).
-export async function POST(req: Request) {
+export const POST = withLogging("ai:chat:post", async (req: Request) => {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { messages, sessionId, useAgent, model } = parsed.data;
@@ -72,4 +73,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ content: reply.content, model: reply.model, sessionId: activeSessionId });
-}
+});

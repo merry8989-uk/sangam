@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getViewerId } from "@/lib/viewer";
 import { withZohoToken, workDriveBaseForAccount } from "@/lib/zohoAccount";
 import { getMyFolderId, listFiles } from "@/lib/zohoWorkDrive";
+import { withLogging } from "@/lib/withLogging";
 
 // What is in the linked WorkDrive account, so the drive can show it.
-export async function GET(req: Request) {
+export const GET = withLogging("drive:zoho:list:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -17,4 +18,4 @@ export async function GET(req: Request) {
 
   const files = await listFiles(base, auth.accessToken, folderId);
   return NextResponse.json({ files, account: { label: auth.account.label, apiDomain: auth.account.apiDomain } });
-}
+});

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { sampleFrames } from "@/lib/ai";
+import { withLogging } from "@/lib/withLogging";
 
 // Candidate poster frames. Only the media owner may ask, because generating
 // them downloads the video and runs FFmpeg.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("media:id:frames:get", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,4 +27,4 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   } catch {
     return NextResponse.json({ error: "Could not generate frames" }, { status: 502 });
   }
-}
+});

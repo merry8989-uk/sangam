@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { roomNameFor } from "@/lib/livekit";
 import { deleteIngress, deleteRoom } from "@/lib/livekitAdmin";
+import { withLogging } from "@/lib/withLogging";
 
 // End a room. Only the host may do this.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("rooms:id:end:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,4 +27,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   await prisma.roomParticipant.updateMany({ where: { roomId: params.id, leftAt: null }, data: { leftAt: new Date() } });
 
   return NextResponse.json({ ok: true });
-}
+});

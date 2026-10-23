@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteObject } from "@/lib/s3";
 import { recordJob, recordRoute } from "@/lib/metrics";
+import { withLogging } from "@/lib/withLogging";
 
 const THUMB_WIDTHS = [320, 640, 1080];
 
 // Deletes stories past their 24h expiry, along with their stored objects.
 // Expiry is already enforced on read; this reclaims the rows and the bytes.
 // Called by a scheduler (see docs/JOBS.md).
-export async function POST(req: Request) {
+export const POST = withLogging("internal:sweep-stories:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("sweep-stories", 403);
@@ -51,4 +52,4 @@ export async function POST(req: Request) {
   await recordJob("sweep-stories", true);
   await recordRoute("sweep-stories", 200);
   return NextResponse.json({ removed, objects });
-}
+});

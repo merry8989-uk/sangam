@@ -5,6 +5,7 @@ import { getViewerId } from "@/lib/viewer";
 import { sanitizeName } from "@/lib/drive";
 import { withZohoToken, workDriveBaseForAccount } from "@/lib/zohoAccount";
 import { getMyFolderId, createNativeFile } from "@/lib/zohoWorkDrive";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   kind: z.enum(["SHEET", "DOC", "SLIDES"]),
@@ -19,7 +20,7 @@ const SERVICE: Record<string, "zw" | "zohosheet" | "zohoshow"> = {
 };
 
 // Create a native Zoho document / sheet / slides and link it in the drive.
-export async function POST(req: Request) {
+export const POST = withLogging("drive:zoho:create:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -54,4 +55,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ item, zoho: created }, { status: 201 });
-}
+});

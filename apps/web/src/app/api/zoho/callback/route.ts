@@ -3,10 +3,11 @@ import { cookies } from "next/headers";
 import { getViewerId } from "@/lib/viewer";
 import { zohoDc, accountsBaseFor, parseTokenResponse, stateMatches } from "@/lib/zoho";
 import { saveZohoLink } from "@/lib/zohoAccount";
+import { withLogging } from "@/lib/withLogging";
 
 // Zoho sends the user back here with a one-time code. Exchange it for tokens
 // and remember the account.
-export async function GET(req: Request) {
+export const GET = withLogging("zoho:callback:get", async (req: Request) => {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -52,4 +53,4 @@ export async function GET(req: Request) {
   } catch {
     return back("tokenfail");
   }
-}
+});

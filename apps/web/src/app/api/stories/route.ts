@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/s3";
 import { processImage } from "@/lib/ai";
 import { keyBelongsToUser } from "@/lib/s3";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   mediaKey: z.string().min(1),
@@ -17,7 +18,7 @@ const Body = z.object({
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Active stories from the people you follow, plus your own. Grouped by author.
-export async function GET(req: Request) {
+export const GET = withLogging("stories:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ groups: [] });
 
@@ -50,10 +51,10 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ groups: [...byAuthor.values()] });
-}
+});
 
 // Create a story that expires in 24 hours.
-export async function POST(req: Request) {
+export const POST = withLogging("stories:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -92,4 +93,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ id: story.id, expiresAt: story.expiresAt }, { status: 201 });
-}
+});

@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { withLogging } from "@/lib/withLogging";
 
-export async function GET(req: Request) {
+export const GET = withLogging("mutes:get", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   const target = new URL(req.url).searchParams.get("userId");
@@ -15,11 +16,11 @@ export async function GET(req: Request) {
     select: { id: true }
   });
   return NextResponse.json({ muting: Boolean(found) });
-}
+});
 
 const Body = z.object({ userId: z.string().min(1) });
 
-export async function POST(req: Request) {
+export const POST = withLogging("mutes:post", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,4 +39,4 @@ export async function POST(req: Request) {
   }
   await prisma.mute.create({ data: { muterId: userId, mutedId: target } });
   return NextResponse.json({ muting: true });
-}
+});

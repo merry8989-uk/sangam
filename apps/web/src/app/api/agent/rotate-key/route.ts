@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureAgent, newAgentKey } from "@/lib/agent";
+import { withLogging } from "@/lib/withLogging";
 
 // Rotate the API key external callers use. Invalidates the previous key.
-export async function POST() {
+export const POST = withLogging("agent:rotate-key:post", async (req: Request) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,4 +14,4 @@ export async function POST() {
   await ensureAgent(userId);
   const agent = await prisma.agent.update({ where: { userId }, data: { apiKey: newAgentKey() } });
   return NextResponse.json({ apiKey: agent.apiKey });
-}
+});

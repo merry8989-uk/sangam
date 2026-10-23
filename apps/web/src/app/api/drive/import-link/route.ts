@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { sanitizeName } from "@/lib/drive";
 import { normalizeShareLink, extractShareCode, isTeraboxUrl } from "@/lib/terabox";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   url: z.string().min(4).max(2000),
@@ -14,7 +15,7 @@ const Body = z.object({
 // Save an external link (a Terabox share link) into the drive. The bytes stay
 // on Terabox - we store a pointer, because there is no supported way to pull
 // them across without their official API.
-export async function POST(req: Request) {
+export const POST = withLogging("drive:import-link:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -52,4 +53,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ item, isTerabox: isTeraboxUrl(normalized) }, { status: 201 });
-}
+});

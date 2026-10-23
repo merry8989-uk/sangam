@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { dueBackups, runBackup } from "@/lib/backupRun";
 import { recordJob, recordRoute } from "@/lib/metrics";
+import { withLogging } from "@/lib/withLogging";
 
 // Runs every backup that is due. Call this from a scheduler once an hour
 // (see docs/JOBS.md). Guarded by the same internal secret as the other jobs.
-export async function POST(req: Request) {
+export const POST = withLogging("internal:run-backups:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("run-backups", 403);
@@ -24,4 +25,4 @@ export async function POST(req: Request) {
   await recordJob("run-backups", ok, failed);
   await recordRoute("run-backups", 200);
   return NextResponse.json({ due: due.length, ok, failed });
-}
+});

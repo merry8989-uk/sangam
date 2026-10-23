@@ -3,10 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { SKIP_CATEGORIES, SKIP_HIDE_BELOW } from "@/lib/skip";
+import { withLogging } from "@/lib/withLogging";
 
 // List skip points for a video: everyone's public ones plus the viewer's own
 // private ones. Community segments the crowd has voted down are hidden.
-export async function GET(req: Request) {
+export const GET = withLogging("skip-points:get", async (req: Request) => {
   const { searchParams } = new URL(req.url);
   const mediaId = searchParams.get("mediaId");
   if (!mediaId) return NextResponse.json({ error: "mediaId is required" }, { status: 400 });
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
     }));
 
   return NextResponse.json({ items });
-}
+});
 
 const Body = z.object({
   mediaId: z.string().min(1),
@@ -50,7 +51,7 @@ const Body = z.object({
 
 // Create a skip point. The author chooses whether it applies only to them
 // (SELF) or to everyone who has skipping turned on (EVERYONE).
-export async function POST(req: Request) {
+export const POST = withLogging("skip-points:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -75,4 +76,4 @@ export async function POST(req: Request) {
     data: { mediaId, authorId: userId, startSec, endSec, category, visibility }
   });
   return NextResponse.json({ segment }, { status: 201 });
-}
+});

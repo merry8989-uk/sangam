@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getViewerId } from "@/lib/viewer";
 import { zohoConfigured, zohoDc, accountsBaseFor } from "@/lib/zoho";
 import { getZohoAccount } from "@/lib/zohoAccount";
+import { withLogging } from "@/lib/withLogging";
 
-export async function GET(req: Request) {
+export const GET = withLogging("zoho:status:get", async (req: Request) => {
   const userId = await getViewerId(req);
   const configured = zohoConfigured();
   const dc = zohoDc();
@@ -20,4 +21,4 @@ export async function GET(req: Request) {
     linked: Boolean(account),
     account: account ? { id: account.id, label: account.label, apiDomain: account.apiDomain } : null
   });
-}
+});

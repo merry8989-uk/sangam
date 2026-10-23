@@ -5,9 +5,10 @@ import { getSettingsOptional } from "@/lib/settings";
 import { isDue, nextRunAt } from "@/lib/backup";
 import { getZohoAccount } from "@/lib/zohoAccount";
 import { getGoogleAccount } from "@/lib/googleAccount";
+import { withLogging } from "@/lib/withLogging";
 
 // What the settings screen needs: the last few runs and when the next is due.
-export async function GET(req: Request) {
+export const GET = withLogging("backup:status:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -49,4 +50,4 @@ export async function GET(req: Request) {
       finishedAt: r.finishedAt
     }))
   });
-}
+});

@@ -4,11 +4,12 @@ import { getViewerId } from "@/lib/viewer";
 import { sanitizeName, MAX_UPLOAD_BYTES } from "@/lib/drive";
 import { withZohoToken, workDriveBaseForAccount } from "@/lib/zohoAccount";
 import { getMyFolderId, uploadFile } from "@/lib/zohoWorkDrive";
+import { withLogging } from "@/lib/withLogging";
 
 // Upload a file straight into the user's Zoho WorkDrive. Unlike the S3 path
 // this has to go through our server, because WorkDrive uploads are
 // authenticated with the user's OAuth token.
-export async function POST(req: Request) {
+export const POST = withLogging("drive:zoho:upload:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -51,4 +52,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ item, zoho: uploaded }, { status: 201 });
-}
+});

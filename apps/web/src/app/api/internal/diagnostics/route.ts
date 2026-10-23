@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { recordRoute } from "@/lib/metrics";
 import { filterEntries, filterFacets, formatReport, isDiagFormat, type DiagFilter } from "@/lib/diagnostics";
 import type { DiagnosticReport } from "@/lib/diagnostics";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ function pick(params: URLSearchParams, key: string): string | undefined {
   return v && v.trim() ? v.trim() : undefined;
 }
 
-export async function GET(req: Request) {
+export const GET = withLogging("internal:diagnostics:get", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("internal-diagnostics", 403);
@@ -146,4 +147,4 @@ export async function GET(req: Request) {
     scanned: reports.length,
     reports: filtered
   });
-}
+});

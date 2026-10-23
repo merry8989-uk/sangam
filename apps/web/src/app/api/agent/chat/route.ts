@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sarvamChat } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/agent";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   messages: z
@@ -18,7 +19,7 @@ const Body = z.object({
 //     -H "Authorization: Bearer sangam_xxx" \
 //     -H "Content-Type: application/json" \
 //     -d '{"messages":[{"role":"user","content":"Hello"}]}'
-export async function POST(req: Request) {
+export const POST = withLogging("agent:chat:post", async (req: Request) => {
   const auth = req.headers.get("authorization") ?? "";
   const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   if (!key) return NextResponse.json({ error: "Missing Bearer token" }, { status: 401 });
@@ -43,4 +44,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Chat service unavailable" }, { status: 502 });
   }
-}
+});

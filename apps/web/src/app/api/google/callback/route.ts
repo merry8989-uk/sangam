@@ -4,8 +4,9 @@ import { getViewerId } from "@/lib/viewer";
 import { GOOGLE_TOKEN_URL, parseGoogleToken, googleRedirectUri } from "@/lib/google";
 import { saveGoogleLink } from "@/lib/googleAccount";
 import { stateMatches } from "@/lib/zoho";
+import { withLogging } from "@/lib/withLogging";
 
-export async function GET(req: Request) {
+export const GET = withLogging("google:callback:get", async (req: Request) => {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -45,4 +46,4 @@ export async function GET(req: Request) {
   } catch {
     return back("tokenfail");
   }
-}
+});

@@ -3,11 +3,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { extractPoster } from "@/lib/ai";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({ atSec: z.number().min(0).max(24 * 3600) });
 
 // Set the poster to the frame at `atSec`. Only the media owner may do this.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("media:id:poster:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -32,4 +33,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   } catch {
     return NextResponse.json({ error: "Could not set the poster" }, { status: 502 });
   }
-}
+});

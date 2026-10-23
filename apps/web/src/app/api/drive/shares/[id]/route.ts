@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
+import { withLogging } from "@/lib/withLogging";
 
 // Revoke a share. Only the person who made it can.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export const DELETE = withLogging("drive:shares:id:delete", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -13,4 +14,4 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   await prisma.driveShare.delete({ where: { id: share.id } });
   return NextResponse.json({ ok: true });
-}
+});

@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { canJoinRoom, canPublish } from "@/lib/rooms";
 import { roomNameFor, mintToken, LIVEKIT_URL, livekitConfigured } from "@/lib/livekit";
+import { withLogging } from "@/lib/withLogging";
 
 // Join a room: records participation and hands back a LiveKit token.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = withLogging("rooms:id:join:post", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -72,4 +73,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     wsUrl: LIVEKIT_URL,
     canPublish: canPub
   });
-}
+});

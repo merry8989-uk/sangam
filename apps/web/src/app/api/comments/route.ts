@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
+import { canActOnPost } from "@/lib/audience";
 import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
@@ -31,6 +32,14 @@ export const POST = withLogging("comments:post", async (req: Request) => {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { postId, body, parentId } = parsed.data;
+
+  // whoCanComment was stored and never read, so a user could set "nobody may
+  // comment", see it saved, and still get comments.
+  const audience = await canActOnPost(userId, postId, "whoCanComment");
+  if (!audience.postExists) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!audience.allowed) {
+    return NextResponse.json({ error: "Commenting is not allowed on this post." }, { status: 403 });
+  }
 
   const comment = await prisma.comment.create({
     data: { postId, authorId: userId, body, parentId: parentId ?? null },

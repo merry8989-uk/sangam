@@ -8,6 +8,7 @@ import { APP_VERSION } from "@/lib/appInfo";
 import { buildReport, formatReport, reportFilename, mimeType, isDiagFormat } from "@/lib/diagnostics";
 import { mailerConfigured, sendMail, toBase64 } from "@/lib/mailer";
 import { ensureUserCode } from "@/lib/userCodeServer";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ const Body = z.object({
 const RATE_LIMIT = 5;
 const RATE_WINDOW_SEC = 3600;
 
-export async function POST(req: Request) {
+export const POST = withLogging("diagnostics:email:post", async (req: Request) => {
   const userId = await getViewerId(req);
 
   const settings = await getSettingsOptional(userId);
@@ -169,4 +170,4 @@ export async function POST(req: Request) {
     },
     { status: result.ok ? 200 : 502 }
   );
-}
+});

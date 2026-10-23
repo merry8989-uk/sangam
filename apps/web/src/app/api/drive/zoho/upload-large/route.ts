@@ -5,10 +5,11 @@ import { sanitizeName, MAX_UPLOAD_BYTES } from "@/lib/drive";
 import { withZohoToken, workDriveBaseForAccount } from "@/lib/zohoAccount";
 import { getMyFolderId, streamUpload } from "@/lib/zohoWorkDrive";
 import { uploadBaseFor } from "@/lib/zoho";
+import { withLogging } from "@/lib/withLogging";
 
 // Large-file upload. The body is piped straight to WorkDrive, so nothing is
 // held in memory here. The client sends the filename and folder as headers.
-export async function POST(req: Request) {
+export const POST = withLogging("drive:zoho:upload-large:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -52,4 +53,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ item, zoho: uploaded }, { status: 201 });
-}
+});

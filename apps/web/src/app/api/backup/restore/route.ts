@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { restoreBackup } from "@/lib/backupRestoreRun";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   fileId: z.string().min(1).max(300),
@@ -13,7 +14,7 @@ const Body = z.object({
 });
 
 // Read a backup back in. A dry run only reports what it would import.
-export async function POST(req: Request) {
+export const POST = withLogging("backup:restore:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -34,4 +35,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(report, { status: report.ok ? 200 : 422 });
-}
+});

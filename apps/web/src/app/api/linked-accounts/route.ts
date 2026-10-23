@@ -5,11 +5,12 @@ import { getViewerId } from "@/lib/viewer";
 import { encryptSecret, maskSecret, decryptSecret } from "@/lib/secrets";
 import { TERABOX_PROVIDER, looksLikeNdusToken, teraboxOAuthConfigured } from "@/lib/terabox";
 import { ZOHO_PROVIDER, zohoConfigured } from "@/lib/zoho";
+import { withLogging } from "@/lib/withLogging";
 
 const PROVIDERS = [TERABOX_PROVIDER, ZOHO_PROVIDER] as const;
 
 // Which third-party accounts this user has connected. Secrets never leave here.
-export async function GET(req: Request) {
+export const GET = withLogging("linked-accounts:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
       linked: accounts.some((a) => a.provider === ZOHO_PROVIDER)
     }
   });
-}
+});
 
 const LinkBody = z.object({
   provider: z.enum(PROVIDERS),
@@ -50,7 +51,7 @@ const LinkBody = z.object({
 });
 
 // Connect an account. We never accept or store a password.
-export async function POST(req: Request) {
+export const POST = withLogging("linked-accounts:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -82,4 +83,4 @@ export async function POST(req: Request) {
   return NextResponse.json({
     account: { id: account.id, provider: account.provider, label: account.label, method: account.method, status: account.status }
   }, { status: 201 });
-}
+});

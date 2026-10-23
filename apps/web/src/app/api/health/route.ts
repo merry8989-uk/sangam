@@ -4,13 +4,14 @@ import { redis } from "@/lib/redis";
 import { recordRoute } from "@/lib/metrics";
 import { describeStorage } from "@/lib/storage";
 import { storage } from "@/lib/s3";
+import { withLogging } from "@/lib/withLogging";
 
 // Liveness / readiness probe: reports database and cache connectivity.
-export async function GET() {
+export const GET = withLogging("health:get", async (req: Request) => {
   const res = await handleHealth();
   await recordRoute("health", res.status);
   return res;
-}
+});
 
 async function handleHealth(): Promise<Response> {
   let db = false;

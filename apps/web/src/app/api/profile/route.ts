@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { indexUsers } from "@/lib/search";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   displayName: z.string().min(1).max(60).optional(),
@@ -11,7 +12,7 @@ const Body = z.object({
   coverUrl: z.string().max(500).optional()
 });
 
-export async function GET(req: Request) {
+export const GET = withLogging("profile:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -21,9 +22,9 @@ export async function GET(req: Request) {
   });
   await indexUsers([{ id: userId, username: user.username, displayName: user.displayName }]);
   return NextResponse.json({ user });
-}
+});
 
-export async function PUT(req: Request) {
+export const PUT = withLogging("profile:put", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -37,4 +38,4 @@ export async function PUT(req: Request) {
   });
   await indexUsers([{ id: userId, username: user.username, displayName: user.displayName }]);
   return NextResponse.json({ user });
-}
+});

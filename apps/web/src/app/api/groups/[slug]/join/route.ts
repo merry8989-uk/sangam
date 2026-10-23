@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { withLogging } from "@/lib/withLogging";
 
 // Toggle membership. The owner cannot leave their own group.
-export async function POST(_req: Request, { params }: { params: { slug: string } }) {
+export const POST = withLogging("groups:slug:join:post", async (_req: Request, { params }: { params: { slug: string } }) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,4 +25,4 @@ export async function POST(_req: Request, { params }: { params: { slug: string }
   }
   await prisma.groupMember.create({ data: { groupId: group.id, userId } });
   return NextResponse.json({ joined: true });
-}
+});

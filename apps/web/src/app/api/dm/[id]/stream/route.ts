@@ -2,13 +2,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { dmChannel, redis } from "@/lib/redis";
+import { withLogging } from "@/lib/withLogging";
 
 export const dynamic = "force-dynamic";
 
 // Server-Sent Events stream of new messages in a conversation.
 // New messages are published to a Redis channel; this subscribes and forwards
 // them, so the thread updates live instead of polling.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withLogging("dm:id:stream:get", async (req: Request, { params }: { params: { id: string } }) => {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return new Response("Unauthorized", { status: 401 });
@@ -84,4 +85,4 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       "X-Accel-Buffering": "no"
     }
   });
-}
+});

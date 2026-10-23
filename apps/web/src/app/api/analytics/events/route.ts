@@ -11,6 +11,7 @@ import {
   validateEvent,
   type EventPlatform
 } from "@/lib/events";
+import { withLogging } from "@/lib/withLogging";
 
 /**
  * Receive a batch of client events.
@@ -62,7 +63,7 @@ function platformOf(req: Request, eventPlatformHeader: string | null): EventPlat
   return /okhttp|expo|react-native/i.test(ua) ? "app" : "web";
 }
 
-export async function POST(req: Request) {
+export const POST = withLogging("analytics:events:post", async (req: Request) => {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -141,5 +142,5 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ accepted, rejected });
-}
+});
 

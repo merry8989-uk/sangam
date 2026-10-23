@@ -1,10 +1,11 @@
 import { getViewerId } from "@/lib/viewer";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withLogging } from "@/lib/withLogging";
 
 // GET /api/notifications          - recent notifications + unread count
 // GET /api/notifications?count=1  - unread count only (for the nav bell)
-export async function GET(req: Request) {
+export const GET = withLogging("notifications:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ items: [], unread: 0 });
 
@@ -20,4 +21,4 @@ export async function GET(req: Request) {
     take: 50
   });
   return NextResponse.json({ items, unread });
-}
+});

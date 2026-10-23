@@ -3,9 +3,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
 import { DRIVE_KINDS, EDITABLE_KINDS, defaultContentFor, sanitizeName, withinQuota } from "@/lib/drive";
+import { withLogging } from "@/lib/withLogging";
 
 // List a folder (or search, or the trash).
-export async function GET(req: Request) {
+export const GET = withLogging("drive:get", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json({ items, parent });
-}
+});
 
 const CreateBody = z.object({
   kind: z.enum(DRIVE_KINDS),
@@ -52,7 +53,7 @@ const CreateBody = z.object({
 });
 
 // Create a folder, a document, or register an uploaded file.
-export async function POST(req: Request) {
+export const POST = withLogging("drive:post", async (req: Request) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -92,4 +93,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ item }, { status: 201 });
-}
+});

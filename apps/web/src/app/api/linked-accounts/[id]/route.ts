@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getViewerId } from "@/lib/viewer";
+import { withLogging } from "@/lib/withLogging";
 
 // Disconnect a linked account, and forget its stored credential.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export const DELETE = withLogging("linked-accounts:id:delete", async (req: Request, { params }: { params: { id: string } }) => {
   const userId = await getViewerId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -12,4 +13,4 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   await prisma.linkedAccount.delete({ where: { id: account.id } });
   return NextResponse.json({ ok: true });
-}
+});

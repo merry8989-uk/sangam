@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { flushCounters } from "@/lib/counters";
 import { recordJob, recordRoute } from "@/lib/metrics";
+import { withLogging } from "@/lib/withLogging";
 
 // Called by a scheduler / worker (see docs/ROADMAP.md), not by the browser.
 // Protected by a shared secret header.
-export async function POST(req: Request) {
+export const POST = withLogging("internal:flush-counters:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     await recordRoute("flush-counters", 403);
@@ -20,4 +21,4 @@ export async function POST(req: Request) {
     await recordRoute("flush-counters", 500);
     return NextResponse.json({ error: "Flush failed" }, { status: 500 });
   }
-}
+});

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { callAi } from "@/lib/ai";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   task: z.enum(["captions", "hashtags", "title", "alt_text", "translate"]),
@@ -12,7 +13,7 @@ const Body = z.object({
 });
 
 // Server-side proxy so the browser never needs the AI service URL.
-export async function POST(req: Request) {
+export const POST = withLogging("assist:post", async (req: Request) => {
   const session = await getServerSession(authOptions);
   if (!(session?.user as { id?: string } | undefined)?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,4 +26,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Assist service unavailable" }, { status: 502 });
   }
-}
+});

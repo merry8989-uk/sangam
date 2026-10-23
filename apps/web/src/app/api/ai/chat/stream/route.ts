@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildSystemPrompt, getAgentForUser } from "@/lib/agent";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({
   messages: z
@@ -19,7 +20,7 @@ const json = (body: unknown, status: number) =>
 
 // Streaming chat. Forwards Sarvam's SSE to the browser and, while doing so,
 // accumulates the reply so it can be persisted once the stream completes.
-export async function POST(req: Request) {
+export const POST = withLogging("ai:chat:stream:post", async (req: Request) => {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return json({ error: "Invalid input" }, 400);
   const { messages, sessionId, useAgent, model } = parsed.data;
@@ -110,4 +111,4 @@ export async function POST(req: Request) {
       Connection: "keep-alive"
     }
   });
-}
+});

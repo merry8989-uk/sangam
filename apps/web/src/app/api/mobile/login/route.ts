@@ -6,6 +6,7 @@ import { redis } from "@/lib/redis";
 import { issueMobileToken } from "@/lib/mobileAuth";
 import { withLogging, clientIp } from "@/lib/withLogging";
 import { logActivity, logSecurity, logApp } from "@/lib/loggerServer";
+import { withLogging } from "@/lib/withLogging";
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(1).max(200) });
 

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureIndexes, indexPosts, indexUsers } from "@/lib/search";
+import { withLogging } from "@/lib/withLogging";
 
 // Backfill the search indexes. Run once after enabling Meilisearch, or any
 // time the index needs rebuilding (see docs/JOBS.md).
-export async function POST(req: Request) {
+export const POST = withLogging("internal:reindex:post", async (req: Request) => {
   const secret = req.headers.get("x-internal-secret") ?? "";
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -36,4 +37,4 @@ export async function POST(req: Request) {
   await indexUsers(users);
 
   return NextResponse.json({ posts: posts.length, users: users.length });
-}
+});
