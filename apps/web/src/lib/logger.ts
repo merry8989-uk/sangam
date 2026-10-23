@@ -14,6 +14,7 @@
  */
 
 import { isSecretKey, redactText, redactValue, REDACTED } from "./diagnostics";
+import { ATTEMPT_OPENERS } from "./events";
 
 /** The six levels, quietest first. Order is load-bearing. */
 export const LOG_SEVERITIES = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"] as const;
@@ -396,8 +397,12 @@ export function unfinishedAttempts(records: LogRecord[]): UnfinishedAttempt[] {
 
 type AttemptOpener = { openedBy: string; sessionId: string | null; ts: string };
 
-/** Events that open an attempt. Kept here so the reader does not import events.ts. */
-const ATTEMPT_OPENERS: Record<string, true> = { access_fix_requested: true };
+/**
+ * Events that open an attempt.
+ *
+ * Was hardcoded to one event, which meant adding a second pair in the catalog
+ * silently did nothing here - the exact kind of drift the standard is against.
+ */
 
 export function describeLogFilter(filter: LogFilter = EMPTY_LOG_FILTER): string {
   const parts: string[] = [];

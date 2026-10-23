@@ -4,6 +4,7 @@ import { FAMILIES, THEMES } from "@/lib/themes";
 import { QUALITY_OPTIONS, UPLOAD_QUALITY_OPTIONS, qualityLabel } from "@/lib/quality";
 import BackupPanel from "./BackupPanel";
 import HistoryPolicyPanel from "./HistoryPolicyPanel";
+import { beginAttempt, endAttempt } from "@/lib/analytics";
 
 type S = {
   theme: string; accent: string; dailyBackground: boolean; backgroundMode: string;
@@ -87,13 +88,33 @@ export default function SettingsPanel({
     // panel's state: HistoryPolicyPanel owns them and writes them next to the
     // mode. Sending a stale copy from here could contradict the mode the user
     // just picked.
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(s)
-    });
-    setBusy(false);
-    setStatus(res.ok ? "Saved." : "Could not save.");
+
+    // The intent, then the outcome, joined by one attempt id - the standard's
+    // rule, applied to Sangam's most common action.
+    const attempt = beginAttempt("settings_save_requested", { setting_count: Object.keys(s).length });
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(s)
+      });
+      endAttempt(attempt, "settings_save_result", {
+        outcome: res.ok ? "success" : "failure",
+        ...(res.ok ? {} : { error_code: `http_${res.status}` }),
+        setting_count: Object.keys(s).length
+      });
+      setStatus(res.ok ? "Saved." : "Could not save.");
+    } catch {
+      endAttempt(attempt, "settings_save_result", {
+        outcome: "failure",
+        error_code: "network",
+        setting_count: Object.keys(s).length
+      });
+      setStatus("Could not save.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function clearHistory() {

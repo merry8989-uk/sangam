@@ -612,3 +612,45 @@ Narrow, sequential phases. Each phase ships something usable.
 - [ ] The Android half. The catalog and the client module are written to be
       shared; the wiring is not there, so no app event is emitted yet.
 - [ ] Ship to an external collector.
+
+## Phase 31 - Clearing the P0 list, and the Android half
+- [x] **The media route was a naked redirect.** Anyone with a key got the object,
+      and every post response carries its keys - so a private post's media was
+      readable by anyone who had seen the post while it was public. One rule now,
+      in `lib/mediaAccess.ts`, used by the redirect and the frame and poster
+      routes: the post's visibility applies, the story's audience applies, and an
+      unposted upload belongs to the account the key was issued to. A denial is a
+      404, because confirming that a thing exists but is not yours is itself a
+      disclosure. `Media.storageKey` is indexed, which it was not.
+- [x] **Four settings were stored and never enforced.** `whoCanComment`,
+      `whoCanShare` and `whoCanReshare` are now read by the routes that need
+      them; `backgroundMode` and `customBackground` are applied; `playbackSpeed`
+      reaches the player. A setting a user changes, that saves, and that does
+      nothing is worse than no setting at all - it reads as a broken product.
+- [x] **The background value is user input reaching a stylesheet**, so it is
+      matched against a strict allowlist rather than passed through. The gate was
+      tested against fourteen injection attempts. Writing it found a real bug:
+      splitting a gradient on commas broke any stop that was itself a colour
+      function, so valid input was being rejected.
+- [x] **The in-process transcode fallback lost work.** With
+      `MEDIA_QUEUE_ENABLED` off, a restart mid-encode left a post at `PROCESSING`
+      forever and the composer polling a status that would never change.
+      `/api/internal/recover-transcodes` re-queues or, when there is no queue,
+      marks it failed so the UI can say something true.
+- [x] **The Android half of the event standard.** The catalog is mirrored into
+      the app with a CI gate that fails if the two drift, and the client module
+      does consent, one session, the attempt pairing, the crash handler and the
+      batching. `screen_view` fires per route, and the friction signals are wired.
+- [x] **Sangam's own intent/outcome pair.** `settings_save_requested` and
+      `settings_save_result` share an attempt id, so a save that was sent and
+      never answered is visible as exactly that - rather than as a setting that
+      quietly did not stick. The reader was hardcoded to the standard's one
+      example; it now reads the catalog, so a second pair cannot silently do
+      nothing.
+- [x] **Every route carries `withLogging`.** 91 of 91, 116 distinct labels. The
+      sweep caught two of its own mistakes: an import inserted inside a multi-line
+      import statement in two files, found by the parse check and repaired.
+- [x] `LOG_COLLECTOR_URL` forwards each batch to an external collector as
+      newline-delimited JSON, best effort and off the request path.
+- [x] `apps/mobile/.env.example`, which did not exist.
+- [ ] Everything in P1: the stack has still never been booted.

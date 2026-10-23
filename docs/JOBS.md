@@ -59,3 +59,26 @@ LOG_RETENTION_JSON={"ERROR":180,"AUDIT":730}
 
 A category set to `0` is kept forever and skipped. `GET` on the same path
 returns the policy without deleting anything.
+
+## Recovering stuck transcodes
+
+`POST /api/internal/recover-transcodes` (header `x-internal-secret`). Run every
+few minutes.
+
+A post is created at `PROCESSING` when it has media. With
+`MEDIA_QUEUE_ENABLED=true` the worker finishes it. With it **off**, the work runs
+inside the request process, and a restart mid-encode leaves the post at
+`PROCESSING` forever: the composer polls a status that will never change and the
+user watches a spinner with no way out.
+
+This job finds posts stuck longer than fifteen minutes and either puts them back
+on the queue, or - when there is no queue to put them on - marks them `FAILED`,
+so the composer can stop polling and say something true.
+
+```
+*/5 * * * * curl -fsS -X POST -H "x-internal-secret: $INTERNAL_SECRET" \
+  http://web:3000/api/internal/recover-transcodes
+```
+
+`GET` on the same path reports how many would be recovered without touching
+anything.

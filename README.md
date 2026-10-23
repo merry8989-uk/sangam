@@ -207,6 +207,19 @@ Analytics and crash reports are diagnostics logs, not a separate system.
 - `python3 tools/check-events.py` validates the schema and every call site, and
   CI runs it. See `docs/EVENTS.md`.
 
+Media is served through one gate.
+
+- `/api/media/[...key]` used to redirect anyone with a key straight to the
+  object, and every post response carries its keys. It now resolves the key
+  against the viewer and applies the same rules the post itself obeys: the
+  author always, a public post to anyone, a followers-only post to a follower, a
+  private post to nobody else. A denial is a 404.
+- The answer is a short-lived presigned URL rather than the public bucket base.
+- `lib/mediaAccess.ts` holds the rule, so the redirect and the frame and poster
+  routes cannot disagree.
+- Cost: one database lookup per media request. The production answer is a CDN
+  with signed URLs; it is on the pending list.
+
 Check the whole database schema without Docker:
 
 ```bash

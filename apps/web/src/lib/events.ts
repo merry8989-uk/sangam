@@ -197,6 +197,22 @@ export const EVENTS: Record<string, EventSpec> = {
     optional: { filters: { array: "string" } },
     about: "A search returned nothing. Usually a catalogue gap, not a bug."
   },
+  settings_save_requested: {
+    source: "both",
+    level: "info",
+    required: { setting_count: "number" },
+    optional: { section: "string" },
+    about:
+      "The user changed a setting and it was sent. Carries an attempt_id; the result answers it. The standard's rule is that intent and outcome travel together, and this is the intent half of the most common action in the product."
+  },
+  settings_save_result: {
+    source: "both",
+    level: "info",
+    required: { outcome: { enum: "outcome" } },
+    optional: { error_code: "string", setting_count: "number" },
+    about:
+      "A settings save finished, and whether it worked. Shares its attempt_id with the request, so a save that was sent and never answered is visible as exactly that rather than as a setting that quietly did not stick."
+  },
   conversion: {
     source: "both",
     level: "info",
@@ -275,8 +291,17 @@ export const EVENT_NAMES = Object.keys(EVENTS);
  * standard's core rule checkable rather than aspirational.
  */
 export const ATTEMPT_PAIRS: Record<string, string> = {
-  access_fix_requested: "access_fix_result"
+  // From the standard: the flow whose missing result half started all of this.
+  access_fix_requested: "access_fix_result",
+  // Sangam's own: the most common intent in the product, and the one where a
+  // silent failure looks like a setting that did not stick.
+  settings_save_requested: "settings_save_result"
 };
+
+/** Every event that opens an attempt, as a set, for the readers that need it. */
+export const ATTEMPT_OPENERS: Record<string, true> = Object.fromEntries(
+  Object.keys(ATTEMPT_PAIRS).map((k) => [k, true])
+) as Record<string, true>;
 
 /** Events whose properties name a matching pair, so a dangling attempt is visible. */
 export function pairFor(eventName: string): string | undefined {
@@ -490,6 +515,9 @@ export function categoryForEvent(eventName: string): string {
       return "ACTIVITY";
     case "conversion":
       return "ANALYTICS";
+    case "settings_save_requested":
+    case "settings_save_result":
+      return "AUDIT";
     default:
       return "APPLICATION";
   }

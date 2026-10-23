@@ -174,6 +174,26 @@ def main():
     if not used:
         warnings.append("no call sites found - is the analytics layer wired up yet?")
 
+    # ---- the mobile mirror must not drift ----
+    # The standard asks for one shared schema. The mobile app is not a workspace
+    # of the web app, so the catalog is copied rather than imported - and a copy
+    # without a gate is drift waiting to happen. This is the gate.
+    mobile_file = os.path.join(ROOT, "apps", "mobile", "src", "events.ts")
+    if not os.path.exists(mobile_file):
+        problems.append("apps/mobile/src/events.ts is missing - run tools/sync-events.py")
+    else:
+        def body_of(text):
+            i = text.find("export const SCHEMA_VERSION")
+            return text[i:] if i != -1 else ""
+
+        if body_of(read(mobile_file)) != body_of(src):
+            problems.append(
+                "apps/mobile/src/events.ts has drifted from apps/web/src/lib/events.ts "
+                "- run tools/sync-events.py"
+            )
+        else:
+            print("  mobile mirror         : in sync")
+
     print(f"  events in the catalog : {len(seen)}")
     print(f"  enums defined         : {len(enum_names)}")
     print(f"  call sites found      : {len({n for n, _ in used})}")

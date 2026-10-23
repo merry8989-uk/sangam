@@ -182,12 +182,61 @@ export async function flush(): Promise<void> {
   buffer = [];
   try {
     await prisma.logEntry.createMany({ data: batch.map((p) => toRow(p.record, p.userId, p.session)) });
+    // A second copy, off the request path. Never awaited by the caller.
+    void forward(batch.map((p) => p.record), batch.map((p) => p.userId));
   } catch {
     // Put them back once, so a transient failure does not lose the batch. If it
     // fails again they age out rather than growing without bound.
     buffer = [...batch, ...buffer].slice(-MAX_BUFFER);
   } finally {
     writing = false;
+  }
+}
+
+// ------------------------------------------------------- external collector
+
+/**
+ * Forward a batch to an external collector, when one is configured.
+ *
+ * The sink writes to Postgres, which is the right place for the records this
+ * product reads back - but a database outage takes the logs with it, and a
+ * production deployment usually wants a second copy somewhere that survives it.
+ *
+ * Set `LOG_COLLECTOR_URL` and every batch is posted there too, as
+ * newline-delimited JSON, which is what most log services ingest. Best effort
+ * and off the request path: a collector that is slow or down must not slow the
+ * app or lose the local copy.
+ */
+function collectorUrl(): string {
+  return (process.env.LOG_COLLECTOR_URL ?? "").trim();
+}
+
+export function collectorConfigured(): boolean {
+  return collectorUrl().length > 0;
+}
+
+async function forward(records: LogRecord[], accounts: (string | null)[]): Promise<void> {
+  const url = collectorUrl();
+  if (!url) return;
+  try {
+    const body = records
+      .map((r, i) => JSON.stringify({ ...r, userId: accounts[i] ?? null }))
+      .join("\n");
+    const headers: Record<string, string> = { "Content-Type": "application/x-ndjson" };
+    const token = (process.env.LOG_COLLECTOR_TOKEN ?? "").trim();
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    // A short timeout: the local write has already happened, and a collector
+    // that hangs must not hold a connection open.
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 3000);
+    try {
+      await fetch(url, { method: "POST", headers, body, signal: controller.signal });
+    } finally {
+      clearTimeout(t);
+    }
+  } catch {
+    /* the local copy is the one that matters */
   }
 }
 

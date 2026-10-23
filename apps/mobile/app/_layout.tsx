@@ -5,6 +5,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeContext } from "../src/ui";
 import { colorsOf, pickTheme } from "../src/theme";
 import { api, loadToken } from "../src/api";
+import { usePathname } from "expo-router";
+import {
+  installAnalytics,
+  loadConsent,
+  setAnalyticsConsent,
+  setRoute,
+  startSession,
+  track
+} from "../src/analytics";
 
 // LiveKit's React Native SDK needs its WebRTC globals registered before use.
 // Guarded so the app still runs where the native module is absent (Expo Go).
@@ -20,20 +29,42 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const [themeMode, setThemeMode] = useState("daily");
   const [customId, setCustomId] = useState<string | undefined>(undefined);
+  const pathname = usePathname();
 
   useEffect(() => {
     (async () => {
+      const started = Date.now();
       await loadToken();
       try {
-        const d = await api<{ settings: { themeMode?: string; themeId?: string } }>("/api/settings");
+        const d = await api<{ settings: { themeMode?: string; themeId?: string; analyticsEnabled?: boolean } }>(
+          "/api/settings"
+        );
         setThemeMode(d.settings?.themeMode ?? "daily");
         setCustomId(d.settings?.themeId || undefined);
+        // The server setting is the source of truth; the local flag mirrors it
+        // so the gate holds before the session is known.
+        await setAnalyticsConsent(d.settings?.analyticsEnabled === true);
       } catch {
-        // Not signed in: fall back to the daily rotation.
+        // Not signed in: fall back to the daily rotation, and analytics stays
+        // off, which is the default.
+        await loadConsent();
       }
+
+      // Install the handlers before the first screen renders, so an early crash
+      // is still reported.
+      installAnalytics();
+      await startSession({ cold: true, ms: Date.now() - started });
       setReady(true);
     })();
   }, []);
+
+  // A screen view per route change. The pair of screens is a navigation path,
+  // which is how someone gets lost.
+  useEffect(() => {
+    if (!ready || !pathname) return;
+    setRoute(pathname);
+    track("screen_view", { screen_name: pathname });
+  }, [pathname, ready]);
 
   const theme = useMemo(() => pickTheme(themeMode, customId), [themeMode, customId]);
   const colors = useMemo(() => colorsOf(theme), [theme]);

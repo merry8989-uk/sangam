@@ -18,6 +18,7 @@ import { Button, Card, Heading, Loading, Pill, Screen, useColors } from "../src/
 import { pickTheme, THEME_COUNT } from "../src/theme";
 import { DISPLAY_TOGGLES, PRIMARY_ACTIONS } from "../src/postDisplay";
 import { HISTORY_MODES, clampDays, modeHint, modeLabel, usesPeriod, type HistoryMode } from "../src/history";
+import { beginAttempt, endAttempt } from "../src/analytics";
 
 export default function Settings() {
   const c = useColors();
@@ -75,11 +76,29 @@ export default function Settings() {
 
   async function save(patch: Record<string, unknown>) {
     setSettings({ ...(settings ?? {}), ...patch });
+
+    // The intent, then the outcome, joined by one attempt id.
+    //
+    // This is the standard's rule in Sangam's own product. Before this, a save
+    // that failed left the toggle showing the new value and nothing said
+    // otherwise: the setting looked saved and was not. The pair makes a save
+    // that was sent and never answered visible as exactly that.
+    const attempt = beginAttempt("settings_save_requested", { setting_count: Object.keys(patch).length });
+
     try {
       await api("/api/settings", { method: "PUT", body: JSON.stringify(patch) });
+      endAttempt(attempt, "settings_save_result", {
+        outcome: "success",
+        setting_count: Object.keys(patch).length
+      });
     } catch {
       // not signed in: revert
       setSettings({ ...(settings ?? {}) });
+      endAttempt(attempt, "settings_save_result", {
+        outcome: "failure",
+        error_code: "save_failed",
+        setting_count: Object.keys(patch).length
+      });
     }
   }
 
