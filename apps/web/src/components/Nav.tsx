@@ -25,7 +25,8 @@ const more = [
   { href: "/history", label: "History" },
   { href: "/moderation", label: "Moderation" },
   { href: "/ops", label: "Ops" },
-  { href: "/logs", label: "Logs" }
+  { href: "/logs", label: "Logs" },
+  { href: "/anon", label: "Anon" }
 ];
 
 export default function Nav() {

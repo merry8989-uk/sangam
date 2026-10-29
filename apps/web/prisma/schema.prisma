@@ -41,6 +41,11 @@ model User {
   notifications Notification[] @relation("recipient")
   agent         Agent?
   logs          LogEntry[]
+  anonIdentity  AnonIdentity?
+  anonTempKeys  AnonTempKey[]
+  anonChats     AnonChat[]        @relation("AnonChatOwner")
+  anonIn        AnonParticipant[]
+  anonSent      AnonMessage[]
   chatSessions  ChatSession[]
   conversations ConversationParticipant[]
   directMessages DirectMessage[]
@@ -496,6 +501,130 @@ model PostStat {
 // ---------- Alerting ----------
 // A diagnostics report a user chose to send to support. Only created when the
 // user presses Send - nothing is uploaded in the background.
+// ---------- Anonymous chat ----------
+// Chat with anyone, without either side knowing who the other is.
+//
+// Two ways in, and the difference is the whole feature:
+//
+//   the fixed key    one per account, permanent. A chat started with it is a
+//                    normal chat: it stays until someone deletes it.
+//   a temporary key  minted for one chat, with a duration the user chooses
+//                    (ten seconds at the least). When it expires the key is
+//                    destroyed and the chat is deleted from both sides - not
+//                    hidden, not archived, deleted, here and in storage.
+
+model AnonIdentity {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  // The permanent, shareable handle. Looked up on every incoming request, so
+  // it is unique and indexed.
+  key       String    @unique
+  createdAt DateTime  @default(now())
+  // Set when the user retires their key. The old chats survive; the key does not.
+  revokedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+}
+
+model AnonTempKey {
+  id          String    @id @default(cuid())
+  // The key itself. Unguessable, single use, destroyed at expiry.
+  key         String    @unique
+  ownerId     String
+  // The chat this key opened, once it is used. Null until then.
+  chatId      String?   @unique
+  // How long the key lives, in seconds. Ten at the least.
+  durationSec Int
+  expiresAt   DateTime
+  usedAt      DateTime?
+  // Whether the key was used to open a chat. An unused key simply expires.
+  used        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([ownerId])
+}
+
+model AnonChat {
+  id        String    @id @default(cuid())
+  // DIRECT or GROUP. A group is the same thing with more participants.
+  kind      String    @default("DIRECT")
+  // TEMPORARY or PERMANENT. Set once, at creation, from the key that opened it.
+  mode      String    @default("TEMPORARY")
+  ownerId   String
+  title     String?
+  // Null for a permanent chat. Indexed because the sweeper scans by it.
+  expiresAt DateTime?
+  // ACTIVE | EXPIRED | DELETED. EXPIRED is written by the sweeper just before
+  // the row goes, so a concurrent read sees a reason rather than a 404.
+  status    String    @default("ACTIVE")
+  // The room this chat's call uses, when one has been started.
+  callRoomId String?
+  createdAt DateTime  @default(now())
+
+  owner        User              @relation("AnonChatOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  participants AnonParticipant[]
+  messages     AnonMessage[]
+
+  @@index([expiresAt, status])
+  @@index([ownerId])
+}
+
+model AnonParticipant {
+  id       String    @id @default(cuid())
+  chatId   String
+  userId   String
+  // OWNER | MEMBER
+  role     String    @default("MEMBER")
+  joinedAt DateTime  @default(now())
+
+  chat     AnonChat  @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId])
+}
+
+// A message. There is deliberately no updatedAt and no edit path anywhere: once
+// a message is sent it cannot be changed, only deleted with the chat.
+model AnonMessage {
+  id        String    @id @default(cuid())
+  chatId    String
+  senderId  String
+  // TEXT, FILE or LINK. A file message carries its attachments.
+  kind      String    @default("TEXT")
+  body      String?
+  createdAt DateTime  @default(now())
+
+  chat        AnonChat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments AnonAttachment[]
+
+  @@index([chatId, createdAt])
+}
+
+model AnonAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  storageKey String
+  // The name the sender gave it. Kept so the recipient can save it back with
+  // the same name; never shown in a log.
+  name       String
+  mimeType   String
+  sizeBytes  Int
+  // IMAGE | VIDEO | AUDIO | GIF | STICKER | DOCUMENT | OTHER
+  kind       String   @default("OTHER")
+  createdAt  DateTime @default(now())
+
+  message    AnonMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
 // ---------- Observability ----------
 // One structured log record. See apps/web/src/lib/logger.ts for the envelope and
 // the rules about what may be written into one.

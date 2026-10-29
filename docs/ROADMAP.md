@@ -654,3 +654,40 @@ Narrow, sequential phases. Each phase ships something usable.
       newline-delimited JSON, best effort and off the request path.
 - [x] `apps/mobile/.env.example`, which did not exist.
 - [ ] Everything in P1: the stack has still never been booted.
+
+## Phase 32 - Anonymous chat, and an app that updates itself
+- [x] **Two keys, and the difference is the feature.** The fixed key is
+      permanent and a chat opened with it stays until someone deletes it. A
+      temporary key is minted for one chat with a duration the user picks, ten
+      seconds at the least and thirty days at the most, and when the time is up
+      the chat is deleted - the rows, the files in storage, and the key.
+- [x] **A temporary key binds to one chat**, so a second person using it joins
+      the same chat rather than opening another. That is how a temporary group
+      forms: one key, several people, all inside the same window.
+- [x] **Deletion is a job, not a hope.** `POST /api/internal/expire-anon` marks a
+      chat EXPIRED so a concurrent read sees the reason, deletes the storage
+      objects, then deletes the rows by cascade. A failure to delete is logged as
+      a security event, because a chat that outlives its expiry is the one thing
+      this feature cannot do.
+- [x] **Messages are write-once**, with three locks: no `updatedAt` on
+      AnonMessage, no update handler under `/api/anon`, and
+      `tools/check-immutable.py` in CI. The guard was proved by adding a PATCH
+      route and watching it fail.
+- [x] Any file type, through the existing presign path, with every attachment key
+      verified against the uploader. The media gate learned about anonymous
+      attachments, so a participant can read the files in a chat they are in and
+      nobody else can.
+- [x] Video, audio and group calls on the existing LiveKit room, with a
+      per-chat pseudonym as the room identity so a call does not reveal who
+      anyone is.
+- [x] Web and Android screens. Both title a chat by its mode and time left,
+      never by a name.
+- [x] **The in-built updater.** Checks `/api/app/version` on launch, draws a real
+      progress bar from the bytes written, verifies the size, and hands the file
+      to Android's installer. It never replaces itself without a press. The
+      version comparison is tested against the trap that catches everyone:
+      `1.10` is newer than `1.9`, which a string comparison gets backwards.
+- [ ] Real virtual backgrounds need `@livekit/track-processors`; without it the
+      control blurs the local preview instead of replacing the background.
+- [ ] Attachments on Android go through the same presign path but the picker UI
+      is not wired yet - the web side is.

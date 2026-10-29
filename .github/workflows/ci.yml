@@ -92,3 +92,17 @@ jobs:
           python-version: "3.12"
       - name: Check the event schema and its call sites
         run: python3 tools/check-events.py
+
+  # Fails if a sent anonymous message could ever be changed.
+  #
+  # The requirement is explicit - once sent, a message cannot be edited. Three
+  # locks: no updatedAt in the schema, no update handler in the API, and this.
+  immutable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check messages are write-once
+        run: python3 tools/check-immutable.py

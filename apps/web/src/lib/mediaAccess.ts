@@ -101,6 +101,33 @@ export async function canReadMediaKey(viewerId: string | null, key: string): Pro
     return { allowed: r.ok, reason: `story: ${r.reason}`, key };
   }
 
+  // An anonymous chat attachment. The chat is the boundary: if the viewer is in
+  // it and it has not expired, the file is theirs to read.
+  const anon = await prisma.anonAttachment.findFirst({
+    where: { storageKey: key },
+    select: { message: { select: { chatId: true } } }
+  });
+  if (anon?.message?.chatId) {
+    const chat = await prisma.anonChat.findUnique({
+      where: { id: anon.message.chatId },
+      select: {
+        mode: true,
+        status: true,
+        expiresAt: true,
+        participants: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false
+      }
+    });
+    if (!chat) return { allowed: false, reason: "anon: chat is gone", key };
+    if (chat.status !== "ACTIVE") return { allowed: false, reason: "anon: chat is not active", key };
+    if (chat.mode === "TEMPORARY" && chat.expiresAt && chat.expiresAt.getTime() <= Date.now()) {
+      return { allowed: false, reason: "anon: chat expired", key };
+    }
+    const isMember = Array.isArray(chat.participants) && chat.participants.length > 0;
+    return isMember
+      ? { allowed: true, reason: "anon: participant", key }
+      : { allowed: false, reason: "anon: not a participant", key };
+  }
+
   // No row, or a row not attached to anything yet: this is an upload that has
   // not been posted. Only the account it was issued to may read it - which is
   // exactly what the key prefix records.

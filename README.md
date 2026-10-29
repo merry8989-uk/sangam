@@ -220,6 +220,33 @@ Media is served through one gate.
 - Cost: one database lookup per media request. The production answer is a CDN
   with signed URLs; it is on the pending list.
 
+Anonymous chat: two keys, and the difference is the feature.
+
+- **Your fixed key** (`SGX-…`) is permanent. A chat opened with it is a normal
+  chat - it stays until someone deletes it.
+- **A temporary key** (`SGT-…`) is minted for one chat with a duration you pick,
+  ten seconds at the least. The first use creates the chat; every later use joins
+  the same one, which is how a temporary *group* forms. When the time is up the
+  key is destroyed and the chat is **deleted from both sides** - the rows, the
+  files in object storage, and the key. Not hidden, not archived. That is
+  `POST /api/internal/expire-anon`, and it runs every minute.
+- **Messages are write-once.** There is no `updatedAt` in the schema, no update
+  handler in the API, and `tools/check-immutable.py` in CI. Three locks, because
+  a rule that lives only in a document gets broken by the next person.
+- Any file type can be sent: documents, PDFs, images, video, audio, gifs,
+  stickers, links.
+- Video, audio and group calls run on the same LiveKit room - what the call is
+  depends on what people publish, not on a different endpoint. Virtual
+  backgrounds apply to the local track; without `@livekit/track-processors` the
+  control blurs the preview instead, which is honest rather than silent.
+- Nothing in a chat shows a name. A chat is titled by its mode and how long it
+  has left.
+
+The Android app updates itself: it checks `/api/app/version` on launch, and when
+there is a newer build it draws a real progress bar from the bytes actually
+written, then hands the file to Android's own installer. It never replaces itself
+without a press.
+
 Check the whole database schema without Docker:
 
 ```bash

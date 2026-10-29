@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeContext } from "../src/ui";
 import { colorsOf, pickTheme } from "../src/theme";
 import { api, loadToken } from "../src/api";
+import UpdateBanner from "../src/UpdateBanner";
 import { usePathname } from "expo-router";
 import {
   installAnalytics,
@@ -75,6 +76,8 @@ export default function RootLayout() {
     <ThemeContext.Provider value={colors}>
       <SafeAreaProvider>
         <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
+        {/* Checks once on launch and says nothing when there is nothing to say. */}
+        <UpdateBanner />
         <Tabs
           screenOptions={{
             headerStyle: { backgroundColor: colors.surface },
@@ -89,6 +92,7 @@ export default function RootLayout() {
           <Tabs.Screen name="explore" options={{ title: "Explore" }} />
           <Tabs.Screen name="live" options={{ title: "Live" }} />
           <Tabs.Screen name="messages" options={{ title: "Messages" }} />
+          <Tabs.Screen name="anon" options={{ title: "Anon" }} />
           <Tabs.Screen name="ai" options={{ title: "AI" }} />
           <Tabs.Screen name="settings" options={{ title: "Settings" }} />
           <Tabs.Screen name="login" options={{ href: null, title: "Sign in" }} />

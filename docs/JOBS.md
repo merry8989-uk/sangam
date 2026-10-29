@@ -82,3 +82,25 @@ so the composer can stop polling and say something true.
 
 `GET` on the same path reports how many would be recovered without touching
 anything.
+
+## Expiring anonymous chats
+
+`POST /api/internal/expire-anon` (header `x-internal-secret`). **Run it every
+minute.**
+
+This is the job that makes the anonymous chat promise true. When a temporary key
+was minted the user was told the chat would be deleted from both sides when the
+clock ran out - not hidden, not archived, deleted. That means the rows go, the
+files go from object storage, and the key goes so it cannot open anything again.
+
+```
+* * * * * curl -fsS -X POST -H "x-internal-secret: $INTERNAL_SECRET" \
+  http://web:3000/api/internal/expire-anon
+```
+
+A chat that expired forty seconds ago should be gone forty seconds later, not at
+the next convenient hour. `GET` on the same path reports what is due without
+deleting anything.
+
+A failure to delete is logged as a security event, not only a job failure: a chat
+that outlives its expiry is the one thing this feature cannot do.
