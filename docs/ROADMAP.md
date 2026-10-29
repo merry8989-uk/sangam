@@ -106,9 +106,10 @@ Narrow, sequential phases. Each phase ships something usable.
 - [x] Mood-driven themes: content you like, save and watch decides the family
       (melancholy -> dark, devotional -> devotion, evergreen -> nature).
 - [x] /themes gallery showing every combination.
-- [ ] Rotating/DIY background images are stored but not applied yet.
-- [ ] Playback settings are stored; the video player does not read them yet.
-- [ ] whoCanComment / whoCanShare / whoCanReshare are stored but not enforced.
+- [x] Rotating/DIY background images. Applied in Phase 31, through a strict
+      allowlist because the value reaches a stylesheet.
+- [x] Playback settings. The player reads the speed in Phase 31.
+- [x] whoCanComment / whoCanShare / whoCanReshare. Enforced in Phase 31.
 
 ## Phase 8 - Android app
 - [x] Expo / React Native client in apps/mobile: feed, shorts, explore, post
@@ -505,8 +506,8 @@ Narrow, sequential phases. Each phase ships something usable.
       early return - LiveKit unconfigured, or the file picker cancelled - left
       the UI permanently disabled.
 - [ ] A support view over submitted reports in the UI.
-- [ ] The remaining audit items: an unauthenticated media redirect, and the
-      `MEDIA_QUEUE_ENABLED` in-process fallback.
+- [x] The remaining audit items. The media redirect is gated and the stuck
+      transcode is recovered, both in Phase 31.
 
 ## Phase 27 - A real logging platform
 - [x] Built to the logging standard: twelve categories, six severities, and one
@@ -535,10 +536,11 @@ Narrow, sequential phases. Each phase ships something usable.
       and a refused attempt to read the logs is itself logged.
 - [x] Retention per category, applied by `POST /api/internal/prune-logs`:
       an audit trail for a year, trace lines for three days.
-- [ ] Instrument the remaining routes. Ten are wrapped; the rest can adopt
-      `withLogging` as they are touched, rather than in one unreviewable sweep.
-- [ ] Ship records to an external collector. The sink writes to Postgres; a
-      production deployment would usually also want a stream to a log service.
+- [x] Instrument the remaining routes. All 91 carry `withLogging` as of
+      Phase 31, 116 distinct labels.
+- [x] Ship records to an external collector. `LOG_COLLECTOR_URL` forwards each
+      batch as newline-delimited JSON, off the request path. Written, never
+      pointed at a real collector - that is a P2 item now.
 
 ## Phase 28 - Notion removed
 - [x] The Notion mirror is gone: the library, the three call sites, the response
@@ -609,9 +611,10 @@ Narrow, sequential phases. Each phase ships something usable.
       non-snake_case name, and watching it fail on each.
 - [x] The web half is wired: page views, Core Web Vitals, unhandled errors and
       the friction signals.
-- [ ] The Android half. The catalog and the client module are written to be
-      shared; the wiring is not there, so no app event is emitted yet.
-- [ ] Ship to an external collector.
+- [x] The Android half. Done in Phase 31: the catalog is mirrored with a CI gate
+      against drift, and the app emits screen views, crashes and the settings
+      save pair.
+- [x] Ship to an external collector. Done in Phase 31, behind `LOG_COLLECTOR_URL`.
 
 ## Phase 31 - Clearing the P0 list, and the Android half
 - [x] **The media route was a naked redirect.** Anyone with a key got the object,
@@ -687,7 +690,20 @@ Narrow, sequential phases. Each phase ships something usable.
       to Android's installer. It never replaces itself without a press. The
       version comparison is tested against the trap that catches everyone:
       `1.10` is newer than `1.9`, which a string comparison gets backwards.
-- [ ] Real virtual backgrounds need `@livekit/track-processors`; without it the
-      control blurs the local preview instead of replacing the background.
-- [ ] Attachments on Android go through the same presign path but the picker UI
-      is not wired yet - the web side is.
+- [x] **Real virtual backgrounds.** `@livekit/track-processors` at 0.8.2, with
+      `BackgroundProcessor` attached in `disabled` mode as soon as the camera is
+      on and switched with `switchTo` - which is what the library recommends,
+      because calling `setProcessor` on every change tears the pipeline down and
+      back up and you see it happen. The first version of this used
+      `VirtualBackground(options)`, which is the older API that takes a string
+      path, so it would have passed an object where a URL belonged; the
+      documented API replaced it. Where the browser cannot run the processor the
+      buttons disable themselves and say why, rather than doing nothing.
+- [x] **Android attachments.** The picker takes anything, and the bytes go
+      straight from the device to object storage through the same presign path
+      the web uses - `FileSystem.uploadAsync` with a binary body, so the app tier
+      never proxies a file.
+- [x] **Android calls.** A call screen on the existing `LiveKitRoom` pattern,
+      reachable from the chat, with the per-chat pseudonym as the room identity.
+      Virtual backgrounds stay a web feature: the phone publishes the camera as
+      it is.

@@ -237,8 +237,14 @@ Anonymous chat: two keys, and the difference is the feature.
   stickers, links.
 - Video, audio and group calls run on the same LiveKit room - what the call is
   depends on what people publish, not on a different endpoint. Virtual
-  backgrounds apply to the local track; without `@livekit/track-processors` the
-  control blurs the preview instead, which is honest rather than silent.
+  backgrounds are real: `@livekit/track-processors` segments the person from the
+  room on the local track, so the background is replaced before the video leaves
+  the device. The processor is attached in `disabled` mode up front and switched
+  with `switchTo`, which avoids the teardown artifacts. Where a browser cannot run
+  it the buttons disable and say why.
+- Attachments work on the phone too: any file type, uploaded straight from the
+  device to storage through the same presign path, so the app tier never proxies
+  a file.
 - Nothing in a chat shows a name. A chat is titled by its mode and how long it
   has left.
 

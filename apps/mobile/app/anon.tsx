@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { api } from "../src/api";
+import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
+import { api, uploadFiles, type UploadedFile } from "../src/api";
 import { Button, Empty, Loading, Screen, useColors } from "../src/ui";
 
 /**
@@ -37,6 +39,7 @@ type Preset = { seconds: number; label: string };
 
 export default function AnonScreen() {
   const c = useColors();
+  const router = useRouter();
   const [mode, setMode] = useState<"home" | "chat">("home");
   const [fixedKey, setFixedKey] = useState<string | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -50,6 +53,8 @@ export default function AnonScreen() {
   const [chatMode, setChatMode] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -142,19 +147,77 @@ export default function AnonScreen() {
     }
   }
 
+  /**
+   * Pick any file and put it in storage.
+   *
+   * The picker takes anything - a document, a PDF, an image, a video, an audio
+   * file, a gif, a zip. Nothing is filtered, because the feature is "send any
+   * type". The bytes go straight from the device to object storage; only the
+   * key comes back through the app tier.
+   */
+  async function attach() {
+    if (files.length >= 10) {
+      setError("At most ten files per message.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setUploadNote(null);
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
+      if (picked.canceled) return;
+      const assets = picked.assets.slice(0, 10 - files.length).map((a) => ({
+        uri: a.uri,
+        name: a.name,
+        mimeType: a.mimeType ?? "application/octet-stream",
+        size: a.size ?? 0
+      }));
+      const uploaded = await uploadFiles(assets, (done, total) => setUploadNote(`Uploading ${done}/${total}…`));
+      setFiles((prev) => [...prev, ...uploaded].slice(0, 10));
+      setUploadNote(null);
+    } catch {
+      setError("That file did not upload.");
+      setUploadNote(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
     const body = draft.trim();
-    if (!body || !openChat || busy) return;
+    if ((!body && files.length === 0) || !openChat || busy) return;
     setBusy(true);
     try {
       const m = await api<Message>("/api/anon/chat/" + openChat + "/message", {
         method: "POST",
-        body: JSON.stringify({ body })
+        body: JSON.stringify({ body: body || undefined, attachments: files })
       });
       setDraft("");
+      setFiles([]);
       setMessages((prev) => [...prev, m]);
     } catch {
       setError("Could not send that.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Start a call. The server decides whether this viewer may join. */
+  async function call(video: boolean) {
+    if (!openChat) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const d = await api<{ token: string; wsUrl: string }>("/api/anon/chat/" + openChat + "/call", {
+        method: "POST",
+        body: JSON.stringify({ video })
+      });
+      router.push({
+        pathname: "/anon-call",
+        params: { token: d.token, ws: d.wsUrl, video: video ? "1" : "0" }
+      });
+    } catch {
+      setError("Could not start a call. LiveKit may not be configured.");
     } finally {
       setBusy(false);
     }
@@ -168,6 +231,7 @@ export default function AnonScreen() {
       setMode("home");
       setOpenChat(null);
       setMessages([]);
+      setFiles([]);
       await loadChats();
       setNotice("Chat deleted.");
     } catch {
@@ -188,6 +252,12 @@ export default function AnonScreen() {
           {chatMode === "TEMPORARY" && (
             <Text style={{ color: "#b45309", fontSize: 11 }}>{chatRemaining}</Text>
           )}
+          <Pressable onPress={() => call(true)} disabled={busy}>
+            <Text style={{ color: c.brand600, fontSize: 12, fontWeight: "600" }}>Video</Text>
+          </Pressable>
+          <Pressable onPress={() => call(false)} disabled={busy}>
+            <Text style={{ color: c.brand600, fontSize: 12, fontWeight: "600" }}>Audio</Text>
+          </Pressable>
         </View>
 
         {error ? <Text style={{ color: "#b91c1c", fontSize: 12, padding: 12 }}>{error}</Text> : null}
@@ -202,11 +272,11 @@ export default function AnonScreen() {
               {item.body ? (
                 <Text style={{ color: c.ink900, fontSize: 14 }}>{item.body}</Text>
               ) : null}
-              {item.attachments.length > 0 ? (
-                <Text style={{ color: c.brand600, fontSize: 12, marginTop: 4 }}>
-                  {item.attachments.length} file{item.attachments.length === 1 ? "" : "s"}
+              {item.attachments.map((f) => (
+                <Text key={f.id} selectable style={{ color: c.brand600, fontSize: 12, marginTop: 4 }}>
+                  {f.name}
                 </Text>
-              ) : null}
+              ))}
               <Text style={{ color: c.ink500, fontSize: 10, marginTop: 4 }}>
                 {new Date(item.createdAt).toLocaleString("en-IN")} · cannot be edited
               </Text>
@@ -214,7 +284,28 @@ export default function AnonScreen() {
           )}
         />
 
+        {files.length > 0 ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 12, paddingTop: 8 }}>
+            {files.map((f) => (
+              <Pressable key={f.key} onPress={() => setFiles((prev) => prev.filter((x) => x.key !== f.key))}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.line, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <Text style={{ color: c.ink700, fontSize: 11 }} numberOfLines={1}>{f.name}</Text>
+                  <Text style={{ color: "#b91c1c", fontSize: 12 }}>×</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        {uploadNote ? (
+          <Text style={{ color: c.ink500, fontSize: 11, paddingHorizontal: 12, paddingTop: 6 }}>{uploadNote}</Text>
+        ) : null}
+
         <View style={{ flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: c.line }}>
+          <Pressable onPress={attach} disabled={busy}>
+            <View style={{ backgroundColor: c.line, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}>
+              <Text style={{ color: c.ink700, fontWeight: "600", fontSize: 13 }}>Attach</Text>
+            </View>
+          </Pressable>
           <TextInput
             value={draft}
             onChangeText={setDraft}
@@ -222,8 +313,8 @@ export default function AnonScreen() {
             multiline
             style={{ flex: 1, borderWidth: 1, borderColor: c.line, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, color: c.ink900, maxHeight: 100 }}
           />
-          <Pressable onPress={send} disabled={busy || !draft.trim()}>
-            <View style={{ backgroundColor: busy || !draft.trim() ? c.line : c.brand600, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
+          <Pressable onPress={send} disabled={busy || (!draft.trim() && files.length === 0)}>
+            <View style={{ backgroundColor: busy || (!draft.trim() && files.length === 0) ? c.line : c.brand600, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
               <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Send</Text>
             </View>
           </Pressable>

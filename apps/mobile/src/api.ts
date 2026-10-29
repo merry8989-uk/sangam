@@ -230,6 +230,57 @@ export type DriveItem = {
   updatedAt: string;
 };
 
+// ---- attachments ----
+// Any file type. The bytes go straight to object storage from the device; the
+// app tier only ever signs the upload, never proxies it.
+
+export type UploadedFile = { key: string; name: string; mimeType: string; sizeBytes: number };
+
+/**
+ * Sign an upload, then put the file in storage.
+ *
+ * Two steps because that is the only way to keep large files off the app tier:
+ * the server signs a key, the device uploads to it directly. The key is what the
+ * server later checks against the account it was issued to.
+ */
+export async function uploadFile(file: {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}): Promise<UploadedFile> {
+  const mimeType = file.mimeType || "application/octet-stream";
+
+  const presign = await api<{ key: string; url: string }>("/api/upload", {
+    method: "POST",
+    body: JSON.stringify({ filename: file.name, contentType: mimeType })
+  });
+
+  const res = await FileSystem.uploadAsync(presign.url, file.uri, {
+    httpMethod: "PUT",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: { "Content-Type": mimeType }
+  });
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Upload failed (${res.status})`);
+  }
+
+  return { key: presign.key, name: file.name, mimeType, sizeBytes: file.size };
+}
+
+/** Sign and upload several files, reporting how many are done. */
+export async function uploadFiles(
+  files: { uri: string; name: string; mimeType: string; size: number }[],
+  onProgress?: (done: number, total: number) => void
+): Promise<UploadedFile[]> {
+  const out: UploadedFile[] = [];
+  for (let i = 0; i < files.length; i++) {
+    out.push(await uploadFile(files[i]));
+    onProgress?.(i + 1, files.length);
+  }
+  return out;
+}
+
 // ---- direct messages ----
 // The shapes here mirror what the routes actually return. They did not before:
 // the screen read `participants` and `updatedAt`, which /api/dm has never sent,

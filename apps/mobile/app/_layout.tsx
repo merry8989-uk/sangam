@@ -93,6 +93,7 @@ export default function RootLayout() {
           <Tabs.Screen name="live" options={{ title: "Live" }} />
           <Tabs.Screen name="messages" options={{ title: "Messages" }} />
           <Tabs.Screen name="anon" options={{ title: "Anon" }} />
+          <Tabs.Screen name="anon-call" options={{ href: null, title: "Call" }} />
           <Tabs.Screen name="ai" options={{ title: "AI" }} />
           <Tabs.Screen name="settings" options={{ title: "Settings" }} />
           <Tabs.Screen name="login" options={{ href: null, title: "Sign in" }} />
